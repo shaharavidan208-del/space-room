@@ -41,8 +41,7 @@ export default class Experience {
 
 
 
-const loader = new THREE.TextureLoader();
-const environmentMap = hdrLoader.load('/volcanic_planet.hdr', (environmentMap) =>
+const environmentMap = hdrLoader.load('/environmentMaps/volcanic_planet.hdr', (environmentMap) =>
 {
     environmentMap.mapping = THREE.EquirectangularReflectionMapping
 
@@ -82,7 +81,7 @@ scene.background = environmentMap
         // טעינת המודל
         const gltfLoader = new GLTFLoader();
         gltfLoader.load(
-            '/Room.glb',
+            '/models/Room.glb',
             (gltf) => {
                 scene.add(gltf.scene);
                 console.log('החדר נטען בהצלחה');
