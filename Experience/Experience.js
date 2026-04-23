@@ -4,19 +4,28 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js';
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+
 
 import GUI from 'lil-gui';
+
+
 
 export default class Experience {
     constructor(canvas) {
         const gu = new GUI()
-        const hdrLoader = new HDRLoader()
-        const cubeTextureLoader = new THREE.CubeTextureLoader()
+        const loader =  new HDRLoader();
 
+        
+
+
+         // FPS counter 
+        const stats = new Stats();
+        document.body.appendChild(stats.dom);
 
         // Scene
         const scene = new THREE.Scene();
-        console.log(hdrLoader)
         /**
          * Lights
          */
@@ -24,10 +33,10 @@ export default class Experience {
         scene.add(ambientLight)
         
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
-        directionalLight.castShadow = true
-        directionalLight.shadow.mapSize.set(1024, 1024)
-        directionalLight.shadow.camera.far = 15
-        directionalLight.shadow.camera.left = - 7
+        directionalLight.castShadow = false
+
+        directionalLight.shadow.camera.far = 10
+        directionalLight.shadow.camera.left = - 6
         directionalLight.shadow.camera.top = 7
         directionalLight.shadow.camera.right = 7
         directionalLight.shadow.camera.bottom = - 7
@@ -41,20 +50,26 @@ export default class Experience {
 
 
 
-const environmentMap = hdrLoader.load('/environmentMaps/volcanic_planet.hdr', (environmentMap) =>
+
+
+const environmentMap = loader.load('/environmentMaps/volcanic_planet_compressed.hdr', (texture) =>
 {
     environmentMap.mapping = THREE.EquirectangularReflectionMapping
 
     scene.background = environmentMap
-    scene.environment = environmentMap
+    console.log(texture)
 })
 
-scene.background = environmentMap
+
 
 
 
         // Camera
-        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(35,
+             window.innerWidth / window.innerHeight, 
+             0.1, // near
+             1000, // far
+            );
         camera.position.set(6, 4, 8);
         scene.add(camera);
 
@@ -64,24 +79,25 @@ scene.background = environmentMap
 
 
         // Renderer
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // נחוץ ל-RectAreaLight
-        RectAreaLightUniformsLib.init();
 
-        // תאורה + GUI
-        // LDR cube texture
+        
 
-    
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.setDRACOLoader(dracoLoader);
 
         // טעינת המודל
-        const gltfLoader = new GLTFLoader();
+
         gltfLoader.load(
-            '/models/Room.glb',
+            '/models/Merged_LowPoly_draco.glb',
             (gltf) => {
                 scene.add(gltf.scene);
                 console.log('החדר נטען בהצלחה');
@@ -100,31 +116,24 @@ scene.background = environmentMap
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         });
 
-        // Raycaster
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+    
 
-        window.addEventListener('mousemove', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        });
-
-        window.addEventListener('click', () => {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-            if (intersects.length > 0) {
-                console.log('פגעת ב:', intersects[0].object.name);
-            }
-        });
+    
 
         // לולאת אנימציה
         const tick = () => {
+
+            stats.begin();
             controls.update();
             renderer.render(scene, camera);
+            stats.end();
             requestAnimationFrame(tick);
         };
         tick();
+
     }
+
+
 
    
 }
