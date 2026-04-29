@@ -33,7 +33,7 @@ export default class Particles {
             '/fonts/Audiowide_Regular.json',
             (font) => {
                 const textGeometry = new TextGeometry(
-                    'MY PROTFOLIO',
+                    'MY PORTFOLIO',
                     {
                         font: font,
                         size: 0.5,

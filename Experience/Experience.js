@@ -7,15 +7,16 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import SupernovaRemnant from './SupernovaRemnant.js'
 import Particles from './Particles.js'
 import GUI from 'lil-gui';
+import Cube from './Cube/Cube.js' 
 
 
 export default class Experience {
     constructor(canvas) {
-        const gui = new GUI()
-        const loader = new HDRLoader();
+        const loader = new HDRLoader()
 
         // Scene
-        const scene = new THREE.Scene();
+        const scene = new THREE.Scene()
+                this.Cube = new Cube(scene)
 
 
 
@@ -129,16 +130,20 @@ export default class Experience {
         const gltfLoader = new GLTFLoader();
         gltfLoader.setDRACOLoader(dracoLoader);
 
+        let walls
         // טעינת המודל
         const model = gltfLoader.load(
             '/models/Room5.glb',
             (gltf) => {
+                gltf.scene.traverse((child) => {
+                    console.log(child.name, child.type)
+                })
+                walls = gltf.scene.getObjectByName('Cube001')
                 scene.add(gltf.scene)
                 
 
             }
         )
-
 
 
         // Raycaster
