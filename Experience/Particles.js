@@ -33,7 +33,7 @@ export default class Particles {
             '/fonts/Audiowide_Regular.json',
             (font) => {
                 const textGeometry = new TextGeometry(
-                    'MY PORTFOLIO',
+                    'SHAHAR AVIDAN',
                     {
                         font: font,
                         size: 0.5,
@@ -55,7 +55,7 @@ export default class Particles {
                 // textGeometry.computeBoundingBox()
 
                 textGeometry.center()
-                console.log(textGeometry.boundingBox)
+                // console.log(textGeometry.boundingBox)
                 const textMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTexture})
                 const text = new THREE.Mesh(textGeometry, textMaterial)
                 const positionFolder = gui.addFolder('Mesh Position');
