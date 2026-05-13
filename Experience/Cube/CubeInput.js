@@ -5,10 +5,13 @@ export default class CubeInput {
         console.log("entered")
         this.isDragging = true
         this.dragMode = "cube"
+        this.axisLocked = false
 
     }
 
     constructor(cube, renderer, experience) {
+        const xVector = new THREE.Vector3(1, 0, 0)
+        const yVector = new THREE.Vector3(0, 1, 0)
         this.cube = cube
         this.renderer = renderer
         this.experience = experience
@@ -18,17 +21,15 @@ export default class CubeInput {
         this.hitCubie = null
         this.startX = 0
         this.startY = 0
+        this.prevX = 0
+        this.prevY = 0
         this.dxLarger = null
-        this.axisLocked = false
-        this.rotationAxis = ''
+        this.axisLocked = false // once we determined which axis the rotation is in, lock the axis
+        this.flipAxis;
         this.layerIndex = -2
         this.direction = -2
         this.dragMode = null // tracks whether current drag is layer or cube rotation
         this.sensitivity = 0.005
-        this.dx = 0
-        this.dy = 0
-        this.currRotationX = this.cube.cubeGroup.rotation.y
-        this.currRotationY = 0
 
         // pointerdown fires when any mouse button is pressed
         renderer.domElement.addEventListener('pointerdown', (input) => {
@@ -36,6 +37,8 @@ export default class CubeInput {
             const isLMB = input.button === 0; // boolean 
             if (!isLMB) return;
             if (!this.experience.isFocused) return;
+            this.prevX = input.clientX
+            this.prevY = input.clientY
             this.isDragging = true
             renderer.domElement.setPointerCapture(input.pointerId)
             this.mouse.x = (input.clientX / window.innerWidth) * 2 - 1
@@ -51,8 +54,6 @@ export default class CubeInput {
             }
             const sticker = intersects[0].object // closest sticker hit
             this.hitCubie = sticker.parent
-            // console.log(this.hitFace)
-            // console.log(this.hitCubie)
             this.axisLocked = false
         });
 
@@ -60,25 +61,28 @@ export default class CubeInput {
         renderer.domElement.addEventListener('pointermove', (input) => {
             if (!this.experience.isFocused) return;
             if (!this.isDragging) return;
-            this.dx = input.clientX - this.startX
-            this.dy = input.clientY - this.startY
+            const dx = input.clientX - this.prevX
+            const dy = input.clientY - this.prevY
             if (this.dragMode === "cube") // cube drag mode
             {
-                if (Math.abs(this.dx) > 8 || Math.abs(this.dy) > 8) {
-                    this.dxLarger = (Math.abs(this.dx) > Math.abs(this.dy))
-                    if (this.dxLarger && this.rotationAxis !== "y") {
-                        this.rotationAxis = "x"
-                        this.cube.cubeGroup.rotation.y = this.dx * this.sensitivity + this.currRotationX
-                        const targetQuaternion = new THREE.Quaternion();
+                if (!this.axisLocked && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+                    this.dxLarger = (Math.abs(dx) > Math.abs(dy))
+                    this.axisLocked = true
+                }
+                if (this.axisLocked) {
+                    if (this.dxLarger) {
+                        this.flipAxis = yVector // the axis to rotate the cube around 
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, dx * this.sensitivity) // Vector3 to rotate around, and angle
                     }
 
-                    // else if(this.rotationAxis !== "x") {
-                    //     this.rotationAxis = "y"
-                    //     this.cube.cubeGroup.rotation.x = this.dy * this.sensitivity + this.currRotationY
-                    //     const targetQuaternion = new THREE.Quaternion();
-                    // }
+                    else {
+                        this.flipAxis = xVector
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, dy * this.sensitivity)
+                    }
                 }
             }
+            this.prevX = input.clientX
+            this.prevY = input.clientY
         })
 
         renderer.domElement.addEventListener('pointerup', (input) => {
@@ -86,22 +90,20 @@ export default class CubeInput {
             const isLMB = input.button === 0;
             if (!isLMB) return;
             if (!this.isDragging) return;
-            this.cube.cubeGroup.rotation.y = Math.round(this.cube.cubeGroup.rotation.y / (Math.PI / 4)) * (Math.PI / 4)
-            this.cube.cubeGroup.rotation.x = Math.round(this.cube.cubeGroup.rotation.x / (Math.PI / 4)) * (Math.PI / 4)
+            const rot = this.cube.cubeGroup.rotation
+            rot.x = Math.round(rot.x / (Math.PI / 2)) * (Math.PI / 2)
+            rot.y = Math.round(rot.y / (Math.PI / 2)) * (Math.PI / 2)
+            rot.z = Math.round(rot.z / (Math.PI / 2)) * (Math.PI / 2)
             // if(Math.cos(this.cube.cubeGroup.rotation.x) > 0.5)
             //     this.cube.cubeGroup.rotation.x = 0
             // else if(Math.cos(this.cube.cubeGroup.rotation.x) < 0.5)
-            this.currRotationX = this.cube.cubeGroup.rotation.y
-            this.currRotationY = this.cube.cubeGroup.rotation.x
-            console.log(this.currRotationX)
-            this.rotationAxis = ''
+            this.rotationAxis = (0, 0, 0)
             this.dragMode = null
             this.isDragging = false
 
             // Direction: which way did the drag go?
             // dx/dy sign maps to rotation direction — may need flipping per face once you test it
             if (!this.axisLocked) return
-            this.cube.rotator.rotateLayer(this.rotationAxis, this.layerIndex, this.direction)
         })
     }
 }
