@@ -137,6 +137,7 @@ export default class Experience {
         })
 
 
+
         // Camera
         this.camera = new THREE.PerspectiveCamera(65,
             window.innerWidth / window.innerHeight,
