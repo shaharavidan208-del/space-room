@@ -1,8 +1,57 @@
-.cube
-{
+/* ---------------------------------------------------------
+   GLOBAL RESET & VIEWPORT LOCK
+   --------------------------------------------------------- */
+html, body, #app {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    
+    /* 100dvh (Dynamic Viewport Height) prevents layout breaks on mobile.
+       It dynamically recalculates the height when the browser's URL address bar 
+       appears or disappears, keeping the scene perfectly centered. */
+    height: 100dvh; 
+    
+    /* This creates the black background that acts as our "cinematic black bars" */
+    background-color: #000;
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------
+   FLEXBOX CENTERING ENGINE
+   --------------------------------------------------------- */
+body { 
+    display: flex;
+    /* Automatically centers the canvas horizontally (creates side pillar-bars if canvas is narrow) */
+    justify-content: center;
+    /* Automatically centers the canvas vertically (creates top/bottom letter-bars if canvas is short) */
+    align-items: center;
+}
+
+/* ---------------------------------------------------------
+   CANVAS DE-STYLING
+   --------------------------------------------------------- */
+canvas {
+    /* Removes standard inline-block spacing anomalies */
+    display: block !important;
+    
+    /* Forces the canvas to obey the parent Flexbox. 
+       If this was 'absolute', it would snap to the top-left corner and ignore our centering. */
+    position: static !important; 
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------------------------------------------------------
+   HOTSPOT ORIGIN ALIGNMENT
+   --------------------------------------------------------- */
+.cube {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    
+    /* CRITICAL: The HTML elements must originate from the exact top-left corner (0,0) of the window.
+       This allows our JS `translate(${targetX}px, ${targetY}px)` math to map 1:1 with the screen. 
+       If these were left at 50%, the JS would push the hotspot completely off the screen. */
+    top: 0;   
+    left: 0;  
 }
 
 .cube:hover .text
@@ -17,9 +66,14 @@
 }
 
 .cube .label {
+     color: #fff;
+  text-shadow: 
+    0 0 5px #fff,
+    0 0 10px #00ff00,
+    0 0 20px #00ff00; /* Stacking layers for a richer effect */
     position: absolute;
-    width: 25px;
-    height: 25px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: #00000077;
     border: 1px solid #ffffff77;
@@ -33,7 +87,35 @@
     transform: translate(-50%, -50%);
     transform:scale(0, 0);
     transition: transform 0.4s;
+    /* Center the text/number */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    /* Attach the infinite breathing animation */
+    animation: standbyPulse 2.5s infinite ease-in-out;
+    
+    /* Smooth transition for the hover state */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    /* Prevent text selection and the I-beam cursor */
+    user-select: none;
+    -webkit-user-select: none; /* Safari compatibility */
+    -moz-user-select: none; /* Firefox compatibility */
+    
+    /* Ensure it doesn't get a weird outline if the browser gives it focus */
+    outline: none;
 }
+
+.cube .label:hover {
+    /* Instantly stop the breathing and snap to full brightness */
+    animation: none; 
+
+    background: rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 1), 0 0 40px rgba(0, 255, 255, 0.6);
+    border-color: rgb(0, 255, 255);
+}
+
 
 .cube .text
 {
@@ -53,6 +135,7 @@
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
+    
 }
 
 .loading-bar {
@@ -70,4 +153,23 @@
     transform: scaleX(0);
     transform-origin: top right;
     transition: transform 1.5s ease-in-out;
+}
+
+/* Define the breathing heartbeat */
+@keyframes standbyPulse {
+    0% {
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.4);
+        background: rgba(0, 0, 0, 0.6);
+        border-color: rgba(0, 255, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4);
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 1.0);
+    }
+    100% {
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.4);
+        background: rgba(0, 0, 0, 0.6);
+        border-color: rgba(0, 255, 255, 0.3);
+    }
 }

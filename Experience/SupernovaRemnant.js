@@ -3,23 +3,25 @@ import * as THREE from 'three'
 export default class SupernovaRemnant {
     constructor(scene, options = {}) {
         this.scene = scene
-        
+
         // Options with defaults
         this.position = options.position || new THREE.Vector3(0, 0, -20)
         this.scale = options.scale || 5
         this.visible = options.visible !== false
-        
+
         // Uniforms
+        // In SupernovaRemnant.js constructor:
         this.uniforms = {
             iTime: { value: 0.0 },
             iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-            iMouse: { value: new THREE.Vector2(0, 0) }
+            iMouse: { value: new THREE.Vector2(0, 0) },
+            iChannel0: { value: options.noiseMap } // <--- Inject the texture as iChannel0
         }
-        
+
         this.createMesh()
         this.setupResize()
     }
-    
+
     createMesh() {
         const vertexShader = `
             varying vec2 vUv;
@@ -28,7 +30,7 @@ export default class SupernovaRemnant {
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
         `
-        
+
         const fragmentShader = `
             varying vec2 vUv;
             uniform float iTime;
@@ -38,16 +40,25 @@ export default class SupernovaRemnant {
             #define pi 3.14159265
             #define R(p, a) p=cos(a)*p+sin(a)*vec2(p.y, -p.x)
             
-            float noise(in vec3 x) {
-                vec3 p = floor(x);
-                vec3 f = fract(x);
-                f = f*f*(3.0-2.0*f);
-                float n = p.x + p.y*57.0 + 113.0*p.z;
-                return mix(mix(mix(fract(sin(n)*43758.5453), fract(sin(n+1.0)*43758.5453), f.x),
-                               mix(fract(sin(n+57.0)*43758.5453), fract(sin(n+58.0)*43758.5453), f.x), f.y),
-                           mix(mix(fract(sin(n+113.0)*43758.5453), fract(sin(n+114.0)*43758.5453), f.x),
-                               mix(fract(sin(n+170.0)*43758.5453), fract(sin(n+171.0)*43758.5453), f.x), f.y), f.z);
-            }
+            // Tell the shader to expect the image texture
+uniform sampler2D iChannel0; 
+
+// Duke's original texture-based noise
+float noise( in vec3 x )
+{
+    vec3 p = floor(x);
+    vec3 f = fract(x);
+    f = f*f*(3.0-2.0*f);
+    
+    // The magic: map 3D coordinates to a 2D texture lookup
+    vec2 uv = (p.xy+vec2(37.0,17.0)*p.z) + f.xy;
+    
+    // Use textureLod to sample the noise map directly.
+    // NOTE: We use texture2D instead of textureLod for better WebGL 1.0 compatibility
+    vec2 rg = texture2D( iChannel0, (uv + 0.5)/256.0 ).yx;
+    
+    return 1. - 0.82*mix( rg.x, rg.y, f.z );
+}
             
             float fbm(vec3 p) {
                 return noise(p*.06125)*.5 + noise(p*.125)*.25 + noise(p*.25)*.125 + noise(p*.4)*.2;
@@ -173,7 +184,7 @@ export default class SupernovaRemnant {
 gl_FragColor = vec4(sum.xyz, alpha);
             }
         `
-        
+
         this.geometry = new THREE.PlaneGeometry(this.scale, this.scale)
         this.material = new THREE.ShaderMaterial({
             vertexShader,
@@ -183,40 +194,40 @@ gl_FragColor = vec4(sum.xyz, alpha);
             depthWrite: false,
             side: THREE.DoubleSide
         })
-        
+
         this.mesh = new THREE.Mesh(this.geometry, this.material)
         this.mesh.position.copy(this.position)
         this.mesh.visible = this.visible
-        
+
         this.scene.add(this.mesh)
     }
-    
+
     setupResize() {
         this.resizeHandler = () => {
             this.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight)
         }
         window.addEventListener('resize', this.resizeHandler)
     }
-    
+
     update(elapsedTime, camera) {
-    this.uniforms.iTime.value = elapsedTime
-    // if (camera) {
-    //     this.mesh.lookAt(camera.position)
-    // }
-}
-    
+        this.uniforms.iTime.value = elapsedTime
+        // if (camera) {
+        //     this.mesh.lookAt(camera.position)
+        // }
+    }
+
     setVisible(visible) {
         this.mesh.visible = visible
     }
-    
+
     setPosition(x, y, z) {
         this.mesh.position.set(x, y, z)
     }
-    
+
     setScale(scale) {
         this.mesh.scale.setScalar(scale)
     }
-    
+
     dispose() {
         window.removeEventListener('resize', this.resizeHandler)
         this.scene.remove(this.mesh)

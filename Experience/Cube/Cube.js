@@ -14,7 +14,7 @@ const PIECE_CORNER_RADIUS = 0.12;
 const STICKER_CORNER_ROUNDNESS = 0.15;
 
 // Sticker size as a fraction of the cubie face. Below 1.0 leaves a black gap between stickers,
-const STICKER_SCALE = 0.82;
+const STICKER_SCALE = 0.87;
 
 // Sticker thickness 
 const STICKER_DEPTH = 0.01;
@@ -45,6 +45,8 @@ const colorMap = {
  */
 export default class Cube {
     constructor(scene) {
+        this.rndAxisArr = ['x', 'y', 'z']
+        this.faceName = null
         // Parent group for the entire cube. 
         this.cubeGroup = new THREE.Group()
         // Size of a single cubie 
@@ -121,15 +123,11 @@ export default class Cube {
 
         // Position the entire cube in the room scene (sitting on the desk)
         this.rotator = new Rotator(this)
-        this.cubeGroup.position.set(-1.93, 1.05, -1.44)
+        this.cubeGroup.position.set(-2.45, 1.37, -1.44)
         this.scene.add(this.cubeGroup)
         console.log(this.pieces[0].position)
         // console.log(this.pieces)
         // console.log(this.rotator)
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), Math.PI / 2 );
-        const vector = new THREE.Vector3( 1, 0, 0 );
-        vector.applyQuaternion( quaternion );
 
     }
 
@@ -154,7 +152,6 @@ export default class Cube {
     }
 
 
-
     /**
      * Creates a colored sticker mesh and attaches it to a cubie as a child.
      * 
@@ -165,6 +162,7 @@ export default class Cube {
      */
     addSticker(cubie, faceName, direction) {
         // Shared sticker geometry
+        this.faceName = faceName
         const stickerGeometry = new THREE.PlaneGeometry(this.pieceSize * STICKER_SCALE, this.pieceSize * STICKER_SCALE);
         const sticker = new THREE.Mesh(stickerGeometry);
         sticker.material.color.set(colorMap[faceName] )
@@ -212,5 +210,13 @@ export default class Cube {
         
         // Also keep flat reference for fast iteration during solve detection and animations
         this.edges.push(sticker);
+    }
+
+    scrambler()
+    {   
+        let rndAxis = Math.floor(Math.random() * this.rndAxisArr.length)
+        let rndLayerIndex = Math.floor(Math.random() * 3 - 1)
+        let rndDirection = Math.random() < 0.5 ? -1 : 1
+        this.rotator.rotateLayer(this.rndAxisArr[rndAxis], rndLayerIndex, rndDirection)
     }
 }

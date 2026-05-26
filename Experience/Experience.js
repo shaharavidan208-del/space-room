@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -16,7 +17,7 @@ export default class Experience {
     constructor(canvas) {
         // Scene
         let sceneReady = false
-        const scene = new THREE.Scene()
+        this.scene = new THREE.Scene()
         const overlayGeometry = new THREE.PlaneGeometry(2, 2)
         const overlayMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -36,7 +37,7 @@ export default class Experience {
     `
         })
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
-        scene.add(overlay)
+        this.scene.add(overlay)
         const gu = new GUI()
 
 
@@ -71,7 +72,7 @@ export default class Experience {
         const loader = new HDRLoader(loadingManager)
         const gltfLoader = new GLTFLoader(loadingManager);
 
-        this.cube = new Cube(scene)
+        this.cube = new Cube(this.scene)
         // console.log(this.cube)
 
         // Renderer
@@ -90,7 +91,7 @@ export default class Experience {
          * Lights
          */
         const ambientLight = new THREE.AmbientLight(0xffffff, 2.4)
-        scene.add(ambientLight)
+        this.scene.add(ambientLight)
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 3)
         directionalLight.castShadow = true
@@ -100,32 +101,55 @@ export default class Experience {
         directionalLight.shadow.camera.top = 7
         directionalLight.shadow.camera.right = 7
         directionalLight.shadow.camera.bottom = - 7
-        const _directionalLight = new THREE.DirectionalLight(directionalLight)
+        const _directionalLight = new THREE.DirectionalLight(0xffffff, 3)
         directionalLight.position.x = 3
         _directionalLight.position.x = -3
-        scene.add(directionalLight, _directionalLight)
+        this.scene.add(directionalLight, _directionalLight)
 
-        this.supernova = new SupernovaRemnant(scene, {
-            position: new THREE.Vector3(-15, 5, 50),  // far away from room
-            scale: 8,
-            visible: true
-        })
+        // this.supernova = new SupernovaRemnant(this.scene, {
+        //     position: new THREE.Vector3(-15, 5, 50),  // far away from room
+        //     scale: 8,
+        //     visible: true
+        // })
 
         /**
          * Shader
          */
+
+        // Tell the shader to expect the image texture
+        // Add the TextureLoader at the top of Experience.js if you haven't already
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+
+        // Load the noise image you downloaded
+        const noiseTexture = textureLoader.load('/textures/noise.png');
+
+        // CRITICAL for Shadertoy noise ports: Set it to repeat infinitely
+        noiseTexture.wrapS = THREE.RepeatWrapping;
+        noiseTexture.wrapT = THREE.RepeatWrapping;
+        noiseTexture.minFilter = THREE.LinearMipmapLinearFilter;
+
+        // Pass the texture into the shader through the options
+        this.supernova = new SupernovaRemnant(this.scene, {
+            position: new THREE.Vector3(-15, 5, 50),
+            scale: 8,
+            visible: true,
+            noiseMap: noiseTexture // <--- Add this new option
+        });
+
         this.supernova.mesh.position.x = -15
-        this.supernova.mesh.position.y = 5
+        this.supernova.mesh.position.y = 6
         this.supernova.mesh.position.z = -850
         this.supernova.mesh.scale.setScalar(200)
-        // const novaFolder = gu.addFolder('Supernova')
-        // // (min, max, increments), change supernova position 
-        // novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
-        // novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
-        // novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
-        // novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
-        //     this.supernova.mesh.scale.setScalar(val)
-        // })
+        const novaFolder = gu.addFolder('Supernova')
+        // (min, max, increments), change supernova position 
+        novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
+        novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
+        novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
+        novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
+            this.supernova.mesh.scale.setScalar(val)
+        })
+
+
 
         /**
         * Environment map
@@ -133,9 +157,10 @@ export default class Experience {
         const environmentMap = loader.load('/environmentMaps/volcanic_planet._4k.hdr', (texture) => {
             environmentMap.mapping = THREE.EquirectangularReflectionMapping
 
-            scene.background = environmentMap
+            this.scene.background = environmentMap
         })
 
+        document.addEventListener('contextmenu', (e) => e.preventDefault())
 
 
         // Camera
@@ -144,9 +169,9 @@ export default class Experience {
             0.1, // near
             1000, // far
         );
-        this.camera.position.set(0, 7, 14.5);
-        this.camera.lookAt(0, 5, 6)
-        scene.add(this.camera);
+        this.camera.position.set(0, 7, 12);
+        this.camera.lookAt(0, 3, 3)
+        this.scene.add(this.camera);
 
         const cam = gu.addFolder('Camera')
         // (min, max, increments), change supernova position 
@@ -156,16 +181,18 @@ export default class Experience {
 
 
         // Controls
+        const trackballControls = new TrackballControls(this.camera, canvas)
+        trackballControls.noRotate = true
+        trackballControls.noZoom = false
+        trackballControls.zoomSpeed = 2
+        trackballControls.panSpeed = 0.5
         const controls = new OrbitControls(this.camera, canvas);
-        controls.target.set(0, 5, 6); // Set the initial target to match camera.lookAt
-
+        // controls.zoomSpeed = 2.0 // Increase zoom speed
+        controls.enableZoom = false
+        controls.target.set(0, 3, 3); // Set the initial target to match camera.lookAt
         controls.enableDamping = true;
-        controls.enablePan = false;
-        controls.mouseButtons = {
-            LEFT: THREE.MOUSE.ROTATE,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.ROTATE  // ← RMB now orbits instead of panning
-        };
+        controls.dampingFactor = 0.12
+        controls.minDistance = 0
 
 
         // Hot spot variables
@@ -177,21 +204,6 @@ export default class Experience {
         // Store the "home" position so you can return to it
         const cameraHome = new THREE.Vector3(0, 7, 14.5); // existing camera.position values
         const lookHome = new THREE.Vector3(0, 5, 6); // your existing camera.lookAt values
-        // this.cube.rotator.rotateLayer('x', 1, 1)
-        // this.cube.rotator.rotateLayer('y', 0, -1)
-        // this.cube.rotator.rotateLayer('z', -1, 1)
-        // this.cube.rotator.rotateLayer('x', -1, 1)
-        // this.cube.rotator.rotateLayer('y', 1, -1)
-        // this.cube.rotator.rotateLayer('x', 1, 1)
-        // this.cube.rotator.rotateLayer('y', 0, -1)
-        // this.cube.rotator.rotateLayer('z', -1, 1)
-        // this.cube.rotator.rotateLayer('x', -1, 1)
-        // this.cube.rotator.rotateLayer('y', 1, -1)
-        // this.cube.rotator.rotateLayer('x', 1, 1)
-        // this.cube.rotator.rotateLayer('y', 0, -1)
-        // this.cube.rotator.rotateLayer('z', -1, 1)
-        // this.cube.rotator.rotateLayer('x', -1, 1)
-        // this.cube.rotator.rotateLayer('y', 1, -1)
 
         /**
          * focus mode on cube
@@ -209,7 +221,11 @@ export default class Experience {
 
             // Position camera a fixed distance in front of the cube
             // Offset on Z so we're looking at it straight on
-            cameraTarget.copy(lookTarget).add(new THREE.Vector3(0, 0.5, 0.8));
+            cameraTarget.copy(lookTarget).add(new THREE.Vector3(0, 0.1, 0.8));
+            for (let i = 0; i < 10; i++) {
+                this.cube.scrambler()
+                console.log("enteredLoop")
+            }
 
         };
         const exitFocusMode = () => {
@@ -237,7 +253,6 @@ export default class Experience {
         });
 
 
-
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 
@@ -246,19 +261,17 @@ export default class Experience {
 
         // טעינת המודל
         let walls;
-        const model = gltfLoader.load(
-            '/models/LowerResTextures3.glb',
-            (gltf) => {
-                gltf.scene.traverse((child) => {
-                    // console.log(child.name, child.type)
-                })
-                walls = gltf.scene.getObjectByName('Cube001')
-                scene.add(gltf.scene)
-
-
-            }
-        )
-
+        const model = gltfLoader.load('/models/BedFixed2.glb', (gltf) => {
+            gltf.scene.traverse((obj) => {
+                if (obj.isMesh) {
+                    const tris = obj.geometry.index
+                        ? obj.geometry.index.count / 3
+                        : obj.geometry.attributes.position.count / 3
+                    // console.log(obj.name, Math.round(tris))
+                }
+            })
+            this.scene.add(gltf.scene)
+        })
 
         // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
         const cubePosition = this.cube.cubeGroup.position
@@ -273,32 +286,97 @@ export default class Experience {
             }
         ]
 
-        /**
-        * Sizes
-        */
-        // const sizes = {
-        //     width: window.innerWidth,
-        //     height: window.innerHeight
-        // }
-        // console.log(sizes.width)
-        // console.log(window.innerWidth)
-
-
         // Raycaster
         const raycaster = new THREE.Raycaster()
         const mouse = new THREE.Vector2()
 
         // Add text Geometry
-        this.particles = new Particles(scene)
+        this.particles = new Particles(this.scene)
 
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 
-        // Tick function 
+
+        // ---------------------------------------------------------
+        // VIEWPORT & ASPECT RATIO MANAGER
+        // ---------------------------------------------------------
+        // We lock the baseline to 21:9 (Ultra-wide cinematic). 
+        // This physically shrinks the canvas on standard 16:9 or 16:10 monitors, 
+        // acting as a massive fill-rate optimization by saving the GPU from 
+        // rendering the empty space at the top and bottom of the screen.
+        const TARGET_ASPECT = 23 / 9;
+
+        window.addEventListener('resize', () => {
+            const windowAspect = window.innerWidth / window.innerHeight;
+
+            // [ MOBILE PORTRAIT DETECTION ]
+            // If the window is taller than it is wide (< 1.0), the user is on a vertical screen.
+            const isPortrait = windowAspect < 1.0;
+
+            // [ RESPONSIVE ASPECT RATIO ]
+            // If on mobile (portrait), we abandon the 21:9 crop (which would create a tiny slit)
+            // and adapt to the phone's native aspect ratio, filling the screen.
+            // If on desktop (landscape), we enforce the cinematic 21:9 crop.
+            const DYNAMIC_TARGET_ASPECT = isPortrait ? windowAspect : TARGET_ASPECT;
+
+            let canvasWidth = window.innerWidth;
+            let canvasHeight = window.innerHeight;
+
+            // [ CANVAS BOUNDARY MATH ]
+            // Calculate exact pixel dimensions to maintain the DYNAMIC_TARGET_ASPECT.
+            if (windowAspect < DYNAMIC_TARGET_ASPECT) {
+                // Window is narrower than target (e.g., standard 16:9 monitor).
+                // Keep max width, shrink height. Flexbox will auto-center it, creating Top/Bottom black bars.
+                canvasHeight = window.innerWidth / DYNAMIC_TARGET_ASPECT;
+            } else {
+                // Window is wider than target (e.g., 32:9 ultra-wide monitor).
+                // Keep max height, shrink width. Flexbox auto-centers it, creating Left/Right black bars (Pillarboxing).
+                canvasWidth = window.innerHeight * DYNAMIC_TARGET_ASPECT;
+            }
+
+            // 1. Lock the Three.js Camera frustum to the new mathematical ratio
+            this.camera.aspect = DYNAMIC_TARGET_ASPECT;
+            this.camera.updateProjectionMatrix();
+
+            // 2. Physically resize the WebGL Canvas element in the DOM
+            renderer.setSize(canvasWidth, canvasHeight);
+
+            // 3. Sync the Heavy Shader (Supernova)
+            // The shader requires the exact pixel count to calculate uv coordinates correctly.
+            // We multiply by devicePixelRatio to ensure it stays sharp on high-density displays (like retina/phones).
+            if (this.supernova) {
+                const currentRatio = renderer.getPixelRatio();
+                this.supernova.uniforms.iResolution.value.set(
+                    canvasWidth * currentRatio,
+                    canvasHeight * currentRatio
+                );
+            }
+
+            // [ DOM MEASUREMENT CACHE ]
+            // measure the physical footprint of the canvas
+            // This is required for raycasting and UI hotspots. 
+            this.canvasRect = renderer.domElement.getBoundingClientRect();
+        });
+
+        // Trigger once on load to establish the initial layout and cache the rect.
+        window.dispatchEvent(new Event('resize'));
+
+
+
+
+        // ---------------------------------------------------------
+        // TICK FUNCTION & HOTSPOT TRACKING
+        // ---------------------------------------------------------
         const clock = new THREE.Clock()
         const cubeWorldPos = new THREE.Vector3();
+
+        // [ MEMORY PRE-ALLOCATION ]
         let hotspotX = 0;
         let hotspotY = 0;
+        let canvasLocalX = 0;
+        let canvasLocalY = 0;
+        let targetX = 0;
+        let targetY = 0;
         const tick = () => {
             const elapsedTime = clock.getElapsedTime();
             stats.begin();
@@ -315,19 +393,25 @@ export default class Experience {
                     // Re-enable orbit controls only when returning home
                     if (!this.isFocused) {
                         controls.update(); // Ensure orbitControls know about the new camera position
+                        trackballControls.update()
                         controls.enabled = true;
                     }
                 }
             }
-            controls.update();
-            // Go through each points 
+            const target = controls.target
             if (sceneReady === true) {
+
                 for (const point of points) {
-                    const screenPos = point.position.clone() // clone the cube's position
-                    screenPos.project(this.camera) // convert 3D coordinates to 2D (NDC)
+                    const screenPos = point.position.clone()
+
+                    // Convert 3D world coordinates into Normalized Device Coordinates (NDC).
+                    // This maps the 3D space to a 2D grid ranging from -1 to +1.
+                    screenPos.project(this.camera)
+
                     raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera)
-                    const intersects = raycaster.intersectObjects(scene.children, true)
+                    const intersects = raycaster.intersectObjects(this.scene.children, true)
                         .filter(hit => !this.cube.cubeGroup.getObjectById(hit.object.id))
+
                     if (intersects.length === 0) {
                         point.element.classList.add('visible')
                     }
@@ -344,18 +428,38 @@ export default class Experience {
 
                     }
 
-                    // const translateX = screenPos.x * innerWidth * 0.5
-                    const targetX = (screenPos.x * 0.5 + 0.5) * innerWidth; // convert NDC to screen coordinates (pixels from top-left)
-                    const targetY = (screenPos.y * -0.5 + 0.5) * innerHeight; // NDC Y is inverted, so multiply by -1 
+
+                    // [ REVERSE-RAYCASTING: 3D TO HTML DOM ]
+
+                    // Step 1: Map the -1 to +1 NDC coordinate to the *physical* pixel size of the canvas.
+                    // (screenPos.x * 0.5 + 0.5) converts the -1 to +1 range into a 0.0 to 1.0 percentage.
+                    canvasLocalX = (screenPos.x * 0.5 + 0.5) * this.canvasRect.width;
+
+                    // Y in NDC is inverted (bottom is -1, top is +1), so we multiply by -0.5 to flip it for the DOM (where top is 0).
+                    canvasLocalY = (screenPos.y * -0.5 + 0.5) * this.canvasRect.height;
+
+                    // Step 2: Account for the Black Bars (The CSS Flexbox Offset)
+                    // If the canvas is letterboxed, it doesn't start at the top-left of the monitor.
+                    // We add canvasRect.left and canvasRect.top to perfectly align the HTML overlay with the shifted canvas.
+                    targetX = this.canvasRect.left + canvasLocalX;
+                    targetY = this.canvasRect.top + canvasLocalY;
+
+                    // Step 3: Hardware-Accelerated DOM Update
                     hotspotX = targetX;
                     hotspotY = targetY;
-                    cubeHotspot.style.left = `${hotspotX}px`;
-                    cubeHotspot.style.top = `${hotspotY}px`;
+
+                    // Using `transform: translate` pushes the math to the GPU compositor. 
+                    // (Unlike `style.top` / `style.left`, which forces the CPU to recalculate the page layout every frame).
+                    cubeHotspot.style.transform = `translate(${targetX}px, ${targetY}px)`;
 
                 }
             }
             this.supernova.update(elapsedTime, this.camera);
-            renderer.render(scene, this.camera);
+            controls.update();
+            trackballControls.target.set(target.x, target.y, target.z)
+            trackballControls.update()
+            // Go through each points 
+            renderer.render(this.scene, this.camera);
             stats.end();
 
             requestAnimationFrame(tick);

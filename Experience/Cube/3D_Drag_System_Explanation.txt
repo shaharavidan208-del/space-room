@@ -1,0 +1,35 @@
+The Hybrid 2D/3D Drag System: A Plain English Breakdown
+=========================================================
+
+Building a tactile 3D puzzle in a web browser requires bridging the gap between a 2D mouse (or touch screen) and a 3D environment. Here is exactly how the custom drag system solves this problem, focusing on the core architectural additions.
+
+1. The "Infinite Sheet of Glass" (The Drag Plane)
+-------------------------------------------------
+THE PROBLEM: When a user clicks a sticker on the cube and drags their mouse, they often drag the cursor off the physical 3D model and into the empty background. If the engine only tracks where the laser hits the cube, the rotation would violently stop the moment the cursor left the cube's edge.
+
+THE SOLUTION: When the user clicks a sticker, the engine instantly generates an invisible, infinite 2D surface (a THREE.Plane) in the 3D world. It snaps this plane perfectly flat against the clicked sticker. 
+From that moment on, the engine stops looking at the cube and ONLY tracks where the raycast laser hits the infinite plane. This allows the user to drag their mouse to the edge of their monitor and still get a perfectly smooth, unbroken 3D drag distance.
+
+2. Untwisting the Room (Quaternion Inversion)
+-------------------------------------------------
+THE PROBLEM: The Raycaster gives us the "World Normal"—which is the exact direction the sticker is pointing in the 3D room right now. But if the user has tumbled or spun the entire Rubik's cube, a sticker that is supposed to be the "Top" face might be pointing sideways or down. If we use that skewed direction for our math, the layer rotations will spin on the wrong axis.
+
+THE SOLUTION: We apply the *inverse* of the entire cube's rotation to the sticker's normal. Mathematically, this "untwists" the room. It forces the engine to ignore how the camera or the puzzle is currently tumbled, and remember the sticker's true, original identity (e.g., "I don't care that I am currently pointing left, I am fundamentally the TOP face"). 
+
+3. The Cross Product (Finding the Rotation)
+-------------------------------------------------
+THE PROBLEM: We know which way the sticker faces, and we know which way the mouse moved. But we need to know what axis to spin the layer around.
+
+THE SOLUTION: We use a matrix math function called the Cross Product. We feed it two arrows:
+Arrow A: The direction the sticker is facing (Normal).
+Arrow B: The exact 3D distance and direction the mouse dragged on the infinite plane (Drag Delta).
+The Cross Product multiplies them together and spits out a brand new arrow that is perfectly perpendicular to both. This new arrow is our rotation axis. 
+
+4. The Hybrid Track (Curing Horizon Distortion)
+-------------------------------------------------
+THE PROBLEM: Relying 100% on 3D math for the drag speed feels terrible. Because the camera uses perspective, dragging an object when it is far away or tilted creates "horizon distortion"—the math thinks the mouse moved a massive 3D distance even if it only moved a few pixels on the screen, causing the layer to spin wildly out of control.
+
+THE SOLUTION: We decoupled the physics. 
+- DIRECTION: We still use the 3D Cross Product, but ONLY to figure out if the layer should spin forwards or backwards (1 or -1).
+- SPEED: We throw away the 3D distance entirely. Instead, we measure the physical distance the mouse cursor moved on the flat 2D monitor (using standard dx and dy). 
+By combining a 2D speed with a 3D direction, the drag feels perfectly tactile, grounded, and consistent, completely bypassing perspective distortion.
