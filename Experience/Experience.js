@@ -11,6 +11,7 @@ import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
 import CubeInput from './Cube/CubeInput.js'
 import gsap from 'gsap'
+import TerminalCanvas from './Terminal/TerminalCanvas.js';
 
 
 export default class Experience {
@@ -39,6 +40,17 @@ export default class Experience {
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
         this.scene.add(overlay)
         const gu = new GUI()
+         this.terminal = new TerminalCanvas();
+
+        const terminalTemporaryBoxGeometry = new THREE.BoxGeometry()
+
+        const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({map: this.terminal.texture})
+
+        const terminalTemporaryMesh = new THREE.Mesh(terminalTemporaryBoxGeometry, terminalTemporaryBoxMaterial)
+
+        terminalTemporaryMesh.position.set(0, 7, 10)
+
+        this.scene.add(terminalTemporaryMesh)
 
 
         //         /**
@@ -261,7 +273,7 @@ export default class Experience {
 
         // טעינת המודל
         let walls;
-        const model = gltfLoader.load('/models/BedFixed2.glb', (gltf) => {
+        const model = gltfLoader.load('/models/monitor_glass_seperated.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
                     const tris = obj.geometry.index
