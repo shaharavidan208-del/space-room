@@ -11,8 +11,7 @@ import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
 import CubeInput from './Cube/CubeInput.js'
 import gsap from 'gsap'
-import TerminalCanvas from './Terminal/TerminalCanvas.js';
-
+import TerminalCanvas from './Terminal/TerminalCanvas.js'; // /models/ReUpload23.glb
 
 export default class Experience {
     constructor(canvas) {
@@ -39,18 +38,19 @@ export default class Experience {
         })
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
         this.scene.add(overlay)
-        const gu = new GUI()
-         this.terminal = new TerminalCanvas();
+        this.gu = new GUI()
+        this.terminal = new TerminalCanvas();
 
         const terminalTemporaryBoxGeometry = new THREE.BoxGeometry()
 
-        const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({map: this.terminal.texture})
+        const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({ map: this.terminal.texture })
 
         const terminalTemporaryMesh = new THREE.Mesh(terminalTemporaryBoxGeometry, terminalTemporaryBoxMaterial)
 
-        terminalTemporaryMesh.position.set(0, 7, 10)
+        terminalTemporaryMesh.position.set(-2.45, 1.37, 0)
 
         this.scene.add(terminalTemporaryMesh)
+
 
 
         //         /**
@@ -92,6 +92,7 @@ export default class Experience {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
 
 
         // FPS counter 
@@ -102,21 +103,61 @@ export default class Experience {
         /**
          * Lights
          */
-        const ambientLight = new THREE.AmbientLight(0xffffff, 2.4)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
         this.scene.add(ambientLight)
+        // directionalLight.castShadow = true
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 3)
-        directionalLight.castShadow = true
+       // 1. The Light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
+        directionalLight.position.set(0, 15, 0); // Positioned directly in the sky above the test
+        directionalLight.castShadow = true;
 
-        directionalLight.shadow.camera.far = 10
-        directionalLight.shadow.camera.left = - 6
-        directionalLight.shadow.camera.top = 7
-        directionalLight.shadow.camera.right = 7
-        directionalLight.shadow.camera.bottom = - 7
-        const _directionalLight = new THREE.DirectionalLight(0xffffff, 3)
-        directionalLight.position.x = 3
-        _directionalLight.position.x = -3
-        this.scene.add(directionalLight, _directionalLight)
+        // 2. The Frustum (Massive box to guarantee no clipping)
+        directionalLight.shadow.camera.left = -20;
+        directionalLight.shadow.camera.right = 20;
+        directionalLight.shadow.camera.top = 20;
+        directionalLight.shadow.camera.bottom = -20;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+
+        // 3. The Math Reset (CRITICAL)
+        // If you change the camera boundaries, you MUST force Three.js to update the matrix.
+        directionalLight.shadow.camera.updateProjectionMatrix();
+
+        // 4. The Resolution
+        
+        // 5. The Bias (Prevents glitchy artifacts on the surface of objects)
+        directionalLight.shadow.normalBias = 0.05;
+
+        this.scene.add(directionalLight);
+
+
+
+        /**
+         * Light GUI
+         */
+        const lightFolder = this.gu.addFolder('Directional Lights');
+
+        // Main Light (The one casting shadows)
+        const mainLightFolder = lightFolder.addFolder('Main Light');
+        mainLightFolder.add(directionalLight.position, 'x', -20, 20, 0.1).name('Position X');
+        mainLightFolder.add(directionalLight.position, 'y', -20, 20, 0.1).name('Position Y');
+        mainLightFolder.add(directionalLight.position, 'z', -20, 20, 0.1).name('Position Z');
+        mainLightFolder.add(directionalLight, 'intensity', 0, 10, 0.1).name('Intensity');
+
+
+
+        /**
+         * Light & Shadow Helpers
+         */
+        // 1. Shows the physical position and direction of the light
+        const mainLightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
+        this.scene.add(mainLightHelper);
+
+        // 2. The Secret Weapon: Shows the exact box calculating your shadows
+        const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+        this.scene.add(shadowCameraHelper);
+
 
         // this.supernova = new SupernovaRemnant(this.scene, {
         //     position: new THREE.Vector3(-15, 5, 50),  // far away from room
@@ -152,14 +193,14 @@ export default class Experience {
         this.supernova.mesh.position.y = 6
         this.supernova.mesh.position.z = -850
         this.supernova.mesh.scale.setScalar(200)
-        const novaFolder = gu.addFolder('Supernova')
+        // const novaFolder = gu.addFolder('Supernova')
         // (min, max, increments), change supernova position 
-        novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
-        novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
-        novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
-        novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
-            this.supernova.mesh.scale.setScalar(val)
-        })
+        // novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
+        // novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
+        // novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
+        // novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
+        //     this.supernova.mesh.scale.setScalar(val)
+        // })
 
 
 
@@ -185,7 +226,7 @@ export default class Experience {
         this.camera.lookAt(0, 3, 3)
         this.scene.add(this.camera);
 
-        const cam = gu.addFolder('Camera')
+        const cam = this.gu.addFolder('Camera')
         // (min, max, increments), change supernova position 
         cam.add(this.camera.position, 'x', -25, 25, 0.5).name('Position X')
         cam.add(this.camera.position, 'y', -25, 25, 0.5).name('Position Y')
@@ -273,9 +314,21 @@ export default class Experience {
 
         // טעינת המודל
         let walls;
-        const model = gltfLoader.load('/models/monitor_glass_seperated.glb', (gltf) => {
+        const model = gltfLoader.load('/models/Aligned2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
+                    console.log(obj.name)
+                    if(obj.name === "Cube001")
+                    {
+                        obj.receiveShadow = true;
+                    }
+                    if(obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" ||obj.name === "mouse")
+                    {
+                        // Bed, controller, 
+                        obj.castShadow = true
+                        obj.receiveShadow = true;
+                        console.log("Found computer parts")
+                    }
                     const tris = obj.geometry.index
                         ? obj.geometry.index.count / 3
                         : obj.geometry.attributes.position.count / 3
@@ -284,6 +337,27 @@ export default class Experience {
             })
             this.scene.add(gltf.scene)
         })
+
+        // --- THE SHADOW SANITY CHECK ---
+        // 1. A basic floor
+        // const testPlane = new THREE.Mesh(
+        //     new THREE.PlaneGeometry(10, 10),
+        //     new THREE.MeshStandardMaterial({ color: 0xffffff })
+        // );
+        // testPlane.rotation.x = -Math.PI / 2;
+        // testPlane.position.set(0, 2, 0); // Floating slightly above your actual room floor
+        // testPlane.receiveShadow = true;
+        // this.scene.add(testPlane);
+
+        // // 2. A floating sphere
+        // const testSphere = new THREE.Mesh(
+        //     new THREE.SphereGeometry(1, 32, 32),
+        //     new THREE.MeshStandardMaterial({ color: 0xff0000 })
+        // );
+        // testSphere.position.set(0, 3, 0); // Hovering above the test plane
+        // testSphere.castShadow = true;
+        // this.scene.add(testSphere);
+        // -------------------------------
 
         // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
         const cubePosition = this.cube.cubeGroup.position
@@ -301,6 +375,37 @@ export default class Experience {
         // Raycaster
         const raycaster = new THREE.Raycaster()
         const mouse = new THREE.Vector2()
+
+        // ==========================================
+        // 🚨 TEMP DEBUG TOOL: CLICK TO GET MESH NAME
+        // ==========================================
+        const debugRaycaster = new THREE.Raycaster();
+        const debugMouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            // 1. Convert mouse pixel coordinates to WebGL Normalized Device Coordinates (-1 to +1)
+            debugMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            debugMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // 2. Shoot the laser from the camera through the mouse position
+            debugRaycaster.setFromCamera(debugMouse, this.camera);
+
+            // 3. Get an array of every object the laser hit (true = check all nested children)
+            const intersects = debugRaycaster.intersectObjects(this.scene.children, true);
+
+            // 4. If we hit something, print the very first object (the closest one) to the console
+            if (intersects.length > 0) {
+                const hitObject = intersects[0].object;
+                
+                console.log(
+                    `🎯 TARGET ACQUIRED:`, 
+                    `\nName: "${hitObject.name}"`, 
+                    `\nType: ${hitObject.type}`,
+                    `\nMaterial:`, hitObject.material
+                );
+            }
+        });
+        // ==========================================
 
         // Add text Geometry
         this.particles = new Particles(this.scene)
@@ -467,6 +572,9 @@ export default class Experience {
                 }
             }
             this.supernova.update(elapsedTime, this.camera);
+            // Update helpers in real-time if you move sliders in the GUI
+            // mainLightHelper.update();
+            // shadowCameraHelper.update();
             controls.update();
             trackballControls.target.set(target.x, target.y, target.z)
             trackballControls.update()
