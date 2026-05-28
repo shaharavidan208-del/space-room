@@ -107,7 +107,7 @@ export default class Experience {
         this.scene.add(ambientLight)
         // directionalLight.castShadow = true
 
-       // 1. The Light
+        // 1. The Light
         const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
         directionalLight.position.set(0, 15, 0); // Positioned directly in the sky above the test
         directionalLight.castShadow = true;
@@ -125,7 +125,7 @@ export default class Experience {
         directionalLight.shadow.camera.updateProjectionMatrix();
 
         // 4. The Resolution
-        
+
         // 5. The Bias (Prevents glitchy artifacts on the surface of objects)
         directionalLight.shadow.normalBias = 0.05;
 
@@ -151,12 +151,12 @@ export default class Experience {
          * Light & Shadow Helpers
          */
         // 1. Shows the physical position and direction of the light
-        const mainLightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
-        this.scene.add(mainLightHelper);
+        // const mainLightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
+        // this.scene.add(mainLightHelper);
 
         // 2. The Secret Weapon: Shows the exact box calculating your shadows
-        const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
-        this.scene.add(shadowCameraHelper);
+        // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+        // this.scene.add(shadowCameraHelper);
 
 
         // this.supernova = new SupernovaRemnant(this.scene, {
@@ -222,7 +222,7 @@ export default class Experience {
             0.1, // near
             1000, // far
         );
-        this.camera.position.set(0, 7, 12);
+        this.camera.position.set(0, 7, 4);
         this.camera.lookAt(0, 3, 3)
         this.scene.add(this.camera);
 
@@ -242,7 +242,7 @@ export default class Experience {
         const controls = new OrbitControls(this.camera, canvas);
         // controls.zoomSpeed = 2.0 // Increase zoom speed
         controls.enableZoom = false
-        controls.target.set(0, 3, 3); // Set the initial target to match camera.lookAt
+        // controls.target.set(0, 3, 3); // Set the initial target to match camera.lookAt
         controls.enableDamping = true;
         controls.dampingFactor = 0.12
         controls.minDistance = 0
@@ -314,20 +314,40 @@ export default class Experience {
 
         // טעינת המודל
         let walls;
-        const model = gltfLoader.load('/models/Aligned2.glb', (gltf) => {
+        const model = gltfLoader.load('/models/screen_final.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
                     console.log(obj.name)
-                    if(obj.name === "Cube001")
-                    {
+                    if (obj.name === "Cube001") {
                         obj.receiveShadow = true;
                     }
-                    if(obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" ||obj.name === "mouse")
-                    {
+                    if (obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" || obj.name === "mouse") {
                         // Bed, controller, 
                         obj.castShadow = true
                         obj.receiveShadow = true;
                         console.log("Found computer parts")
+                    }
+                    if (obj.name === "screen_glass") {
+
+                        if (obj.name === "screen_glass") {
+                            if (obj.name === "screen_glass") {
+                                // Completely overwrite whatever material Blender sent
+                                obj.material = new THREE.MeshBasicMaterial({
+                                    map: this.terminal.texture,
+                                });
+                                // Slide the texture down slightly. 
+                                // Positive numbers push it up, negative push it down.
+                                this.terminal.texture.offset.y = 0.2;
+
+                                // If the edges start tiling/repeating when you move it, lock them:
+                                this.terminal.texture.wrapS = THREE.ClampToEdgeWrapping;
+                                this.terminal.texture.wrapT = THREE.ClampToEdgeWrapping;
+                            }
+                        }
+
+                        // 4. Apply and update
+                        obj.material.map = this.terminal.texture;
+                        obj.material.needsUpdate = true;
                     }
                     const tris = obj.geometry.index
                         ? obj.geometry.index.count / 3
@@ -396,10 +416,10 @@ export default class Experience {
             // 4. If we hit something, print the very first object (the closest one) to the console
             if (intersects.length > 0) {
                 const hitObject = intersects[0].object;
-                
+
                 console.log(
-                    `🎯 TARGET ACQUIRED:`, 
-                    `\nName: "${hitObject.name}"`, 
+                    `🎯 TARGET ACQUIRED:`,
+                    `\nName: "${hitObject.name}"`,
                     `\nType: ${hitObject.type}`,
                     `\nMaterial:`, hitObject.material
                 );

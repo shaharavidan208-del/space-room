@@ -105,76 +105,86 @@ export default class TerminalCanvas {
             }
         }
     }
-
     executeSelection() {
-        // Grabs the string from the array based on the current mathematical state of the cursor.
-        const selected = this.menuItems[this.selectedIndex];
-        console.log(`Executing: ${selected}`);
+        switch(this.selectedIndex) {
+            case 0: // MY PROJECTS
+                this.mode = 'projects';
+                break;
+            case 1: // ABOUT ME
+                this.mode = 'about';
+                break;
+            case 2: // MANUAL OVERRIDE
+                this.mode = 'override';
+                break;
+            case 3: // SYSTEM DIAGNOSTICS
+                this.mode = 'diagnostics';
+                break;
+        }
+        
+        // Force the canvas to update immediately with the new mode
+        this.draw(); 
     }
 
+
+
     draw() {
-        // ==========================================
         // 1. WIPE THE CANVAS
-        // ==========================================
+        this.ctx.fillStyle = '#050505'; 
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Sets the active brush color to a dark, off-black hex code.
-        this.ctx.fillStyle = '#050505'; // fillSyle = paintbrush's color 
-
-        // Draws a massive rectangle starting at coordinates (0,0) that covers the exact width and height of the canvas. 
-        // Because canvas pixels are permanent until painted over, this acts as our screen wipe/clear function.
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // this is how we fake background color
-
-
-        // ==========================================
         // 2. SET FONT STYLING
-        // ==========================================
-
-        // Configures the brush to draw text at 40 pixels high using the browser's default monospaced font.
         this.ctx.font = '40px monospace';
         this.ctx.textAlign = 'left';
 
-        if (this.mode === 'menu') {
+        // 3. RENDER BASED ON CURRENT MODE
+        switch(this.mode) {
+            case 'menu':
+                this.ctx.fillStyle = '#00FF41';
+                this.ctx.fillText('C:\\GUEST> SYSTEM BOOT SEQUENCE...', 50, 100);
+                this.ctx.fillText('SELECT DIRECTORY:', 50, 180);
 
-            this.ctx.fillStyle = '#00FF41';
+                // RENDER THE MENU LOOP
+                this.menuItems.forEach((currString, index) => {
+                    const yPos = 300 + (index * 80);
 
-            // Burns a specific text string into the canvas at X: 50, Y: 100. (Y goes top-to-bottom in canvas logic).
-            this.ctx.fillText('C:\\GUEST> SYSTEM BOOT SEQUENCE...', 50, 100);
-            this.ctx.fillText('SELECT DIRECTORY:', 50, 180);
+                    if (index === this.selectedIndex) {
+                        // HIGHLIGHT STATE
+                        this.ctx.fillStyle = '#00FF41';
+                        this.ctx.fillRect(40, yPos - 50, 450, 70);
+                        this.ctx.fillStyle = '#050505';
+                        this.ctx.fillText(`> ${currString}`, 50, yPos);
+                    } else {
+                        // NORMAL STATE
+                        this.ctx.fillStyle = '#00FF41';
+                        this.ctx.fillText(`  ${currString}`, 50, yPos);
+                    }
+                });
+                break;
 
-            // ==========================================
-            // 3. RENDER THE MENU LOOP
-            // ==========================================
-            this.menuItems.forEach((currString, index) => {
+            case 'about':
+                this.ctx.fillStyle = '#00FF41';
+                this.ctx.fillText('USER PROFILE: SHAHAR AVIDAN', 50, 100);
+                this.ctx.fillText('---------------------------', 50, 130);
+                this.ctx.fillText('> WebGL Developer', 50, 200);
+                
+                // Keep the back instruction near the bottom of the 1024x1024 canvas
+                this.ctx.fillText('[PRESS ESC TO RETURN]', 50, 950); 
+                break;
 
-                // Calculates the vertical Y coordinate for this specific text line based on its array index.
-                const yPos = 300 + (index * 80);
-
-                if (index === this.selectedIndex) {
-                    // THE HIGHLIGHT STATE:
-                    // Draws a solid green rectangle behind where the text is about to go.
-                    this.ctx.fillStyle = '#00FF41';
-                    this.ctx.fillRect(40, yPos - 50, 450, 70);
-
-                    // Switches the brush back to black so the text is cut out of the green box.
-                    this.ctx.fillStyle = '#050505';
-                    this.ctx.fillText(`> ${currString}`, 50, yPos);
-                } else {
-                    // THE NORMAL STATE:
-                    // Just draws standard green text with some spaces in front to align it with the '>' arrow above.
-                    this.ctx.fillStyle = '#00FF41';
-                    this.ctx.fillText(`  ${currString}`, 50, yPos);
-                }
-            });
+            case 'diagnostics':
+                this.ctx.fillStyle = '#00FF41';
+                this.ctx.fillText('SYSTEM DIAGNOSTICS...', 50, 100);
+                this.ctx.fillText('---------------------', 50, 130);
+                this.ctx.fillText('CPU: AMD Ryzen 7 5700X3D ......... OK', 50, 200);
+                this.ctx.fillText('GPU: Radeon RX 9070 XT ........... OK', 50, 260);
+                
+                this.ctx.fillText('[PRESS ESC TO RETURN]', 50, 950);
+                break;
+                
+            // You can add cases for 'projects' and 'override' here
         }
 
-        // ==========================================
         // 4. THE GPU TRIGGER (CRITICAL)
-        // ==========================================
-
-        // This is the most expensive and important line in the file. 
-        // Three.js caches textures on the GPU to save performance. By setting needsUpdate to true, 
-        // we forcefully tell the WebGL renderer: "The 2D canvas changed. Pause the render loop, 
-        // pull the new 4MB array of pixels from the CPU, overwrite the old VRAM texture, and draw the next 3D frame."
         this.texture.needsUpdate = true;
     }
 }
