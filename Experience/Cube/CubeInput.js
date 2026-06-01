@@ -60,6 +60,7 @@ export default class CubeInput {
         // --- Constants & Raycasting ---
         const xVector = new THREE.Vector3(1, 0, 0)
         const yVector = new THREE.Vector3(0, 1, 0)
+        const zVector = new THREE.Vector3(0, 0, 1)
         const axes = ['x', 'y', 'z'];
         this.raycaster = new THREE.Raycaster() // Projects a 3D ray starting at the camera and passing through that 2D pixel into the 3D scene.
         this.mouse = new THREE.Vector2()
@@ -125,7 +126,6 @@ export default class CubeInput {
             // 3. Calculate NDC (Normalized Device Coordinates) relative to the canvas, not the window
             this.mouse.x = (canvasX / rect.width) * 2 - 1;
             this.mouse.y = -(canvasY / rect.height) * 2 + 1;
-
             this.raycaster.setFromCamera(this.mouse, this.experience.camera);
             this.startX = input.clientX;
             this.startY = input.clientY;
@@ -161,12 +161,11 @@ export default class CubeInput {
                 // completely ignoring how the user tumbled the camera or the puzzle!
                 const inverseCubeRotation = this.cube.cubeGroup.quaternion.clone().invert();
                 this.hitLocalNormal = this.hitStickerNormal.clone().applyQuaternion(inverseCubeRotation).round();
-
                 this.axisLocked = false
                 this.onCubeDown();
                 return;
 
-            } else if (this.dragMode !== "layer") {
+            } else if (this.dragMode !== "layer" && stickerHits.length === 0) {
                 // Clicked empty space — initialize whole cube rotation
                 this.dragMode = "cube"
                 this.onEmptyDown();
@@ -200,8 +199,10 @@ export default class CubeInput {
                     this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy);
                     if (this.dxLarger)
                         this.rotationAxis = 'y'
-                    else
+                    else if(this.mouse.x >= 0)
                         this.rotationAxis = 'x'
+                    else 
+                        this.rotationAxis = 'z'
                     this.axisLocked = true;
                 }
 
@@ -211,9 +212,14 @@ export default class CubeInput {
                         // Dragging Left/Right -> Spin around the World Y-Axis (Up/Down)
                         this.flipAxis = yVector;
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dx * this.sensitivity);
-                    } else {
+                    } else if(this.rotationAxis === 'x') {
                         // Dragging Up/Down -> Spin around the World X-Axis (Left/Right)
                         this.flipAxis = xVector;
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
+                    }
+                    else 
+                    {
+                        this.flipAxis = zVector;
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
                     }
                 }
@@ -236,6 +242,7 @@ export default class CubeInput {
                 const planeHit = this.raycaster.ray.intersectPlane(this.dragPlane, this.currentDragWorld);
                 // The Safe Guard: Bail out if ray is perfectly parallel to plane (prevents stale data loops)
                 if (!planeHit) return;
+                // transform world into local
                 this.currentDragLocal = this.cube.cubeGroup.worldToLocal(this.currentDragWorld);
 
                 // Calculate the exact X, Y, and Z distances the mouse moved in Local Space
@@ -258,7 +265,7 @@ export default class CubeInput {
                         return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger;
                     });
 
-                    this.direction = Math.sign(rotationVector[this.rotationAxis]);
+                    this.direction = Math.sign(rotationVector[this.rotationAxis]); // using the rotation axis that we determined, check if the direction is positive or negative
                     this.layerIndex = Math.round(this.hitCubie.position[this.rotationAxis] / this.cube.pieceSize)
 
                     this.cube.rotator.beginRotation(this.rotationAxis, this.layerIndex, this.direction)
@@ -277,7 +284,7 @@ export default class CubeInput {
                     const frameSign = Math.sign(frameRotationVector[this.rotationAxis]);
 
                     // 3. SYNTHESIS: Speed driven by 2D, Direction driven by 3D
-                    const rotationAmount = screenDistance * frameSign * 0.012;
+                    const rotationAmount = screenDistance * frameSign * 0.010;
 
                     this.cube.rotator.updateRotation(this.rotationAxis, rotationAmount);
                 }

@@ -14,7 +14,7 @@ const PIECE_CORNER_RADIUS = 0.12;
 const STICKER_CORNER_ROUNDNESS = 0.15;
 
 // Sticker size as a fraction of the cubie face. Below 1.0 leaves a black gap between stickers,
-const STICKER_SCALE = 0.87;
+const STICKER_SCALE = 0.93;
 
 // Sticker thickness 
 const STICKER_DEPTH = 0.01;
@@ -50,7 +50,7 @@ export default class Cube {
         // Parent group for the entire cube. 
         this.cubeGroup = new THREE.Group()
         // Size of a single cubie 
-        this.pieceSize = 0.1
+        this.pieceSize = 0.12
         // const axesHelper = new THREE.AxesHelper(5)
         // scene.add(axesHelper)
         this.scene = scene
@@ -123,14 +123,7 @@ export default class Cube {
 
         // Position the entire cube in the room scene (sitting on the desk)
         this.rotator = new Rotator(this)
-        this.cubeGroup.position.set(-2.45, 1.37, -1.8)
-        this.cubeGroup.traverse((child) => {
-            // Only apply shadows if the child is an actual 3D mesh
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true; // Optional: Lets the pieces cast shadows on each other
-            }
-        });
+        this.cubeGroup.position.set(-2.45, 1.57, -1.8)
         this.scene.add(this.cubeGroup)
         console.log(this.pieces[0].position)
         // console.log(this.pieces)

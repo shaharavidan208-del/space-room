@@ -41,15 +41,15 @@ export default class Experience {
         this.gu = new GUI()
         this.terminal = new TerminalCanvas();
 
-        const terminalTemporaryBoxGeometry = new THREE.BoxGeometry()
+        // const terminalTemporaryBoxGeometry = new THREE.BoxGeometry()
 
-        const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({ map: this.terminal.texture })
+        // const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({ map: this.terminal.texture })
 
-        const terminalTemporaryMesh = new THREE.Mesh(terminalTemporaryBoxGeometry, terminalTemporaryBoxMaterial)
+        // const terminalTemporaryMesh = new THREE.Mesh(terminalTemporaryBoxGeometry, terminalTemporaryBoxMaterial)
 
-        terminalTemporaryMesh.position.set(-2.45, 1.37, 0)
+        // terminalTemporaryMesh.position.set(-2.45, 1.37, 0)
 
-        this.scene.add(terminalTemporaryMesh)
+        // this.scene.add(terminalTemporaryMesh)
 
 
 
@@ -93,7 +93,7 @@ export default class Experience {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
-
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // FPS counter 
         const stats = new Stats();
@@ -103,59 +103,86 @@ export default class Experience {
         /**
          * Lights
          */
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-        this.scene.add(ambientLight)
-        // directionalLight.castShadow = true
 
-        // 1. The Light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-        directionalLight.position.set(0, 15, 0); // Positioned directly in the sky above the test
-        directionalLight.castShadow = true;
 
-        // 2. The Frustum (Massive box to guarantee no clipping)
-        directionalLight.shadow.camera.left = -20;
-        directionalLight.shadow.camera.right = 20;
-        directionalLight.shadow.camera.top = 20;
-        directionalLight.shadow.camera.bottom = -20;
-        directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 50;
+        /**
+ * Cinematic Lighting Rig
+ */
+        // 1. Drop the global ambient wash
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+        this.scene.add(ambientLight);
 
-        // 3. The Math Reset (CRITICAL)
-        // If you change the camera boundaries, you MUST force Three.js to update the matrix.
-        directionalLight.shadow.camera.updateProjectionMatrix();
+        // 2. The Supernova Rim Light (Warm)
+        const novaLight = new THREE.DirectionalLight(0xff4400, 20); // Deep orange/red, very intense
+        novaLight.position.set(0.8, 11.8, -10.7); // Positioned back where the supernova is
+        novaLight.castShadow = true;
+        // (Keep your existing shadow frustum math here for the novaLight)
+        this.scene.add(novaLight);
 
-        // 4. The Resolution
+        // 3. The Monitor/Desk Spill (Cool)
+        // const deskLight = new THREE.PointLight(0x00ffff, 2, 15); // Cyan, intensity 2, fades out after 15 units
+        // deskLight.position.set(0, 4, 0); // Hovering right above the keyboard/monitor
+        // deskLight.castShadow = true;
+        // deskLight.shadow.bias = -0.001; // Prevents shadow acne on the desk surface
+        // this.scene.add(deskLight);
 
-        // 5. The Bias (Prevents glitchy artifacts on the surface of objects)
-        directionalLight.shadow.normalBias = 0.05;
 
-        this.scene.add(directionalLight);
+
+
+        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+        // this.scene.add(ambientLight)
+        // // directionalLight.castShadow = true
+
+        // // 1. The Light
+        // const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
+        // directionalLight.position.set(0, 15, 0); // Positioned directly in the sky above the test
+        // directionalLight.castShadow = true;
+
+        // // 2. The Frustum (Massive box to guarantee no clipping)
+        // directionalLight.shadow.camera.left = -20;
+        // directionalLight.shadow.camera.right = 20;
+        // directionalLight.shadow.camera.top = 20;
+        // directionalLight.shadow.camera.bottom = -20;
+        // directionalLight.shadow.camera.near = 0.5;
+        // directionalLight.shadow.camera.far = 50;
+
+        // // 3. The Math Reset (CRITICAL)
+        // // If you change the camera boundaries, you MUST force Three.js to update the matrix.
+        // directionalLight.shadow.camera.updateProjectionMatrix();
+
+        // // 4. The Resolution
+
+        // // 5. The Bias (Prevents glitchy artifacts on the surface of objects)
+        // directionalLight.shadow.normalBias = 0.05;
+
+        // this.scene.add(directionalLight);
 
 
 
         /**
          * Light GUI
          */
-        const lightFolder = this.gu.addFolder('Directional Lights');
+        // const lightFolder = this.gu.addFolder('Directional Lights');
 
-        // Main Light (The one casting shadows)
-        const mainLightFolder = lightFolder.addFolder('Main Light');
-        mainLightFolder.add(directionalLight.position, 'x', -20, 20, 0.1).name('Position X');
-        mainLightFolder.add(directionalLight.position, 'y', -20, 20, 0.1).name('Position Y');
-        mainLightFolder.add(directionalLight.position, 'z', -20, 20, 0.1).name('Position Z');
-        mainLightFolder.add(directionalLight, 'intensity', 0, 10, 0.1).name('Intensity');
+     // Main Light (The one casting shadows)
+        // const mainLightFolder = lightFolder.addFolder('Main Light');
+        // mainLightFolder.add(novaLight.position, 'x', -20, 20, 0.1).name('Position X');
+        // mainLightFolder.add(novaLight.position, 'y', -20, 20, 0.1).name('Position Y');
+        // mainLightFolder.add(novaLight.position, 'z', -20, 20, 0.1).name('Position Z');
+        // mainLightFolder.add(novaLight, 'intensity', 0, 10, 0.1).name('Intensity');
+        // mainLightFolder.addColor(novaLight, 'color').name('Color')
 
-
+        console.log(renderer.info)
 
         /**
          * Light & Shadow Helpers
          */
         // 1. Shows the physical position and direction of the light
-        // const mainLightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
+        // const mainLightHelper = new THREE.DirectionalLightHelper(novaLight, 1);
         // this.scene.add(mainLightHelper);
 
         // 2. The Secret Weapon: Shows the exact box calculating your shadows
-        // const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+        // const shadowCameraHelper = new THREE.CameraHelper(novaLight.shadow.camera);
         // this.scene.add(shadowCameraHelper);
 
 
@@ -222,16 +249,45 @@ export default class Experience {
             0.1, // near
             1000, // far
         );
-        this.camera.position.set(0, 7, 4);
-        this.camera.lookAt(0, 3, 3)
+
+        const debugParams = {
+            lookX: 0,
+            lookY: 1, // Start slightly above the floor
+            lookZ: 0
+        };
+        this.camera.position.set(-0.5, 5.5, 10.5);
+        this.camera.lookAt(0, 2.71, 0.5)
         this.scene.add(this.camera);
+
+
+        // 3. Create a helper function to update both systems safely
+        const updateCameraTarget = () => {
+            const newTarget = new THREE.Vector3(debugParams.lookX, debugParams.lookY, debugParams.lookZ);
+
+            // Update the camera lens
+            this.camera.lookAt(newTarget);
+
+            // Update the center of the OrbitControls universe
+            controls.target.copy(newTarget);
+            controls.update();
+        };
+
+        // 4. Add the sliders to the screen
+        const cameraFolder = this.gu.addFolder('Initial Look Target');
+
+        // .add(object, property).min.max.step.name.onChange
+        cameraFolder.add(debugParams, 'lookX').min(-10).max(10).step(0.01).name('Target X').onChange(updateCameraTarget);
+        cameraFolder.add(debugParams, 'lookY').min(-10).max(10).step(0.01).name('Target Y').onChange(updateCameraTarget);
+        cameraFolder.add(debugParams, 'lookZ').min(-10).max(10).step(0.01).name('Target Z').onChange(updateCameraTarget);
+
+        cameraFolder.open(); // Keeps the folder open by default
+
 
         const cam = this.gu.addFolder('Camera')
         // (min, max, increments), change supernova position 
         cam.add(this.camera.position, 'x', -25, 25, 0.5).name('Position X')
         cam.add(this.camera.position, 'y', -25, 25, 0.5).name('Position Y')
         cam.add(this.camera.position, 'z', -25, 25, 0.5).name('Position Z')
-
 
         // Controls
         const trackballControls = new TrackballControls(this.camera, canvas)
@@ -247,49 +303,85 @@ export default class Experience {
         controls.dampingFactor = 0.12
         controls.minDistance = 0
 
-
+        let isTransitioning = false;
+        // Hot spot variables
         // Hot spot variables
         this.isFocused = false;
-        const cameraTarget = new THREE.Vector3(); // where the camera moves toward (either cube or home position)
-        const lookTarget = new THREE.Vector3();   // what camera is looking toward
-        let isTransitioning = false; // 
+        const lookTarget = this.cube.cubeGroup.position.clone();
 
-        // Store the "home" position so you can return to it
-        const cameraHome = new THREE.Vector3(0, 7, 14.5); // existing camera.position values
-        const lookHome = new THREE.Vector3(0, 5, 6); // your existing camera.lookAt values
+        // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
+        const isometricDistance = 1.8;
+        const cameraTarget = new THREE.Vector3(
+            lookTarget.x + isometricDistance,
+            lookTarget.y + isometricDistance,
+            lookTarget.z + isometricDistance
+        );
+
+        const cameraHome = new THREE.Vector3(-0.5, 5.5, 10.5);
+        const lookHome = new THREE.Vector3(0, 2.71, 0.5);
+
+        // --- NEW FOV VARIABLES ---
+        const homeFov = 65;
+        let targetFov = homeFov; // We will lerp toward this value
 
         /**
          * focus mode on cube
          */
         const cubeHotspot = document.querySelector(".cube")
         const enterFocusMode = () => {
+            monitorGlass.visible = false
+            monitorFrame.visible = false
+            lookTarget.copy(this.cube.cubeGroup.position.clone())
             this.isFocused = true;
             isTransitioning = true;
-            controls.enabled = false; // freeze OrbitControls
+            controls.enabled = false;
             cubeHotspot.style.opacity = '0';
-            cubeHotspot.style.pointerEvents = 'none';  // ← ADD — don't intercept clicks while hidden
+            cubeHotspot.style.pointerEvents = 'none';
 
-            // Get the cube's current world position as the look target
-            this.cube.cubeGroup.getWorldPosition(lookTarget);
+            // Set the new target FOV for the isometric look
+            targetFov = 13;
 
-            // Position camera a fixed distance in front of the cube
-            // Offset on Z so we're looking at it straight on
-            cameraTarget.copy(lookTarget).add(new THREE.Vector3(0, 0.1, 0.8));
-            for (let i = 0; i < 10; i++) {
-                this.cube.scrambler()
-                console.log("enteredLoop")
+            // --- CONTINUOUS SCALING MATH ---
+            // 1. Get the exact screen ratio at the moment the user clicks
+            const currentWindowAspect = window.innerWidth / window.innerHeight;
+            const BASE_ASPECT = 16 / 9; // Your ideal desktop ratio
+
+            // 2. Default state: no pushback needed
+            let scaleFactor = 1.0;
+
+            // 3. If the screen is narrower than standard 16:9, calculate how much to push back
+            if (currentWindowAspect < BASE_ASPECT) {
+                scaleFactor = BASE_ASPECT / currentWindowAspect;
             }
 
+            // 4. Apply the dampener so it's smooth, and calculate final distance
+            const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.3));
+
+
+            // Set the camera target to the far-away isometric position
+            cameraTarget.set(
+                lookTarget.x + dynamicDistance,
+                lookTarget.y + dynamicDistance,
+                lookTarget.z + dynamicDistance
+            );
+
+            for (let i = 0; i < 10; i++) {
+                this.cube.scrambler()
+            }
         };
+
         const exitFocusMode = () => {
             this.isFocused = false;
-            isTransitioning = true; // start lerping back to home position
-            cubeHotspot.style.opacity = '1'; // Show hotspot again
-            cubeHotspot.style.pointerEvents = 'auto';  // Re-enable clicks on hotspot
+            isTransitioning = true;
+            cubeHotspot.style.opacity = '1';
+            cubeHotspot.style.pointerEvents = 'auto';
 
-            // Return to home
-            cameraTarget.copy(cameraHome); // where camera moves to
-            lookTarget.copy(lookHome); // where camera looks at
+            // Return to home values
+            targetFov = homeFov;
+            cameraTarget.copy(cameraHome);
+            lookTarget.copy(lookHome);
+            monitorFrame.visible = true
+            monitorGlass.visible = true
         };
 
         // Escape key exits
@@ -311,49 +403,67 @@ export default class Experience {
 
 
         gltfLoader.setDRACOLoader(dracoLoader);
-
+        const pcParams = {
+            color: '#151515',   // Use a hex string for the GUI color picker
+            roughness: 0.65,
+            metalness: 0.40,
+            clearcoat: 0.1,     // Bonus: Adds a premium glossy shell over the metal
+            clearcoatRoughness: 0.2
+        };
         // טעינת המודל
         let walls;
-        const model = gltfLoader.load('/models/screen_final.glb', (gltf) => {
+        let monitorGlass;
+        let monitorFrame;
+        const model = gltfLoader.load('/models/addedNoteBook2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
-                    console.log(obj.name)
+                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
+
+                    // 3. If it's just a normal PC part, nuke the grey and make it pitch black
+                    if (obj.name === "Cube002_1") {
+                        obj.material = new THREE.MeshStandardMaterial({
+                            color: 0x222222,
+                            roughness: 0.45,
+                            metalness: 0.85
+                        });
+                        obj.material.needsUpdate = true;
+                        obj.castShadow = true
+                        obj.receiveShadow = true
+                    }
+
+
                     if (obj.name === "Cube001") {
                         obj.receiveShadow = true;
                     }
-                    if (obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" || obj.name === "mouse") {
+                    if (obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" || obj.name === "mouse" || obj.name.includes("MSI")) {
                         // Bed, controller, 
                         obj.castShadow = true
                         obj.receiveShadow = true;
                         console.log("Found computer parts")
                     }
-                    if (obj.name === "screen_glass") {
+                    if (obj.name.includes("MSI"))
+                        monitorFrame = obj
+                    if (obj.name === "Screen") {
+                        monitorGlass = obj
+                        // Completely overwrite whatever material Blender sent
+                        obj.material = new THREE.MeshBasicMaterial({
+                            map: this.terminal.texture,
+                        });
+                        // Slide the texture down slightly. 
+                        // Positive numbers push it up, negative push it down.
+                        this.terminal.texture.offset.y = 0.15;
+                        this.terminal.texture.repeat.set(1.5, 1.5, 1.5)
 
-                        if (obj.name === "screen_glass") {
-                            if (obj.name === "screen_glass") {
-                                // Completely overwrite whatever material Blender sent
-                                obj.material = new THREE.MeshBasicMaterial({
-                                    map: this.terminal.texture,
-                                });
-                                // Slide the texture down slightly. 
-                                // Positive numbers push it up, negative push it down.
-                                this.terminal.texture.offset.y = 0.2;
-
-                                // If the edges start tiling/repeating when you move it, lock them:
-                                this.terminal.texture.wrapS = THREE.ClampToEdgeWrapping;
-                                this.terminal.texture.wrapT = THREE.ClampToEdgeWrapping;
-                            }
-                        }
-
+                        // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
                         obj.material.map = this.terminal.texture;
                         obj.material.needsUpdate = true;
                     }
-                    const tris = obj.geometry.index
-                        ? obj.geometry.index.count / 3
-                        : obj.geometry.attributes.position.count / 3
-                    // console.log(obj.name, Math.round(tris))
+
+
                 }
+
+                // console.log(obj.name, Math.round(tris))
             })
             this.scene.add(gltf.scene)
         })
@@ -392,6 +502,8 @@ export default class Experience {
             }
         ]
 
+        console.log(renderer.info)
+
         // Raycaster
         const raycaster = new THREE.Raycaster()
         const mouse = new THREE.Vector2()
@@ -425,6 +537,8 @@ export default class Experience {
                 );
             }
         });
+
+
         // ==========================================
 
         // Add text Geometry
@@ -443,6 +557,7 @@ export default class Experience {
         // rendering the empty space at the top and bottom of the screen.
         const TARGET_ASPECT = 23 / 9;
 
+
         window.addEventListener('resize', () => {
             const windowAspect = window.innerWidth / window.innerHeight;
 
@@ -454,15 +569,23 @@ export default class Experience {
             // If on mobile (portrait), we abandon the 21:9 crop (which would create a tiny slit)
             // and adapt to the phone's native aspect ratio, filling the screen.
             // If on desktop (landscape), we enforce the cinematic 21:9 crop.
-            const DYNAMIC_TARGET_ASPECT = isPortrait ? windowAspect : TARGET_ASPECT;
+            // [ RESPONSIVE ASPECT RATIO ]
 
+            let DYNAMIC_TARGET_ASPECT = TARGET_ASPECT; // start by assuming we want the cinematic 23/9 crop (Default state). 
+
+            if (isPortrait) {
+                // Mobile: Abandon the crop and use the phone's native aspect ratio to fill the screen
+                DYNAMIC_TARGET_ASPECT = windowAspect; // the aspect ratio just becomes the phone's native 
+            }
+
+            // create two mutable variables and initially set them to fill 100% of the screen
             let canvasWidth = window.innerWidth;
             let canvasHeight = window.innerHeight;
 
             // [ CANVAS BOUNDARY MATH ]
             // Calculate exact pixel dimensions to maintain the DYNAMIC_TARGET_ASPECT.
             if (windowAspect < DYNAMIC_TARGET_ASPECT) {
-                // Window is narrower than target (e.g., standard 16:9 monitor).
+                // if the window is narrower than target (e.g., standard 16:9 monitor).
                 // Keep max width, shrink height. Flexbox will auto-center it, creating Top/Bottom black bars.
                 canvasHeight = window.innerWidth / DYNAMIC_TARGET_ASPECT;
             } else {
@@ -472,8 +595,10 @@ export default class Experience {
             }
 
             // 1. Lock the Three.js Camera frustum to the new mathematical ratio
-            this.camera.aspect = DYNAMIC_TARGET_ASPECT;
-            this.camera.updateProjectionMatrix();
+            this.camera.aspect = DYNAMIC_TARGET_ASPECT; // Update the camera to render at the new aspect ratio to match the canvas
+            this.camera.updateProjectionMatrix(); // compile the new aspect ratio into the core webGL math so the GPU can use it
+            // after any modification to a camera propety we need to update projection matrix
+            // since three.js doesn't need to update things  like FOV/AR each frame we need to update it manually
 
             // 2. Physically resize the WebGL Canvas element in the DOM
             renderer.setSize(canvasWidth, canvasHeight);
@@ -518,19 +643,28 @@ export default class Experience {
             const elapsedTime = clock.getElapsedTime();
             stats.begin();
             // ---- CAMERA LERP ----
+            // ---- CAMERA LERP ----
             if (isTransitioning) {
+                // 1. Lerp position and look target
                 this.camera.position.lerp(cameraTarget, 0.08);
                 controls.target.lerp(lookTarget, 0.08);
 
+                // 2. Lerp the FOV
+                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 0.08);
+                this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
+
                 // Check if we've arrived (close enough)
-                if (this.camera.position.distanceTo(cameraTarget) < 0.001) {
+                if (this.camera.position.distanceTo(cameraTarget) < 0.01) { // Bumped to 0.01 to prevent micro-stutters at the end of the lerp
                     this.camera.position.copy(cameraTarget);
+                    this.camera.fov = targetFov; // Snap exactly to target just in case
+                    this.camera.updateProjectionMatrix(); //
+
                     isTransitioning = false;
 
                     // Re-enable orbit controls only when returning home
                     if (!this.isFocused) {
-                        controls.update(); // Ensure orbitControls know about the new camera position
-                        trackballControls.update()
+                        controls.update();
+                        trackballControls.update();
                         controls.enabled = true;
                     }
                 }
@@ -539,17 +673,30 @@ export default class Experience {
             if (sceneReady === true) {
 
                 for (const point of points) {
+                    // 1. Grab the 3D location of the Rubik's cube
                     const screenPos = point.position.clone()
 
                     // Convert 3D world coordinates into Normalized Device Coordinates (NDC).
                     // This maps the 3D space to a 2D grid ranging from -1 to +1.
+                    // 2. Figure out exactly where that 3D location appears on the 2D glass of the monitor
                     screenPos.project(this.camera)
 
-                    raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera)
-                    const intersects = raycaster.intersectObjects(this.scene.children, true)
-                        .filter(hit => !this.cube.cubeGroup.getObjectById(hit.object.id))
+                    // [ THE SHIELD ]
+                    if (
+                        Math.abs(screenPos.x) > 1 ||
+                        Math.abs(screenPos.y) > 1 ||
+                        screenPos.z > 1
+                    ) {
+                        point.element.classList.remove('visible');
+                        continue;
+                    }
 
-                    if (intersects.length === 0) {
+                    // 3. Aim the raycaster exactly at that 2D spot
+                    raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera)
+                    const intersects = raycaster.intersectObjects(this.scene.children, true) // returns an array of every single mesh that laser touched, sorted from closest to furthest.
+                        .filter(hit => !this.cube.cubeGroup.getObjectById(hit.object.id)) // Ignores the Rubik's cube itself, leaving only physical obstacles in the array.
+                    // we do this so our raycaster only cares about obstacles (monitor, notebook, etc)
+                    if (intersects.length === 0) { // If no objects are in the way, add visible class to the hotspot
                         point.element.classList.add('visible')
                     }
                     else {
@@ -601,7 +748,6 @@ export default class Experience {
             // Go through each points 
             renderer.render(this.scene, this.camera);
             stats.end();
-
             requestAnimationFrame(tick);
         };
         tick()

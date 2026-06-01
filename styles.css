@@ -1,6 +1,15 @@
 /* ---------------------------------------------------------
    GLOBAL RESET & VIEWPORT LOCK
    --------------------------------------------------------- */
+
+   @font-face {
+    font-family: 'Audiowide';
+    src: url('./fonts/Audiowide-Regular.ttf') format('truetype'); 
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 html, body, #app {
     margin: 0;
     padding: 0;
@@ -59,83 +68,79 @@ canvas {
     opacity: 1;
 }
 
-.cube.visible .label
-{
-    transform: scale(1, 1);
-    transform: translate(-50%, -50%);
+.cube.visible .label {
+    /* Moves it to the dead center, THEN scales it up to full size */
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .cube .label {
-     color: #fff;
-  text-shadow: 
-    0 0 5px #fff,
-    0 0 10px #00ff00,
-    0 0 20px #00ff00; /* Stacking layers for a richer effect */
     position: absolute;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: #00000077;
     border: 1px solid #ffffff77;
     color: #ffffff;
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: 'Audiowide', sans-serif;
     text-align: center;
     line-height: 25px;
     font-weight: 100;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
-    transform: translate(-50%, -50%);
-    transform:scale(0, 0);
-    transition: transform 0.4s;
-    /* Center the text/number */
+    
+    /* THE FIX: Chained into one line */
+    transform: translate(-50%, -50%) scale(0);
+    
+    /* Let the browser handle both transform and box-shadow smoothly */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+    
     display: flex;
     justify-content: center;
     align-items: center;
-    
-    /* Attach the infinite breathing animation */
     animation: standbyPulse 2.5s infinite ease-in-out;
-    
-    /* Smooth transition for the hover state */
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-    /* Prevent text selection and the I-beam cursor */
     user-select: none;
-    -webkit-user-select: none; /* Safari compatibility */
-    -moz-user-select: none; /* Firefox compatibility */
-    
-    /* Ensure it doesn't get a weird outline if the browser gives it focus */
     outline: none;
 }
 
-.cube .label:hover {
-    /* Instantly stop the breathing and snap to full brightness */
-    animation: none; 
-
-    background: rgba(0, 255, 255, 0.3);
-    box-shadow: 0 0 20px rgba(0, 255, 255, 1), 0 0 40px rgba(0, 255, 255, 0.6);
-    border-color: rgb(0, 255, 255);
-}
-
-
-.cube .text
-{
+.cube .text {
     position: absolute;
-    top: 30px;
-    left: -120px;
-    width: 200px;
-    padding: 20px;
-    border-radius: 4px;
-    background: #00000077;
-    border: 1px solid #ffffff77;
+    /* Anchor it right next to the pulsating dot, perfectly vertically aligned */
+    top: 50%; 
+    left: 45px; /* Pushes it just outside the 40px dot */
+    transform: translateY(-50%); /* Centers the text to the dot's equator */
+    
+    /* Strip the bulky borders and background */
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: max-content; /* Only takes up exactly as much space as the letters need */
+    
+    /* Typography Upgrade */
     color: #ffffff;
-    line-height: 1.3em;
-    font-family: Helvetica, Arial, sans-serif;
-    font-weight: 100;
-    font-size: 14px;
+    font-family: 'Audiowide', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    
+    /* The Holographic Glow */
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.8), 
+                 0 0 10px rgba(0, 255, 255, 0.4);
+    
+    /* The Animation State */
     opacity: 0;
-    transition: opacity 0.3s;
     pointer-events: none;
     
+    /* Instead of just fading in, let's make it slide out of the dot mechanically */
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    transition: clip-path 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
+                opacity 0.2s ease-in;
+}
+
+/* When the user hovers over the dot, reveal the text */
+.cube:hover .text {
+    opacity: 1;
+    /* Wipe the text open from left to right like a computer terminal */
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
 }
 
 .loading-bar {

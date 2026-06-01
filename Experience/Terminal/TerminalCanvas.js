@@ -133,7 +133,7 @@ export default class TerminalCanvas {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // 2. SET FONT STYLING
-        this.ctx.font = '40px monospace';
+        this.ctx.font = '30px monospace';
         this.ctx.textAlign = 'left';
 
         // 3. RENDER BASED ON CURRENT MODE
@@ -151,7 +151,7 @@ export default class TerminalCanvas {
                         // HIGHLIGHT STATE
                         this.ctx.fillStyle = '#00FF41';
                         this.ctx.fillRect(40, yPos - 50, 450, 70);
-                        this.ctx.fillStyle = '#050505';
+                        this.ctx.fillStyle = 'black';
                         this.ctx.fillText(`> ${currString}`, 50, yPos);
                     } else {
                         // NORMAL STATE
