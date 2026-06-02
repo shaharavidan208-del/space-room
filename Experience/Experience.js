@@ -41,18 +41,6 @@ export default class Experience {
         this.gu = new GUI()
         this.terminal = new TerminalCanvas();
 
-        // const terminalTemporaryBoxGeometry = new THREE.BoxGeometry()
-
-        // const terminalTemporaryBoxMaterial = new THREE.MeshBasicMaterial({ map: this.terminal.texture })
-
-        // const terminalTemporaryMesh = new THREE.Mesh(terminalTemporaryBoxGeometry, terminalTemporaryBoxMaterial)
-
-        // terminalTemporaryMesh.position.set(-2.45, 1.37, 0)
-
-        // this.scene.add(terminalTemporaryMesh)
-
-
-
         //         /**
         //  * Loaders
         //  */
@@ -85,7 +73,6 @@ export default class Experience {
         const gltfLoader = new GLTFLoader(loadingManager);
 
         this.cube = new Cube(this.scene)
-        // console.log(this.cube)
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -104,10 +91,6 @@ export default class Experience {
          * Lights
          */
 
-
-        /**
- * Cinematic Lighting Rig
- */
         // 1. Drop the global ambient wash
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
         this.scene.add(ambientLight);
@@ -125,8 +108,6 @@ export default class Experience {
         // deskLight.castShadow = true;
         // deskLight.shadow.bias = -0.001; // Prevents shadow acne on the desk surface
         // this.scene.add(deskLight);
-
-
 
 
         // const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
@@ -164,7 +145,7 @@ export default class Experience {
          */
         // const lightFolder = this.gu.addFolder('Directional Lights');
 
-     // Main Light (The one casting shadows)
+        // Main Light (The one casting shadows)
         // const mainLightFolder = lightFolder.addFolder('Main Light');
         // mainLightFolder.add(novaLight.position, 'x', -20, 20, 0.1).name('Position X');
         // mainLightFolder.add(novaLight.position, 'y', -20, 20, 0.1).name('Position Y');
@@ -192,15 +173,10 @@ export default class Experience {
         //     visible: true
         // })
 
-        /**
-         * Shader
-         */
-
-        // Tell the shader to expect the image texture
         // Add the TextureLoader at the top of Experience.js if you haven't already
         const textureLoader = new THREE.TextureLoader(loadingManager);
 
-        // Load the noise image you downloaded
+        // Load the noise image
         const noiseTexture = textureLoader.load('/textures/noise.png');
 
         // CRITICAL for Shadertoy noise ports: Set it to repeat infinitely
@@ -240,7 +216,7 @@ export default class Experience {
             this.scene.background = environmentMap
         })
 
-        document.addEventListener('contextmenu', (e) => e.preventDefault())
+        document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
 
 
         // Camera
@@ -327,75 +303,95 @@ export default class Experience {
         /**
          * focus mode on cube
          */
-        const cubeHotspot = document.querySelector(".cube")
-        const enterFocusMode = () => {
-            monitorGlass.visible = false
-            monitorFrame.visible = false
-            lookTarget.copy(this.cube.cubeGroup.position.clone())
+        const cubeHotspot = document.querySelector("#hotspot-cube")
+        const enterFocusMode = (activePoint) => {
             this.isFocused = true;
             isTransitioning = true;
             controls.enabled = false;
-            cubeHotspot.style.opacity = '0';
-            cubeHotspot.style.pointerEvents = 'none';
 
-            // Set the new target FOV for the isometric look
-            targetFov = 13;
+            // Hide ALL UI hotspots so they don't float around while we are zoomed in
+            this.points.forEach(p => {
+                p.element.style.opacity = '0';
+                p.element.style.pointerEvents = 'none';
+            });
+            // --- 1. RUBIK'S CUBE LOGIC ---
+            if (activePoint.name === 'RubiksCube') {
+                monitorGlass.visible = false;
+                monitorFrame.visible = false;
+                console.log("entered Rubiks cube focus mode")
+                lookTarget.copy(activePoint.position.clone());
+                targetFov = 13; // Isometric squeeze
 
-            // --- CONTINUOUS SCALING MATH ---
-            // 1. Get the exact screen ratio at the moment the user clicks
-            const currentWindowAspect = window.innerWidth / window.innerHeight;
-            const BASE_ASPECT = 16 / 9; // Your ideal desktop ratio
+                const currentWindowAspect = window.innerWidth / window.innerHeight;
+                const BASE_ASPECT = 16 / 9;
+                let scaleFactor = 1.0;
+                if (currentWindowAspect < BASE_ASPECT) {
+                    scaleFactor = BASE_ASPECT / currentWindowAspect;
+                }
 
-            // 2. Default state: no pushback needed
-            let scaleFactor = 1.0;
+                const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.3));
 
-            // 3. If the screen is narrower than standard 16:9, calculate how much to push back
-            if (currentWindowAspect < BASE_ASPECT) {
-                scaleFactor = BASE_ASPECT / currentWindowAspect;
-            }
+                cameraTarget.set(
+                    lookTarget.x + dynamicDistance,
+                    lookTarget.y + dynamicDistance,
+                    lookTarget.z + dynamicDistance
+                );
 
-            // 4. Apply the dampener so it's smooth, and calculate final distance
-            const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.3));
-
-
-            // Set the camera target to the far-away isometric position
-            cameraTarget.set(
-                lookTarget.x + dynamicDistance,
-                lookTarget.y + dynamicDistance,
-                lookTarget.z + dynamicDistance
-            );
-
-            for (let i = 0; i < 10; i++) {
-                this.cube.scrambler()
+                for (let i = 0; i < 10; i++) {
+                    this.cube.scrambler();
+                }
+            } 
+            
+            // --- 2. TERMINAL LOGIC ---
+            else if (activePoint.name === 'Terminal') {
+                // Keep the monitor visible!
+                lookTarget.copy(activePoint.position.clone()); // Aims exactly at the glass center
+                
+                targetFov = 70; // A natural, slightly focused human eye FOV
+                
+                // The Diegetic Camera Offset:
+                // Move the camera slightly up (Y) and pull it back (Z) from the screen.
+                // NOTE: Depending on how your room is rotated in Blender, you might need to adjust 
+                // the Z or X offset to pull straight back from the monitor glass.
+                cameraTarget.set(
+                    lookTarget.x,
+                    lookTarget.y + 0.15, // Eye level, looking slightly down
+                    lookTarget.z + 1.2   // Pull back to sit in the chair
+                );
             }
         };
 
         const exitFocusMode = () => {
-            this.isFocused = false;
+            this.isFocused = true; // Prevents spam clicking during animation
             isTransitioning = true;
-            cubeHotspot.style.opacity = '1';
-            cubeHotspot.style.pointerEvents = 'auto';
+
+            // Bring all UI hotspots back
+            this.points.forEach(p => {
+                p.element.style.opacity = '1';
+                p.element.style.pointerEvents = 'auto';
+            });
 
             // Return to home values
             targetFov = homeFov;
             cameraTarget.copy(cameraHome);
             lookTarget.copy(lookHome);
-            monitorFrame.visible = true
-            monitorGlass.visible = true
+            
+            // Ensure monitor is visible again
+            monitorFrame.visible = true;
+            monitorGlass.visible = true;
         };
+
+    
 
         // Escape key exits
         window.addEventListener('keydown', (input) => {
             if (input.key === 'Escape' && this.isFocused) {
                 exitFocusMode();
+                this.isFocused = false
             }
         });
 
-        cubeHotspot.addEventListener('click', () => {
-            if (!this.isFocused && !isTransitioning) {
-                enterFocusMode();
-            }
-        });
+    
 
 
         const dracoLoader = new DRACOLoader();
@@ -414,10 +410,11 @@ export default class Experience {
         let walls;
         let monitorGlass;
         let monitorFrame;
+        let terminalPosition;
         const model = gltfLoader.load('/models/addedNoteBook2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
-                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
+                    // console.log("Mesh:", obj.name, "| Material:", obj.material.name);
 
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
                     if (obj.name === "Cube002_1") {
@@ -439,12 +436,14 @@ export default class Experience {
                         // Bed, controller, 
                         obj.castShadow = true
                         obj.receiveShadow = true;
-                        console.log("Found computer parts")
                     }
-                    if (obj.name.includes("MSI"))
+                    if (obj.name.includes("MSI")) {
                         monitorFrame = obj
+                        console.log(obj.position)
+                    }
                     if (obj.name === "Screen") {
                         monitorGlass = obj
+                        terminalPosition = obj.position
                         // Completely overwrite whatever material Blender sent
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
@@ -465,6 +464,7 @@ export default class Experience {
 
                 // console.log(obj.name, Math.round(tris))
             })
+            this.initHotspots();
             this.scene.add(gltf.scene)
         })
 
@@ -495,12 +495,44 @@ export default class Experience {
         /**
          * Points of interest
          */
-        const points = [
-            {
-                position: cubePosition,
-                element: cubeHotspot
+        
+
+        this.initHotspots = () => {
+    const glassBox = new THREE.Box3().setFromObject(monitorGlass);
+    const trueGlassCenter = new THREE.Vector3();
+    glassBox.getCenter(trueGlassCenter);
+
+    this.points = [
+        {
+            name: 'RubiksCube',
+            position: this.cube.cubeGroup.position,
+            element: document.querySelector('#hotspot-cube'),
+            ignoreMeshes: [this.cube.cubeGroup] 
+        },
+        {
+            name: 'Terminal',
+            position: trueGlassCenter, 
+            element: document.querySelector('#hotspot-terminal'),
+            ignoreMeshes: [monitorFrame, monitorGlass] 
+        }
+    ];
+
+    // NEW: Dynamically attach a click listener to every hotspot in the array
+    this.points.forEach((point) => {
+        point.element.addEventListener('click', () => {
+            if (!this.isFocused && !isTransitioning) {
+                // Pass the specific point we clicked into the focus function
+                enterFocusMode(point); 
+                this.currPointName = point.name
             }
-        ]
+        });
+    });
+}
+        //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
+
+
+
+
 
         console.log(renderer.info)
 
@@ -625,7 +657,6 @@ export default class Experience {
 
 
 
-
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
         // ---------------------------------------------------------
@@ -639,7 +670,13 @@ export default class Experience {
         let canvasLocalY = 0;
         let targetX = 0;
         let targetY = 0;
+
+
+
         const tick = () => {
+            controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
+            renderer.render(this.scene, this.camera);
+
             const elapsedTime = clock.getElapsedTime();
             stats.begin();
             // ---- CAMERA LERP ----
@@ -670,16 +707,11 @@ export default class Experience {
                 }
             }
             const target = controls.target
-            if (sceneReady === true) {
-
-                for (const point of points) {
-                    // 1. Grab the 3D location of the Rubik's cube
-                    const screenPos = point.position.clone()
-
-                    // Convert 3D world coordinates into Normalized Device Coordinates (NDC).
-                    // This maps the 3D space to a 2D grid ranging from -1 to +1.
-                    // 2. Figure out exactly where that 3D location appears on the 2D glass of the monitor
-                    screenPos.project(this.camera)
+            if (sceneReady === true && this.points) {
+                for (const point of this.points) {
+                    // 1. Grab the dynamic target position
+                    const screenPos = point.position.clone();
+                    screenPos.project(this.camera);
 
                     // [ THE SHIELD ]
                     if (
@@ -692,50 +724,34 @@ export default class Experience {
                     }
 
                     // 3. Aim the raycaster exactly at that 2D spot
-                    raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera)
-                    const intersects = raycaster.intersectObjects(this.scene.children, true) // returns an array of every single mesh that laser touched, sorted from closest to furthest.
-                        .filter(hit => !this.cube.cubeGroup.getObjectById(hit.object.id)) // Ignores the Rubik's cube itself, leaving only physical obstacles in the array.
-                    // we do this so our raycaster only cares about obstacles (monitor, notebook, etc)
-                    if (intersects.length === 0) { // If no objects are in the way, add visible class to the hotspot
-                        point.element.classList.add('visible')
-                    }
-                    else {
-                        const intersectionDistance = intersects[0].distance
-                        const pointDistance = point.position.distanceTo(this.camera.position)
+                    raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera);
+
+                    // THE DYNAMIC SHIELD: Checks if the hit object is inside THIS specific point's ignore array
+                    const intersects = raycaster.intersectObjects(this.scene.children, true)
+                        .filter(hit => !point.ignoreMeshes.some(ignoreObj => ignoreObj.getObjectById(hit.object.id)));
+                    // 🚨 THE DETECTIVE LOG
+                    if (intersects.length === 0) {
+                        point.element.classList.add('visible');
+                    } else {
+                        const intersectionDistance = intersects[0].distance;
+                        const pointDistance = point.position.distanceTo(this.camera.position);
 
                         if (intersectionDistance < pointDistance) {
-                            point.element.classList.remove('visible')
+                            point.element.classList.remove('visible');
+                        } else {
+                            point.element.classList.add('visible');
                         }
-                        else {
-                            point.element.classList.add('visible')
-                        }
-
                     }
 
-
                     // [ REVERSE-RAYCASTING: 3D TO HTML DOM ]
-
-                    // Step 1: Map the -1 to +1 NDC coordinate to the *physical* pixel size of the canvas.
-                    // (screenPos.x * 0.5 + 0.5) converts the -1 to +1 range into a 0.0 to 1.0 percentage.
                     canvasLocalX = (screenPos.x * 0.5 + 0.5) * this.canvasRect.width;
-
-                    // Y in NDC is inverted (bottom is -1, top is +1), so we multiply by -0.5 to flip it for the DOM (where top is 0).
                     canvasLocalY = (screenPos.y * -0.5 + 0.5) * this.canvasRect.height;
 
-                    // Step 2: Account for the Black Bars (The CSS Flexbox Offset)
-                    // If the canvas is letterboxed, it doesn't start at the top-left of the monitor.
-                    // We add canvasRect.left and canvasRect.top to perfectly align the HTML overlay with the shifted canvas.
-                    targetX = this.canvasRect.left + canvasLocalX;
-                    targetY = this.canvasRect.top + canvasLocalY;
+                    targetX = Math.round(this.canvasRect.left + canvasLocalX);
+                    targetY = Math.round(this.canvasRect.top + canvasLocalY);
 
-                    // Step 3: Hardware-Accelerated DOM Update
-                    hotspotX = targetX;
-                    hotspotY = targetY;
-
-                    // Using `transform: translate` pushes the math to the GPU compositor. 
-                    // (Unlike `style.top` / `style.left`, which forces the CPU to recalculate the page layout every frame).
-                    cubeHotspot.style.transform = `translate(${targetX}px, ${targetY}px)`;
-
+                    // DYNAMIC DOM UPDATE: Applies the math to whatever HTML element this point owns
+                    point.element.style.transform = `translate(${targetX}px, ${targetY}px)`;
                 }
             }
             this.supernova.update(elapsedTime, this.camera);
@@ -746,7 +762,6 @@ export default class Experience {
             trackballControls.target.set(target.x, target.y, target.z)
             trackballControls.update()
             // Go through each points 
-            renderer.render(this.scene, this.camera);
             stats.end();
             requestAnimationFrame(tick);
         };

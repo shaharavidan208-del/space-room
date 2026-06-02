@@ -2,24 +2,26 @@
    GLOBAL RESET & VIEWPORT LOCK
    --------------------------------------------------------- */
 
-   @font-face {
+@font-face {
     font-family: 'Audiowide';
-    src: url('./fonts/Audiowide-Regular.ttf') format('truetype'); 
+    src: url('./fonts/Audiowide-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
 }
 
-html, body, #app {
+html,
+body,
+#app {
     margin: 0;
     padding: 0;
     width: 100vw;
-    
+
     /* 100dvh (Dynamic Viewport Height) prevents layout breaks on mobile.
        It dynamically recalculates the height when the browser's URL address bar 
        appears or disappears, keeping the scene perfectly centered. */
-    height: 100dvh; 
-    
+    height: 100dvh;
+
     /* This creates the black background that acts as our "cinematic black bars" */
     background-color: #000;
     overflow: hidden;
@@ -28,7 +30,7 @@ html, body, #app {
 /* ---------------------------------------------------------
    FLEXBOX CENTERING ENGINE
    --------------------------------------------------------- */
-body { 
+body {
     display: flex;
     /* Automatically centers the canvas horizontally (creates side pillar-bars if canvas is narrow) */
     justify-content: center;
@@ -42,10 +44,10 @@ body {
 canvas {
     /* Removes standard inline-block spacing anomalies */
     display: block !important;
-    
+
     /* Forces the canvas to obey the parent Flexbox. 
        If this was 'absolute', it would snap to the top-left corner and ignore our centering. */
-    position: static !important; 
+    position: static !important;
     margin: 0;
     padding: 0;
 }
@@ -53,27 +55,28 @@ canvas {
 /* ---------------------------------------------------------
    HOTSPOT ORIGIN ALIGNMENT
    --------------------------------------------------------- */
-.cube {
+.point {
     position: absolute;
-    
+
     /* CRITICAL: The HTML elements must originate from the exact top-left corner (0,0) of the window.
        This allows our JS `translate(${targetX}px, ${targetY}px)` math to map 1:1 with the screen. 
        If these were left at 50%, the JS would push the hotspot completely off the screen. */
-    top: 0;   
-    left: 0;  
+    top: 0;
+    left: 0;
+    /* Force the browser to hand this element over to the GPU */
+    will-change: transform;
 }
 
-.cube:hover .text
-{
+.point:hover .text {
     opacity: 1;
 }
 
-.cube.visible .label {
+.point.visible .label {
     /* Moves it to the dead center, THEN scales it up to full size */
     transform: translate(-50%, -50%) scale(1);
 }
 
-.cube .label {
+.point .label {
     position: absolute;
     width: 40px;
     height: 40px;
@@ -87,13 +90,13 @@ canvas {
     font-weight: 100;
     font-size: 12px;
     cursor: pointer;
-    
+
     /* THE FIX: Chained into one line */
     transform: translate(-50%, -50%) scale(0);
-    
+
     /* Let the browser handle both transform and box-shadow smoothly */
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
-    
+
     display: flex;
     justify-content: center;
     align-items: center;
@@ -102,42 +105,45 @@ canvas {
     outline: none;
 }
 
-.cube .text {
+.point .text {
     position: absolute;
     /* Anchor it right next to the pulsating dot, perfectly vertically aligned */
-    top: 50%; 
-    left: 45px; /* Pushes it just outside the 40px dot */
-    transform: translateY(-50%); /* Centers the text to the dot's equator */
-    
+    top: 50%;
+    left: 45px;
+    /* Pushes it just outside the 40px dot */
+    transform: translateY(-50%);
+    /* Centers the text to the dot's equator */
+
     /* Strip the bulky borders and background */
     background: transparent;
     border: none;
     padding: 0;
-    width: max-content; /* Only takes up exactly as much space as the letters need */
-    
+    width: max-content;
+    /* Only takes up exactly as much space as the letters need */
+
     /* Typography Upgrade */
     color: #ffffff;
     font-family: 'Audiowide', sans-serif;
     font-size: 11px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    
+
     /* The Holographic Glow */
-    text-shadow: 0 0 5px rgba(0, 255, 255, 0.8), 
-                 0 0 10px rgba(0, 255, 255, 0.4);
-    
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.8),
+        0 0 10px rgba(0, 255, 255, 0.4);
+
     /* The Animation State */
     opacity: 0;
     pointer-events: none;
-    
+
     /* Instead of just fading in, let's make it slide out of the dot mechanically */
     clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
-    transition: clip-path 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), 
-                opacity 0.2s ease-in;
+    transition: clip-path 0.3s cubic-bezier(0.165, 0.84, 0.44, 1),
+        opacity 0.2s ease-in;
 }
 
 /* When the user hovers over the dot, reveal the text */
-.cube:hover .text {
+.point:hover .text {
     opacity: 1;
     /* Wipe the text open from left to right like a computer terminal */
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
@@ -167,11 +173,13 @@ canvas {
         background: rgba(0, 0, 0, 0.6);
         border-color: rgba(0, 255, 255, 0.3);
     }
+
     50% {
         box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4);
         background: rgba(0, 255, 255, 0.1);
         border-color: rgba(0, 255, 255, 1.0);
     }
+
     100% {
         box-shadow: 0 0 4px rgba(0, 255, 255, 0.4);
         background: rgba(0, 0, 0, 0.6);

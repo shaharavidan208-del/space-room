@@ -106,7 +106,7 @@ export default class CubeInput {
         renderer.domElement.addEventListener('pointerdown', (input) => {
             const isLMB = input.button === 0; // Works for touch too!
             this.rotationAxis = ''
-            if (this.isDragging || !isLMB || !this.experience.isFocused || this.cube.rotator.isAnimating) return;
+            if (this.isDragging || !isLMB || !this.experience.isFocused || this.cube.rotator.isAnimating || this.experience.currPointName !== "RubiksCube") return;
             this.dx = input.clientX - this.prevX;
             this.dy = input.clientY - this.prevY;
 
