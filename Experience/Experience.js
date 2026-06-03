@@ -340,15 +340,15 @@ export default class Experience {
                 for (let i = 0; i < 10; i++) {
                     this.cube.scrambler();
                 }
-            } 
-            
+            }
+
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
                 // Keep the monitor visible!
                 lookTarget.copy(activePoint.position.clone()); // Aims exactly at the glass center
-                
+
                 targetFov = 70; // A natural, slightly focused human eye FOV
-                
+
                 // The Diegetic Camera Offset:
                 // Move the camera slightly up (Y) and pull it back (Z) from the screen.
                 // NOTE: Depending on how your room is rotated in Blender, you might need to adjust 
@@ -375,13 +375,13 @@ export default class Experience {
             targetFov = homeFov;
             cameraTarget.copy(cameraHome);
             lookTarget.copy(lookHome);
-            
+
             // Ensure monitor is visible again
             monitorFrame.visible = true;
             monitorGlass.visible = true;
         };
 
-    
+
 
         // Escape key exits
         window.addEventListener('keydown', (input) => {
@@ -391,7 +391,7 @@ export default class Experience {
             }
         });
 
-    
+
 
 
         const dracoLoader = new DRACOLoader();
@@ -406,16 +406,22 @@ export default class Experience {
             clearcoat: 0.1,     // Bonus: Adds a premium glossy shell over the metal
             clearcoatRoughness: 0.2
         };
+
+        console.log(renderer.info)
         // טעינת המודל
         let walls;
         let monitorGlass;
         let monitorFrame;
         let terminalPosition;
-        const model = gltfLoader.load('/models/addedNoteBook2.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newPanels2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
-                    // console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-
+                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
+                    if (obj.name === "Mesh016_2") {
+                        obj.material.transparent = true
+                        obj.material.opacity = 0.2; // Adjust from 0.0 (invisible) to 1.0 (solid)
+                        obj.material.depthWrite = false; // This is the magic line that stops the glitching
+                    }
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
                     if (obj.name === "Cube002_1") {
                         obj.material = new THREE.MeshStandardMaterial({
@@ -495,39 +501,39 @@ export default class Experience {
         /**
          * Points of interest
          */
-        
+
 
         this.initHotspots = () => {
-    const glassBox = new THREE.Box3().setFromObject(monitorGlass);
-    const trueGlassCenter = new THREE.Vector3();
-    glassBox.getCenter(trueGlassCenter);
+            const glassBox = new THREE.Box3().setFromObject(monitorGlass);
+            const trueGlassCenter = new THREE.Vector3();
+            glassBox.getCenter(trueGlassCenter);
 
-    this.points = [
-        {
-            name: 'RubiksCube',
-            position: this.cube.cubeGroup.position,
-            element: document.querySelector('#hotspot-cube'),
-            ignoreMeshes: [this.cube.cubeGroup] 
-        },
-        {
-            name: 'Terminal',
-            position: trueGlassCenter, 
-            element: document.querySelector('#hotspot-terminal'),
-            ignoreMeshes: [monitorFrame, monitorGlass] 
+            this.points = [
+                {
+                    name: 'RubiksCube',
+                    position: this.cube.cubeGroup.position,
+                    element: document.querySelector('#hotspot-cube'),
+                    ignoreMeshes: [this.cube.cubeGroup]
+                },
+                {
+                    name: 'Terminal',
+                    position: trueGlassCenter,
+                    element: document.querySelector('#hotspot-terminal'),
+                    ignoreMeshes: [monitorFrame, monitorGlass]
+                }
+            ];
+
+            // NEW: Dynamically attach a click listener to every hotspot in the array
+            this.points.forEach((point) => {
+                point.element.addEventListener('click', () => {
+                    if (!this.isFocused && !isTransitioning) {
+                        // Pass the specific point we clicked into the focus function
+                        enterFocusMode(point);
+                        this.currPointName = point.name
+                    }
+                });
+            });
         }
-    ];
-
-    // NEW: Dynamically attach a click listener to every hotspot in the array
-    this.points.forEach((point) => {
-        point.element.addEventListener('click', () => {
-            if (!this.isFocused && !isTransitioning) {
-                // Pass the specific point we clicked into the focus function
-                enterFocusMode(point); 
-                this.currPointName = point.name
-            }
-        });
-    });
-}
         //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
 
 

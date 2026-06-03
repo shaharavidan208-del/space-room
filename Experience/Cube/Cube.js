@@ -123,7 +123,7 @@ export default class Cube {
 
         // Position the entire cube in the room scene (sitting on the desk)
         this.rotator = new Rotator(this)
-        this.cubeGroup.position.set(-2.45, 1.57, -1.8)
+        this.cubeGroup.position.set(0, 1.57, -1.8)
         this.scene.add(this.cubeGroup)
         console.log(this.pieces[0].position)
         // console.log(this.pieces)
