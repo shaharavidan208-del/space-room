@@ -39,7 +39,7 @@ export default class Experience {
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
         this.scene.add(overlay)
         this.gu = new GUI()
-        this.terminal = new TerminalCanvas();
+        this.terminal = new TerminalCanvas(this);
 
         //         /**
         //  * Loaders
@@ -388,6 +388,7 @@ export default class Experience {
             if (input.key === 'Escape' && this.isFocused) {
                 exitFocusMode();
                 this.isFocused = false
+                this.currPointName = ""
             }
         });
 
@@ -419,7 +420,7 @@ export default class Experience {
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
                     if (obj.name === "Mesh016_2") {
                         obj.material.transparent = true
-                        obj.material.opacity = 0.2; // Adjust from 0.0 (invisible) to 1.0 (solid)
+                        obj.material.opacity = 0.2; // 0.0 is fully transparent, 1.0 is fully opaque
                         obj.material.depthWrite = false; // This is the magic line that stops the glitching
                     }
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
@@ -456,8 +457,8 @@ export default class Experience {
                         });
                         // Slide the texture down slightly. 
                         // Positive numbers push it up, negative push it down.
-                        this.terminal.texture.offset.y = 0.15;
-                        this.terminal.texture.repeat.set(1.5, 1.5, 1.5)
+                        this.terminal.texture.offset.y = 0.1;
+                        this.terminal.texture.repeat.set(1.6, 1.6, 1.6)
 
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
