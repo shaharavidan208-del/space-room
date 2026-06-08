@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import DialogueTree from './DialogueTree.js';
+import TerminalTree from './TerminalTree.js';
 
 export default class TerminalCanvas {
     constructor(experience) {
@@ -33,46 +33,13 @@ export default class TerminalCanvas {
         this.texture.minFilter = THREE.LinearFilter;
         this.texture.magFilter = THREE.LinearFilter;
 
-        // ==========================================
-        // 3. STATE MACHINE DATA (THE BRAIN)
-        // ==========================================
+        this.texture.wrapS = THREE.ClampToEdgeWrapping;
+        this.texture.wrapT = THREE.ClampToEdgeWrapping;
 
-        // 'mode' tracks which screen the user is currently looking at.
-        this.mode = 'menu';
-        // 'selectedIndex' tracks which menu item the cursor (>) is currently hovering over.
-        this.selectedIndex = 0;
+        this.texture.minFilter = THREE.LinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
 
-        // The master list of our root directory menus.
-        this.menuItems = [
-            'MY PROJECTS',
-            'ABOUT ME',
-            'Customer Support',
-            'SYSTEM DIAGNOSTICS'
-        ];
 
-        // The data that will populate the 'projects' screen.
-        this.projects = [ // an array that holds each project as an object
-            { name: 'Interactive 3D Rubik\'s Cube', tech: 'Three.js, Raycasting' },
-            { name: 'Portfolio Mainframe', tech: 'WebGL, GLSL Shaders' }
-        ];
-
-        // 'currentInput' holds the string of text the user is actively typing.
-        this.currentInput = '';
-
-        // 'chatHistory' stores an array of objects. Each object is one message (either from the user or the AI).
-        this.chatHistory = [ // an array that holds each message as an object
-            { sender: 'SYS', text: 'UNAUTHORIZED ACCESS DETECTED.' },
-            { sender: 'SYS', text: 'COGNITIVE CALIBRATION REQUIRED.' }
-        ];
-
-        // The data that will populate the 'about' screen.
-        // divided to paragraphs
-        // We break it into an array so we can easily create paragraph breaks later.
-        this.aboutParagraphs = [
-            "Hey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.",
-            "I'm a strong believer in learning by doing. Long before officially starting my Computer Science degree at the Holon Institute of Technology (HIT) this fall, I was already teaching myself how to bridge the gap between raw math and visual design.",
-            "I had a lot of fun making this project. I've learned a lot of things by working on this and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall. "
-        ];
 
         // Dialogue Tree State
         this.currentNodeId = 'start';
@@ -177,7 +144,7 @@ export default class TerminalCanvas {
         // MANUAL OVERRIDE LOGIC: Hijack the keys to type a message
         else if (this.mode === 'override') {
             // 1. Ask the Database for the current node data
-            const currentNode = DialogueTree[this.currentNodeId];
+            const currentNode = TerminalTree[this.currentNodeId];
             const maxChoices = currentNode.choices.length; // calculate how many dialogue options the user have
 
             if (event.key === 'ArrowDown') {
@@ -207,18 +174,74 @@ export default class TerminalCanvas {
     }
 
     // A simple router. Changes the screen based on which index the cursor was on when they pressed Enter.
-    executeSelection() {
-        switch (this.selectedIndex) {
-            case 0: this.mode = 'projects'; break;
-            case 1: this.mode = 'about'; break;
-            case 2: this.mode = 'override'; break;
-            case 3: this.mode = 'diagnostics'; break;
-        }
-        this.draw(); // Instantly wipe and redraw the screen to show the new mode
-    }
-    draw()
-    {
+    draw() {
+        // 1. Clear the previous terminal frame.
+        // Canvas does not automatically erase old drawings, so we repaint the background.
+        this.ctx.fillStyle = '#050505';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // 2. Get the current terminal node from the tree.
+        // currentNodeId is the "address" of the current screen.
+        const node = TerminalTree[this.currentNodeId];
+
+        // 3. Safety check.
+        // If the node ID is wrong, show an error instead of crashing silently.
+        if (!node) {
+            this.ctx.fillStyle = '#00FF41';
+            this.ctx.font = '30px monospace';
+            this.ctx.fillText('ERROR: NODE NOT FOUND', 50, 80);
+            this.ctx.fillText(`Missing node: ${this.currentNodeId}`, 50, 130);
+
+            this.texture.needsUpdate = true;
+            return;
+        }
+
+        // 4. Draw the header.
+        this.ctx.fillStyle = '#00FF41';
+        this.ctx.font = '28px monospace';
+
+        if (node.header) {
+            this.ctx.fillText(node.header, 50, 80);
+        } else {
+            this.ctx.fillText('TERMINAL', 50, 80);
+        }
+
+        this.ctx.fillText('------------------------', 50, 115);
+
+        // 5. Draw the main text.
+        this.ctx.font = '24px monospace';
+
+        let cursorY = 180;
+
+        if (node.aiText) {
+            cursorY = this.wrapText(node.aiText, 50, cursorY, 900, 36);
+            cursorY += 40;
+        }
+
+        // 6. Draw the choices.
+        // The selected choice gets a green highlight bar.
+        if (node.choices && node.choices.length > 0) {
+            for (let i = 0; i < node.choices.length; i++) {
+                const choice = node.choices[i];
+
+                if (i === this.dialogueSelectedIndex) {
+                    this.ctx.fillStyle = '#00FF41';
+                    this.ctx.fillRect(40, cursorY - 28, 920, 38);
+
+                    this.ctx.fillStyle = '#050505';
+                    this.ctx.fillText(`> ${choice.text}`, 55, cursorY);
+                } else {
+                    this.ctx.fillStyle = '#00FF41';
+                    this.ctx.fillText(`  ${choice.text}`, 55, cursorY);
+                }
+
+                cursorY += 48;
+            }
+        }
+
+        // 7. Tell Three.js to upload the new canvas pixels to the monitor texture.
+        // Without this, the 3D monitor keeps showing the old frame.
+        this.texture.needsUpdate = true;
     }
 
     // ==========================================
@@ -263,15 +286,15 @@ export default class TerminalCanvas {
     //         cursorY += 50;
     //     });
 
-        // 3. RENDER BASED ON CURRENT MODE
-        // We use a switch statement to ask the State Machine what we should be drawing right now.
+    // 3. RENDER BASED ON CURRENT MODE
+    // We use a switch statement to ask the State Machine what we should be drawing right now.
 
 
-        // ==========================================
-        // 6. THE GPU TRIGGER (CRITICAL)
-        // ==========================================
-        // The 3D graphics card (GPU) has no idea that we just changed pixels on the 2D canvas in RAM.
-        // If we do not set this flag to true, the monitor in your 3D room will never update.
-        // This line tells Three.js: "Hey, the canvas changed. Upload the new frame to the GPU immediately."
-        // this.texture.needsUpdate = true;
-    }
+    // ==========================================
+    // 6. THE GPU TRIGGER (CRITICAL)
+    // ==========================================
+    // The 3D graphics card (GPU) has no idea that we just changed pixels on the 2D canvas in RAM.
+    // If we do not set this flag to true, the monitor in your 3D room will never update.
+    // This line tells Three.js: "Hey, the canvas changed. Upload the new frame to the GPU immediately."
+    // this.texture.needsUpdate = true;
+}

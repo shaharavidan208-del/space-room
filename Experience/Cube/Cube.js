@@ -14,7 +14,7 @@ const PIECE_CORNER_RADIUS = 0.12;
 const STICKER_CORNER_ROUNDNESS = 0.15;
 
 // Sticker size as a fraction of the cubie face. Below 1.0 leaves a black gap between stickers,
-const STICKER_SCALE = 0.93;
+const STICKER_SCALE = 0.87;
 
 // Sticker thickness 
 const STICKER_DEPTH = 0.01;
@@ -47,6 +47,7 @@ export default class Cube {
     constructor(scene) {
         this.rndAxisArr = ['x', 'y', 'z']
         this.faceName = null
+        this.stickerArr = []
         // Parent group for the entire cube. 
         this.cubeGroup = new THREE.Group()
         // Size of a single cubie 
@@ -206,7 +207,14 @@ export default class Cube {
         // Make sticker a child of cubie. Three.js scene graph will automatically apply
         // any cubie rotations to its sticker children — no manual sticker math needed during animations.
         cubie.add(sticker);
+        const hitSticker = sticker.clone();
 
+        const hitScale = 1 / STICKER_SCALE;
+        hitSticker.scale.set(hitScale, hitScale, 1); // multiply by the inverse of STICKER_SCALE so it cancels out
+        hitSticker.visible = false;
+        cubie.add(hitSticker);
+
+        this.stickerArr.push(hitSticker);
         // Also keep flat reference for fast iteration during solve detection and animations
         this.edges.push(sticker);
     }

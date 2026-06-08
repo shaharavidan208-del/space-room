@@ -59,7 +59,7 @@ export default class Particles {
                 const textMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTexture})
                 const text = new THREE.Mesh(textGeometry, textMaterial)
                 const positionFolder = gui.addFolder('Mesh Position');
-                text.position.set(0, 4, -5)
+                text.position.set(1.5, 3.8, -5)
                 // positionFolder.add(text.position, 'x', -10, 10, 0.1).name('X Axis');
                 // positionFolder.add(text.position, 'y', -10, 10, 0.1).name('Y Axis');
                 // positionFolder.add(text.position, 'z', -10, 10, 0.1).name('Z Axis');

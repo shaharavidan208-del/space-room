@@ -139,9 +139,11 @@ canvas {
     /* Instead of just fading in, let's make it slide out of the dot mechanically */
     clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
     transition: clip-path 0.3s cubic-bezier(0.165, 0.84, 0.44, 1),
-        opacity 0.2s ease-in;
+        opacity 0.1s ease-in;
 }
-
+canvas {
+    touch-action: none;
+}
 /* When the user hovers over the dot, reveal the text */
 .point:hover .text {
     opacity: 1;

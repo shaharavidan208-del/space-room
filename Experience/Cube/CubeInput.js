@@ -41,6 +41,8 @@ export default class CubeInput {
             this.cube.rotator.endRotation()
         }
 
+        this.activePointerId = null
+        this.isPointerActive = false
         this.dragMode = ''
         this.isDragging = false
 
@@ -69,6 +71,8 @@ export default class CubeInput {
         this.isDragging = false
         this.dragMode = "" // Tracks whether current drag is "layer" or "cube"
         this.axisLocked = false // Locks the axis once rotation intent is determined
+        this.activePointerId = null;
+        this.isPointerActive = false;
 
         // --- Interaction Data ---
         this.hitCubie = null
@@ -99,14 +103,28 @@ export default class CubeInput {
         this.dragDelta = null
 
 
+
         // ==========================================
         // EVENT: POINTER DOWN
         // Fires when any mouse button is pressed or screen is touched
         // ==========================================
         renderer.domElement.addEventListener('pointerdown', (input) => {
+
             const isLMB = input.button === 0; // Works for touch too!
-            this.rotationAxis = ''
             if (this.isDragging || !isLMB || !this.experience.isFocused || this.cube.rotator.isAnimating || this.experience.currPointName !== "RubiksCube") return;
+
+            if (this.isPointerActive === true) {
+                return;
+            }
+
+            // From this point onward, this pointer is accepted.
+            // Now it is safe to reset interaction state.
+            this.rotationAxis = '';
+            this.axisLocked = false;
+
+            this.isPointerActive = true;
+            this.activePointerId = input.pointerId;
+
             this.dx = input.clientX - this.prevX;
             this.dy = input.clientY - this.prevY;
 
@@ -130,13 +148,12 @@ export default class CubeInput {
             this.startX = input.clientX;
             this.startY = input.clientY;
 
-            const stickerHits = this.raycaster.intersectObjects(this.cube.edges);
+            const stickerHits = this.raycaster.intersectObjects(this.cube.stickerArr);
             this.axisLocked = false;
 
             if (stickerHits.length > 0) {
                 // We clicked a sticker — initialize layer rotation
                 this.hitCubie = stickerHits[0].object.parent;
-
                 // Clone normal to avoid aliasing, then translate it from Local to World space
                 this.hitStickerNormal = stickerHits[0].face.normal.clone()
                     .transformDirection(stickerHits[0].object.matrixWorld)
@@ -183,6 +200,13 @@ export default class CubeInput {
             if (!this.experience.isFocused) return;
             if (!this.isDragging) return;
             if (this.cube.rotator.isAnimating) return;
+            if (this.isPointerActive === false) {
+                return;
+            }
+
+            if (input.pointerId !== this.activePointerId) {
+                return;
+            }
             this.dx = input.clientX - this.prevX
             this.dy = input.clientY - this.prevY
 
@@ -199,9 +223,9 @@ export default class CubeInput {
                     this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy);
                     if (this.dxLarger)
                         this.rotationAxis = 'y'
-                    else if(this.mouse.x >= 0)
+                    else if (this.mouse.x >= 0)
                         this.rotationAxis = 'x'
-                    else 
+                    else
                         this.rotationAxis = 'z'
                     this.axisLocked = true;
                 }
@@ -212,13 +236,12 @@ export default class CubeInput {
                         // Dragging Left/Right -> Spin around the World Y-Axis (Up/Down)
                         this.flipAxis = yVector;
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dx * this.sensitivity);
-                    } else if(this.rotationAxis === 'x') {
+                    } else if (this.rotationAxis === 'x') {
                         // Dragging Up/Down -> Spin around the World X-Axis (Left/Right)
                         this.flipAxis = xVector;
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
                     }
-                    else 
-                    {
+                    else {
                         this.flipAxis = zVector;
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
                     }
@@ -237,7 +260,6 @@ export default class CubeInput {
             // TRACK 2: LAYER ROTATION (2D/3D HYBRID)
             // ------------------------------------------
             if (this.dragMode !== "cube") {
-                console.log("entered if statement")
                 // Shoot the laser at the drag plane
                 const planeHit = this.raycaster.ray.intersectPlane(this.dragPlane, this.currentDragWorld);
                 // The Safe Guard: Bail out if ray is perfectly parallel to plane (prevents stale data loops)
@@ -303,11 +325,31 @@ export default class CubeInput {
             this.prevX = input.clientX;
             this.prevY = input.clientY;
         })
+        // Actively kill native multi-touch gestures before the OS can hijack the pointer
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
         // ==========================================
         // EVENT: POINTER UP & CANCEL
         // ==========================================
         renderer.domElement.addEventListener('pointerup', (input) => {
+            if (this.isPointerActive === false) {
+                return;
+            }
+            if (input.pointerId !== this.activePointerId) {
+                return;
+            }
+            if (input.target.hasPointerCapture(input.pointerId)) {
+                input.target.releasePointerCapture(input.pointerId);
+            }
             if (!this.experience.isFocused) return;
             this.onDragEnd()
             if (!this.isDragging) return;
@@ -315,6 +357,16 @@ export default class CubeInput {
         })
 
         renderer.domElement.addEventListener('pointercancel', (input) => {
+            if (this.isPointerActive === false) {
+                return;
+            }
+
+            if (input.pointerId !== this.activePointerId) {
+                return;
+            }
+            if (input.target.hasPointerCapture(input.pointerId)) {
+                input.target.releasePointerCapture(input.pointerId);
+            }
             this.onDragEnd()
             this.dragMode = null
             this.isDragging = false

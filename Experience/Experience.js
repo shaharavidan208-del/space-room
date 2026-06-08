@@ -91,6 +91,7 @@ export default class Experience {
          * Lights
          */
 
+
         // 1. Drop the global ambient wash
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
         this.scene.add(ambientLight);
@@ -140,21 +141,70 @@ export default class Experience {
 
 
 
-        /**
-         * Light GUI
-         */
-        // const lightFolder = this.gu.addFolder('Directional Lights');
 
-        // Main Light (The one casting shadows)
-        // const mainLightFolder = lightFolder.addFolder('Main Light');
-        // mainLightFolder.add(novaLight.position, 'x', -20, 20, 0.1).name('Position X');
-        // mainLightFolder.add(novaLight.position, 'y', -20, 20, 0.1).name('Position Y');
-        // mainLightFolder.add(novaLight.position, 'z', -20, 20, 0.1).name('Position Z');
-        // mainLightFolder.add(novaLight, 'intensity', 0, 10, 0.1).name('Intensity');
-        // mainLightFolder.addColor(novaLight, 'color').name('Color')
 
-        console.log(renderer.info)
+        // directionalLight.shadow.camera.updateProjectionMatrix();
 
+        // directionalLight.shadow.normalBias = 0.05;
+
+
+        const debugParams = {
+            lookX: 1,
+            lookY: 1.24, // Start slightly above the floor
+            lookZ: 0
+        };
+
+        novaLight.target.position.set(-15, 5, -20);
+
+        this.scene.add(novaLight.target);
+        const lightFolder = this.gu.addFolder('Supernova Light');
+
+        const sourceFolder = lightFolder.addFolder('Source Position');
+        sourceFolder.add(novaLight.position, 'x', -50, 50, 0.1).name('Pos X');
+        sourceFolder.add(novaLight.position, 'y', -50, 50, 0.1).name('Pos Y');
+        sourceFolder.add(novaLight.position, 'z', -50, 50, 0.1).name('Pos Z');
+        sourceFolder.add(novaLight, 'intensity', 0, 40, 0.1).name('Intensity');
+
+        const targetFolder = lightFolder.addFolder('Target (Look At)');
+        targetFolder.add(novaLight.target.position, 'x', -50, 50, 0.1).name('Target X');
+        targetFolder.add(novaLight.target.position, 'y', -50, 50, 0.1).name('Target Y');
+        targetFolder.add(novaLight.target.position, 'z', -50, 50, 0.1).name('Target Z');
+
+        const novaLightHelper = new THREE.DirectionalLightHelper(novaLight, 2);
+        this.scene.add(novaLightHelper);
+
+        sourceFolder.onChange(() => novaLightHelper.update());
+        targetFolder.onChange(() => novaLightHelper.update());
+
+
+        // Move the light source itself
+        const deskLight = new THREE.PointLight(0x00ffff, 5, 5)
+        const deskLight2 = new THREE.PointLight(0x00ffff, 5, 5)
+        // 3. FORCE realistic physics decay (Crucial for atmospheric lighting)
+        deskLight.decay = 2;
+        deskLight2.decay = 2;
+        deskLight.position.set(0, 2.5, 0) // up in the ceiling
+        deskLight2.position.set(2.5, 1.2, -4.2) // near desk
+        novaLight.position.set(4.8, 11.8, -26.7)
+        // Set the exact coordinates you want it to look at
+        novaLight.target.position.set(5, 5, -20);
+
+        // CRITICAL: The engine still needs the target in the scene to calculate the math
+        this.scene.add(novaLight.target);
+        // const lightFolder2 = this.gu.addFolder('desk Light');
+        // const sourceFolder2 = lightFolder2.addFolder('Desk Light 1');
+        // sourceFolder2.add(deskLight.position, 'x', -50, 50, 0.1).name('Pos X');
+        // sourceFolder2.add(deskLight.position, 'y', -50, 50, 0.1).name('Pos Y');
+        // sourceFolder2.add(deskLight.position, 'z', -50, 50, 0.1).name('Pos Z');
+        // sourceFolder2.add(deskLight, 'intensity', 0, 40, 0.1).name('Intensity');
+
+        // const sourceFolder3 = lightFolder2.addFolder('Desk Light 2');
+        // sourceFolder3.add(deskLight2.position, 'x', -50, 50, 0.1).name('Pos X');
+        // sourceFolder3.add(deskLight2.position, 'y', -50, 50, 0.1).name('Pos Y');
+        // sourceFolder3.add(deskLight2.position, 'z', -50, 50, 0.1).name('Pos Z');
+        // sourceFolder3.add(deskLight2, 'intensity', 0, 40, 0.1).name('Intensity');
+
+        this.scene.add(deskLight, deskLight2)
         /**
          * Light & Shadow Helpers
          */
@@ -195,9 +245,9 @@ export default class Experience {
         this.supernova.mesh.position.x = -15
         this.supernova.mesh.position.y = 6
         this.supernova.mesh.position.z = -850
-        this.supernova.mesh.scale.setScalar(200)
+        this.supernova.mesh.scale.setScalar(175)
         // const novaFolder = gu.addFolder('Supernova')
-        // (min, max, increments), change supernova position 
+        // // (min, max, increments), change supernova position 
         // novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
         // novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
         // novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
@@ -226,13 +276,9 @@ export default class Experience {
             1000, // far
         );
 
-        const debugParams = {
-            lookX: 0,
-            lookY: 1, // Start slightly above the floor
-            lookZ: 0
-        };
-        this.camera.position.set(-0.5, 5.5, 10.5);
-        this.camera.lookAt(0, 2.71, 0.5)
+
+        this.camera.position.set(1.5, 2.5, 10.5);
+        this.camera.lookAt(0.9, 1.24, 0)
         this.scene.add(this.camera);
 
 
@@ -249,21 +295,21 @@ export default class Experience {
         };
 
         // 4. Add the sliders to the screen
-        const cameraFolder = this.gu.addFolder('Initial Look Target');
+        // const cameraFolder = this.gu.addFolder('Initial Look Target');
 
         // .add(object, property).min.max.step.name.onChange
-        cameraFolder.add(debugParams, 'lookX').min(-10).max(10).step(0.01).name('Target X').onChange(updateCameraTarget);
-        cameraFolder.add(debugParams, 'lookY').min(-10).max(10).step(0.01).name('Target Y').onChange(updateCameraTarget);
-        cameraFolder.add(debugParams, 'lookZ').min(-10).max(10).step(0.01).name('Target Z').onChange(updateCameraTarget);
+        // cameraFolder.add(debugParams, 'lookX').min(-10).max(10).step(0.01).name('Target X').onChange(updateCameraTarget);
+        // cameraFolder.add(debugParams, 'lookY').min(-10).max(10).step(0.01).name('Target Y').onChange(updateCameraTarget);
+        // cameraFolder.add(debugParams, 'lookZ').min(-10).max(10).step(0.01).name('Target Z').onChange(updateCameraTarget);
 
-        cameraFolder.open(); // Keeps the folder open by default
+        // cameraFolder.open(); // Keeps the folder open by default
 
 
         const cam = this.gu.addFolder('Camera')
         // (min, max, increments), change supernova position 
-        cam.add(this.camera.position, 'x', -25, 25, 0.5).name('Position X')
-        cam.add(this.camera.position, 'y', -25, 25, 0.5).name('Position Y')
-        cam.add(this.camera.position, 'z', -25, 25, 0.5).name('Position Z')
+        cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
+        cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
+        cam.add(this.camera.position, 'z', -25, 25, 0.1).name('Position Z')
 
         // Controls
         const trackballControls = new TrackballControls(this.camera, canvas)
@@ -274,13 +320,12 @@ export default class Experience {
         const controls = new OrbitControls(this.camera, canvas);
         // controls.zoomSpeed = 2.0 // Increase zoom speed
         controls.enableZoom = false
-        // controls.target.set(0, 3, 3); // Set the initial target to match camera.lookAt
+        controls.target.set(0.9, 1.24, 0); // Set the initial target to match camera.lookAt
         controls.enableDamping = true;
         controls.dampingFactor = 0.12
         controls.minDistance = 0
-
         let isTransitioning = false;
-        // Hot spot variables
+
         // Hot spot variables
         this.isFocused = false;
         const lookTarget = this.cube.cubeGroup.position.clone();
@@ -293,19 +338,28 @@ export default class Experience {
             lookTarget.z + isometricDistance
         );
 
-        const cameraHome = new THREE.Vector3(-0.5, 5.5, 10.5);
-        const lookHome = new THREE.Vector3(0, 2.71, 0.5);
+        const cameraHome = this.camera.position.clone()
+        const lookHome = new THREE.Vector3(0.9, 1.24, 0);
 
         // --- NEW FOV VARIABLES ---
         const homeFov = 65;
         let targetFov = homeFov; // We will lerp toward this value
+
+        function showItems(visibility) {
+            ceilingMeshes.forEach((ceilingMesh) => {
+                ceilingMesh.visible = visibility;
+                console.log("entered show items")
+            });
+        }
 
         /**
          * focus mode on cube
          */
         const cubeHotspot = document.querySelector("#hotspot-cube")
         const enterFocusMode = (activePoint) => {
+            console.log(ceilingMeshes)
             this.isFocused = true;
+            trackballControls.enabled = false
             isTransitioning = true;
             controls.enabled = false;
 
@@ -316,9 +370,9 @@ export default class Experience {
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
+                showItems(false) // hide ceiling only in Cube mode
                 monitorGlass.visible = false;
                 monitorFrame.visible = false;
-                console.log("entered Rubiks cube focus mode")
                 lookTarget.copy(activePoint.position.clone());
                 targetFov = 13; // Isometric squeeze
 
@@ -337,9 +391,6 @@ export default class Experience {
                     lookTarget.z + dynamicDistance
                 );
 
-                for (let i = 0; i < 10; i++) {
-                    this.cube.scrambler();
-                }
             }
 
             // --- 2. TERMINAL LOGIC ---
@@ -362,7 +413,9 @@ export default class Experience {
         };
 
         const exitFocusMode = () => {
+            showItems(true) // unhide ceiling
             this.isFocused = true; // Prevents spam clicking during animation
+            trackballControls.enabled = true
             isTransitioning = true;
 
             // Bring all UI hotspots back
@@ -382,10 +435,12 @@ export default class Experience {
         };
 
 
-
+        let enteringFocusTransition = false
+        let exitingFocusTransition = false
         // Escape key exits
         window.addEventListener('keydown', (input) => {
             if (input.key === 'Escape' && this.isFocused) {
+                exitingFocusTransition = true
                 exitFocusMode();
                 this.isFocused = false
                 this.currPointName = ""
@@ -408,20 +463,86 @@ export default class Experience {
             clearcoatRoughness: 0.2
         };
 
+
+
         console.log(renderer.info)
         // טעינת המודל
         let walls;
-        let monitorGlass;
+        let monitorGlass; // x = 6.50067 m , y = 4.63503 m , z = 1.45205 m
         let monitorFrame;
         let terminalPosition;
-        const model = gltfLoader.load('/models/newPanels2.glb', (gltf) => {
+
+        const objectsArr = []
+
+        const hotspotOccluderNames = new Set([
+            "Cylinder002",
+            "Cylinder003",
+            "Cube002",
+            "Cube1",
+            "Cylinder005",
+            "Plane",
+            "Screen",
+            "Mesh009",
+            "Mesh015",
+            "Mesh011",
+            "spaceship-window-side",
+            "spaceship-window-side001",
+            "Occluder_Floor",
+            "Occluder_Ceiling",
+
+        ]);
+
+        const shouldAddHotspotOccluder = (obj) => {
+            if (hotspotOccluderNames.has(obj.name)) {
+                return true;
+            }
+
+            return false;
+        };
+        this.camera.layers.enable(1);
+
+        novaLight.layers.set(0);
+        deskLight.layers.set(0);
+        deskLight2.layers.set(0);
+        
+        const ceilingMeshes = [];
+        const model = gltfLoader.load('/models/merged2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (obj.isMesh) {
+                    if (shouldAddHotspotOccluder(obj)) {
+                        objectsArr.push(obj);
+                    }
+                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021")) {
+                        ceilingMeshes.push(obj);
+                    }
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-                    if (obj.name === "Mesh016_2") {
+                    if (obj.name === "spaceship-window-side001") {
+                        console.log(obj.material)
+                    }
+
+                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling") {
+                        obj.visible = false
+                        obj.material.side = THREE.DoubleSide;
+                    }
+
+                    //                     if(obj.name === "Mesh011") {
+                    //                         this.occlusionPlanes.push(
+                    //     new THREE.Box3().setFromObject(obj)
+                    // );
+                    //                     }
+
+                    if (obj.name === "Mesh016_2") { // windows
                         obj.material.transparent = true
                         obj.material.opacity = 0.2; // 0.0 is fully transparent, 1.0 is fully opaque
                         obj.material.depthWrite = false; // This is the magic line that stops the glitching
+                    }
+
+                    if (obj.name === "Mesh017") { // floor 
+                        // this.floorPlane = createHorizontalPlaneFromMesh(obj, 'floor', -1.7);
+                        // this.occlusionPlanes.push(this.floorPlane);
+                        // obj.castShadow = true
+                        // obj.receiveShadow = true
+                        // this.floorMesh = obj
                     }
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
                     if (obj.name === "Cube002_1") {
@@ -431,24 +552,20 @@ export default class Experience {
                             metalness: 0.85
                         });
                         obj.material.needsUpdate = true;
-                        obj.castShadow = true
-                        obj.receiveShadow = true
                     }
 
 
-                    if (obj.name === "Cube001") {
-                        obj.receiveShadow = true;
-                    }
                     if (obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" || obj.name === "mouse" || obj.name.includes("MSI")) {
                         // Bed, controller, 
-                        obj.castShadow = true
-                        obj.receiveShadow = true;
+                        // obj.castShadow = true
+                        // obj.receiveShadow = true
                     }
                     if (obj.name.includes("MSI")) {
                         monitorFrame = obj
-                        console.log(obj.position)
+                        obj.layers.set(1);
                     }
                     if (obj.name === "Screen") {
+                        obj.layers.set(1);
                         monitorGlass = obj
                         terminalPosition = obj.position
                         // Completely overwrite whatever material Blender sent
@@ -474,7 +591,7 @@ export default class Experience {
             this.initHotspots();
             this.scene.add(gltf.scene)
         })
-
+        console.log(renderer.info)
         // --- THE SHADOW SANITY CHECK ---
         // 1. A basic floor
         // const testPlane = new THREE.Mesh(
@@ -514,13 +631,13 @@ export default class Experience {
                     name: 'RubiksCube',
                     position: this.cube.cubeGroup.position,
                     element: document.querySelector('#hotspot-cube'),
-                    ignoreMeshes: [this.cube.cubeGroup]
+                    ignoreMeshes: [this.cube.cubeGroup, this.floorMesh, this.ceilingMesh]
                 },
                 {
                     name: 'Terminal',
                     position: trueGlassCenter,
                     element: document.querySelector('#hotspot-terminal'),
-                    ignoreMeshes: [monitorFrame, monitorGlass]
+                    ignoreMeshes: [monitorFrame, monitorGlass, this.floorMesh, this.ceilingMesh]
                 }
             ];
 
@@ -540,8 +657,6 @@ export default class Experience {
 
 
 
-
-        console.log(renderer.info)
 
         // Raycaster
         const raycaster = new THREE.Raycaster()
@@ -596,8 +711,9 @@ export default class Experience {
         // rendering the empty space at the top and bottom of the screen.
         const TARGET_ASPECT = 23 / 9;
 
-
+        let hotspotNeedUpdate = false
         window.addEventListener('resize', () => {
+            hotspotNeedUpdate = true
             const windowAspect = window.innerWidth / window.innerHeight;
 
             // [ MOBILE PORTRAIT DETECTION ]
@@ -677,18 +793,27 @@ export default class Experience {
         let canvasLocalY = 0;
         let targetX = 0;
         let targetY = 0;
+        const tempScreenVector = new THREE.Vector2();
+        const tempHitPoint = new THREE.Vector3();
 
+        controls.addEventListener('change', () => {
+            hotspotNeedUpdate = true;
+        });
 
+        trackballControls.addEventListener('change', () => {
+            hotspotNeedUpdate = true
+        });
 
         const tick = () => {
             controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
             renderer.render(this.scene, this.camera);
 
+
             const elapsedTime = clock.getElapsedTime();
             stats.begin();
             // ---- CAMERA LERP ----
-            // ---- CAMERA LERP ----
             if (isTransitioning) {
+                hotspotNeedUpdate = true
                 // 1. Lerp position and look target
                 this.camera.position.lerp(cameraTarget, 0.08);
                 controls.target.lerp(lookTarget, 0.08);
@@ -698,11 +823,11 @@ export default class Experience {
                 this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
 
                 // Check if we've arrived (close enough)
+
                 if (this.camera.position.distanceTo(cameraTarget) < 0.01) { // Bumped to 0.01 to prevent micro-stutters at the end of the lerp
                     this.camera.position.copy(cameraTarget);
                     this.camera.fov = targetFov; // Snap exactly to target just in case
                     this.camera.updateProjectionMatrix(); //
-
                     isTransitioning = false;
 
                     // Re-enable orbit controls only when returning home
@@ -714,28 +839,40 @@ export default class Experience {
                 }
             }
             const target = controls.target
-            if (sceneReady === true && this.points) {
+            if (sceneReady === true && this.points && hotspotNeedUpdate) {
+                console.log(renderer.info)
                 for (const point of this.points) {
-                    // 1. Grab the dynamic target position
+                    // Convert the hotspot's 3D world position into normalized screen coordinates.
+                    // After projection:
+                    // x and y are between -1 and 1 when visible on screen.
+                    // z tells us whether the point is in front of or behind the camera.
                     const screenPos = point.position.clone();
+                    // console.log("Before projection: ", screenPos)
                     screenPos.project(this.camera);
+                    // console.log("After projection: ", screenPos)
 
-                    // [ THE SHIELD ]
+                    // [ SCREEN VISIBILITY CHECK ]
+                    // If the hotspot is outside the camera view, hide it immediately and do an early exit.
+                    // This prevents DOM labels from appearing when their 3D target is off-screen.
                     if (
+                        // if the x or y isn't between -1 and 1, the hotspot isn't in the camera view 
                         Math.abs(screenPos.x) > 1 ||
                         Math.abs(screenPos.y) > 1 ||
-                        screenPos.z > 1
+                        screenPos.z > 1 // If z is greater than 1, the projected point is outside the camera's visible depth range.
                     ) {
                         point.element.classList.remove('visible');
                         continue;
                     }
 
-                    // 3. Aim the raycaster exactly at that 2D spot
-                    raycaster.setFromCamera(new THREE.Vector2(screenPos.x, screenPos.y), this.camera);
+                    // Reuse a pre-allocated Vector2 instead of creating a new one every frame.
+                    // This avoids unnecessary garbage collection during the render loop.
+                    tempScreenVector.set(screenPos.x, screenPos.y);
 
-                    // THE DYNAMIC SHIELD: Checks if the hit object is inside THIS specific point's ignore array
-                    const intersects = raycaster.intersectObjects(this.scene.children, true)
-                        .filter(hit => !point.ignoreMeshes.some(ignoreObj => ignoreObj.getObjectById(hit.object.id)));
+                    // Create a ray from the camera through the hotspot's projected screen position.
+                    // This ray represents the line of sight between the camera and the hotspot.
+                    raycaster.setFromCamera(tempScreenVector, this.camera);
+                    const intersects = raycaster.intersectObjects(objectsArr, true)
+                    // .filter(hit => !point.ignoreMeshes.some(ignoreObj => ignoreObj.getObjectById(hit.object.id)));
                     // 🚨 THE DETECTIVE LOG
                     if (intersects.length === 0) {
                         point.element.classList.add('visible');
@@ -745,6 +882,7 @@ export default class Experience {
 
                         if (intersectionDistance < pointDistance) {
                             point.element.classList.remove('visible');
+                            continue;
                         } else {
                             point.element.classList.add('visible');
                         }
@@ -760,8 +898,10 @@ export default class Experience {
                     // DYNAMIC DOM UPDATE: Applies the math to whatever HTML element this point owns
                     point.element.style.transform = `translate(${targetX}px, ${targetY}px)`;
                 }
+                hotspotNeedUpdate = false;
             }
             this.supernova.update(elapsedTime, this.camera);
+
             // Update helpers in real-time if you move sliders in the GUI
             // mainLightHelper.update();
             // shadowCameraHelper.update();
