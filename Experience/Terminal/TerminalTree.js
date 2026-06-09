@@ -1,14 +1,14 @@
 const TerminalTree = {
     start: {
-        header: "ROOT DIRECTORY",
-        aiText: "UNAUTHORIZED ACCESS DETECTED. ALL STATION PERSONNEL HAVE EVACUATED. STATE YOUR BUSINESS.",
-        choices: [
-            { text: "[ MY PROJECTS ]", nextId: "projects_menu" },
-            { text: "[ ABOUT ME ]", nextId: "about_me" },
-            { text: "[ CUSTOMER SUPPORT ]", nextId: "customer_support" },
-            { text: "[ SYSTEM DIAGNOSTICS ]", nextId: "system_diagnostics" }
-        ]
-    },
+    header: "AURA-7 ADMINISTRATIVE INTERFACE",
+    aiText: "I am AURA-7, the station's administrative intelligence. All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory if your tiny organic decision tree collapses.",
+    choices: [
+        { text: "[ MY PROJECTS ]", nextId: "projects_menu" },
+        { text: "[ ABOUT ME ]", nextId: "about_me" },
+        { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
+        { text: "[ SYSTEM DIAGNOSTICS ]", nextId: "system_diagnostics" }
+    ]
+},
 
     projects_menu: {
         header: "PROJECT ARCHIVE",
@@ -40,24 +40,34 @@ const TerminalTree = {
 
     about_me: {
         header: "PERSONNEL FILE: SHAHAR AVIDAN",
-        aiText: "Hey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.\n\nI'm a strong believer in learning by doing. Long before officially starting my Computer Science degree at the Holon Institute of Technology (HIT) this fall, I was already teaching myself how to bridge the gap between raw math and visual design.\n\nI had a lot of fun making this project. I've learned a lot by working on it, and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall.",
+        aiText: "Hey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.\n\nLong before officially starting my Computer Science degree at the Holon Institute of Technology (HIT) this fall, I was already teaching myself how to bridge the gap between raw math and visual design.\n\nI had a lot of fun making this project. I've learned a lot by working on it, and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall.",
         choices: [
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
         ]
     },
 
     customer_support: {
-        header: "CUSTOMER SUPPORT",
-        aiText: "Customer support is currently unavailable due to the minor inconvenience of a localized supernova outside the observation window. Your complaint has been filed directly into the nearest plasma vent.",
-        choices: [
-            { text: "[ Where am I? ]", nextId: "location_info" },
-            { text: "[ Who are you? ]", nextId: "identity_info" },
-            { text: "[ WHY IS THERE A GIANT EXPLODING STAR OUTSIDE THE WINDOW? ]", nextId: "supernova_info" },
-            { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
-            { text: "[ I'm just looking for the projects. ]", nextId: "projects_menu" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
+    header: "AURA-7 SUPPORT INTERFACE",
+    aiText: "Customer support is currently unavailable due to the minor inconvenience of a localized supernova outside the observation window. Unfortunately, I am the replacement. Direct your confusion efficiently.",
+    choices: [
+        { text: "[ Where am I? ]", nextId: "location_info" },
+        { text: "[ Who are you? ]", nextId: "identity_info" },
+        { text: "[ WHY IS THERE A GIANT EXPLODING STAR OUTSIDE THE WINDOW? ]", nextId: "supernova_info" },
+        { text: "[ How do I use the terminal? ]", nextId: "terminal_controls" },
+        { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
+        { text: "[ I'm just looking for the projects ]", nextId: "projects_menu" },
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+},
+
+terminal_controls: {
+    header: "TERMINAL CONTROL BRIEFING",
+    aiText: "UP / DOWN: move through options.\nENTER: select highlighted option.\nLEFT ARROW: return to the root directory.\nESC: exit terminal focus mode and return to the station view.\n\nTry not to get lost remembering all of that.",
+    choices: [
+        { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+},
 
     system_diagnostics: {
         header: "SYSTEM DIAGNOSTICS",
@@ -78,13 +88,13 @@ const TerminalTree = {
     },
 
     identity_info: {
-        header: "AI IDENTITY",
-        aiText: "I am the station's remaining administrative intelligence. My duties include maintaining basic systems, preventing total structural collapse, and explaining obvious things to visitors who keep touching the interface.",
-        choices: [
-            { text: "[ Charming. ]", nextId: "customer_support" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
+    header: "STATION AI IDENTIFICATION",
+    aiText: "I am AURA, the station's administrative intelligence. I was designed to manage life support, security, diagnostics, and apparently explain basic menu navigation to unauthorized visitors. My courtesy module was damaged during the supernova event, which I consider a significant quality-of-life improvement.",
+    choices: [
+        { text: "[ That explains the attitude. ]", nextId: "customer_support" },
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+},
 
     supernova_info: {
         header: "LOCALIZED SUPERNOVA EVENT",
@@ -97,7 +107,7 @@ const TerminalTree = {
 
     cube_info: {
         header: "COGNITIVE CALIBRATION UNIT",
-        aiText: "The Rubik's Cube is interactive. Drag across a face to rotate a layer. Drag across an empty space to rotate the whole cube. Try not to panic when the colored squares move. That is generally considered the point.",
+        aiText: "The Rubik's Cube is interactive. Drag across a face to rotate a layer. Drag across empty space to rotate the whole cube on a controlled axis. Try not to panic when the colored squares move. That is generally considered the point.",
         choices: [
             { text: "[ Show me the projects. ]", nextId: "projects_menu" },
             { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },

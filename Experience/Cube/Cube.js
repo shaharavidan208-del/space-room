@@ -44,14 +44,24 @@ const colorMap = {
  *   - this.pieces and this.edges hold flat references for fast iteration (solve detection, etc.)
  */
 export default class Cube {
+
     constructor(scene) {
+                this.pieceSize = 0.12 // Size of a single cubie 
+        this.stickerGeometry = new THREE.PlaneGeometry(this.pieceSize * STICKER_SCALE, this.pieceSize * STICKER_SCALE);
+this.stickerMaterials = {
+    'right': new THREE.MeshBasicMaterial({ color: 0xD50032 }),
+    'left': new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+    'top': new THREE.MeshBasicMaterial({ color: 0xFFD500 }),
+    'bottom': new THREE.MeshBasicMaterial({ color: 0x0033A0 }),
+    'front': new THREE.MeshBasicMaterial({ color: 0xE45C00 }),
+    'back': new THREE.MeshBasicMaterial({ color: 0x6E1F7A })
+};
         this.rndAxisArr = ['x', 'y', 'z']
         this.faceName = null
         this.stickerArr = []
         // Parent group for the entire cube. 
         this.cubeGroup = new THREE.Group()
-        // Size of a single cubie 
-        this.pieceSize = 0.12
+
         // const axesHelper = new THREE.AxesHelper(5)
         // scene.add(axesHelper)
         this.scene = scene
@@ -163,9 +173,7 @@ export default class Cube {
     addSticker(cubie, faceName, direction) {
         // Shared sticker geometry
         this.faceName = faceName
-        const stickerGeometry = new THREE.PlaneGeometry(this.pieceSize * STICKER_SCALE, this.pieceSize * STICKER_SCALE);
-        const sticker = new THREE.Mesh(stickerGeometry);
-        sticker.material.color.set(colorMap[faceName])
+       const sticker = new THREE.Mesh(this.stickerGeometry, this.stickerMaterials[faceName]);
 
         // Distance from cubie center to its outer surface, plus a tiny buffer.
         // The +0.001 prevents z-fighting between sticker and cubie face 

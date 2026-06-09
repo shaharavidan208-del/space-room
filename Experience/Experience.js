@@ -78,8 +78,8 @@ export default class Experience {
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.shadowMap.enabled = false;
+        // renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // FPS counter 
@@ -99,7 +99,7 @@ export default class Experience {
         // 2. The Supernova Rim Light (Warm)
         const novaLight = new THREE.DirectionalLight(0xff4400, 20); // Deep orange/red, very intense
         novaLight.position.set(0.8, 11.8, -10.7); // Positioned back where the supernova is
-        novaLight.castShadow = true;
+        // novaLight.castShadow = true;
         // (Keep your existing shadow frustum math here for the novaLight)
         this.scene.add(novaLight);
 
@@ -489,6 +489,8 @@ export default class Experience {
             "spaceship-window-side001",
             "Occluder_Floor",
             "Occluder_Ceiling",
+            "Wall_mesh",
+            "Wall_mesh2"
 
         ]);
 
@@ -499,15 +501,23 @@ export default class Experience {
 
             return false;
         };
-        this.camera.layers.enable(1);
 
-        novaLight.layers.set(0);
-        deskLight.layers.set(0);
-        deskLight2.layers.set(0);
-        
+
+
         const ceilingMeshes = [];
-        const model = gltfLoader.load('/models/merged2.glb', (gltf) => {
+        const model = gltfLoader.load('/models/merged_final.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
+                // KILL THE DOUBLE-RENDER TRANSMISSION PASS
+                if (obj.material && obj.material.transmission > 0) {
+                    console.log(`🚨 Nuking transmission on: ${obj.name}`);
+
+                    // Force transmission to 0 to cancel the background render pass
+                    obj.material.transmission = 0;
+
+                    // Ensure it falls back to standard, cheap transparency
+                    obj.material.transparent = true;
+                    obj.material.needsUpdate = true;
+                }
                 if (obj.isMesh) {
                     if (shouldAddHotspotOccluder(obj)) {
                         objectsArr.push(obj);
@@ -516,30 +526,20 @@ export default class Experience {
                         ceilingMeshes.push(obj);
                     }
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-                    if (obj.name === "spaceship-window-side001") {
-                        console.log(obj.material)
-                    }
-
-                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling") {
+                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2")  {
                         obj.visible = false
                         obj.material.side = THREE.DoubleSide;
                     }
 
-                    //                     if(obj.name === "Mesh011") {
-                    //                         this.occlusionPlanes.push(
-                    //     new THREE.Box3().setFromObject(obj)
-                    // );
-                    //                     }
+            
 
-                    if (obj.name === "Mesh016_2") { // windows
+                    if (obj.name === "Mesh016_2" ) { // windows
                         obj.material.transparent = true
                         obj.material.opacity = 0.2; // 0.0 is fully transparent, 1.0 is fully opaque
                         obj.material.depthWrite = false; // This is the magic line that stops the glitching
                     }
 
                     if (obj.name === "Mesh017") { // floor 
-                        // this.floorPlane = createHorizontalPlaneFromMesh(obj, 'floor', -1.7);
-                        // this.occlusionPlanes.push(this.floorPlane);
                         // obj.castShadow = true
                         // obj.receiveShadow = true
                         // this.floorMesh = obj
@@ -562,10 +562,8 @@ export default class Experience {
                     }
                     if (obj.name.includes("MSI")) {
                         monitorFrame = obj
-                        obj.layers.set(1);
                     }
                     if (obj.name === "Screen") {
-                        obj.layers.set(1);
                         monitorGlass = obj
                         terminalPosition = obj.position
                         // Completely overwrite whatever material Blender sent
@@ -615,7 +613,31 @@ export default class Experience {
 
         // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
         const cubePosition = this.cube.cubeGroup.position
+        // Press 'i' on your keyboard to print the Draw Call Ledger
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'i') {
+                let meshCount = 0;
+                const drawCallLedger = {};
 
+                this.scene.traverse((child) => {
+                    // A draw call is only generated if the object is a mesh AND it is visible
+                    if (child.isMesh && child.visible) {
+                        meshCount++;
+
+                        // Group by the parent's name to see which system is generating them
+                        const parentName = child.parent ? (child.parent.name || child.parent.type) : 'Root';
+
+                        if (!drawCallLedger[parentName]) {
+                            drawCallLedger[parentName] = 0;
+                        }
+                        drawCallLedger[parentName]++;
+                    }
+                });
+
+                console.log(`🔍 TOTAL VISIBLE MESHES: ${meshCount}`);
+                console.table(drawCallLedger);
+            }
+        });
         /**
          * Points of interest
          */
@@ -696,7 +718,7 @@ export default class Experience {
         // ==========================================
 
         // Add text Geometry
-        this.particles = new Particles(this.scene)
+        // this.particles = new Particles(this.scene)
 
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
