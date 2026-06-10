@@ -12,12 +12,25 @@ import Cube from './Cube/Cube.js'
 import CubeInput from './Cube/CubeInput.js'
 import gsap from 'gsap'
 import TerminalCanvas from './Terminal/TerminalCanvas.js'; // /models/ReUpload23.glb
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
 export default class Experience {
     constructor(canvas) {
         // Scene
         let sceneReady = false
         this.scene = new THREE.Scene()
+        // Initialize the math library BEFORE creating the light
+RectAreaLightUniformsLib.init();
+
+// (Color, Intensity, Width, Height) 
+// Make the width/height roughly the size of your window opening
+const windowBounceLight = new THREE.RectAreaLight(0xff4400, 1.0, 30, 10);
+
+// Position it exactly at the glass, facing inward
+windowBounceLight.position.set(0, 5, -18); 
+windowBounceLight.lookAt(0, 5, 0); 
+
+this.scene.add(windowBounceLight);
         const overlayGeometry = new THREE.PlaneGeometry(2, 2)
         const overlayMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -78,8 +91,8 @@ export default class Experience {
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = false;
-        // renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // FPS counter 
@@ -93,15 +106,15 @@ export default class Experience {
 
 
         // 1. Drop the global ambient wash
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-        this.scene.add(ambientLight);
+        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+        // this.scene.add(ambientLight);
 
         // 2. The Supernova Rim Light (Warm)
         const novaLight = new THREE.DirectionalLight(0xff4400, 20); // Deep orange/red, very intense
         novaLight.position.set(0.8, 11.8, -10.7); // Positioned back where the supernova is
         // novaLight.castShadow = true;
         // (Keep your existing shadow frustum math here for the novaLight)
-        this.scene.add(novaLight);
+        // this.scene.add(novaLight);
 
         // 3. The Monitor/Desk Spill (Cool)
         // const deskLight = new THREE.PointLight(0x00ffff, 2, 15); // Cyan, intensity 2, fades out after 15 units
@@ -154,43 +167,141 @@ export default class Experience {
             lookZ: 0
         };
 
-        novaLight.target.position.set(-15, 5, -20);
+        const novaLightMain = new THREE.DirectionalLight(0xff4400, 14);
+        novaLightMain.position.set(4.8, 23, -26.7); // Pushed back outside
+        novaLightMain.target.position.set(5, 5, -5);  // Aimed forward INTO the room
+        novaLightMain.castShadow = true;
 
-        this.scene.add(novaLight.target);
-        const lightFolder = this.gu.addFolder('Supernova Light');
+        this.scene.add(novaLightMain);
+        // THE CRITICAL FIX: You must add the target to the scene
+        this.scene.add(novaLightMain.target);
 
-        const sourceFolder = lightFolder.addFolder('Source Position');
-        sourceFolder.add(novaLight.position, 'x', -50, 50, 0.1).name('Pos X');
-        sourceFolder.add(novaLight.position, 'y', -50, 50, 0.1).name('Pos Y');
-        sourceFolder.add(novaLight.position, 'z', -50, 50, 0.1).name('Pos Z');
-        sourceFolder.add(novaLight, 'intensity', 0, 40, 0.1).name('Intensity');
+        // const novaLightWideA = new THREE.DirectionalLight(0xff4400, 8);
+        // novaLightWideA.position.set(-8, 8, -22);
+        // novaLightWideA.target.position.set(0, 3, -10);
+        // novaLightWideA.castShadow = false;
 
-        const targetFolder = lightFolder.addFolder('Target (Look At)');
-        targetFolder.add(novaLight.target.position, 'x', -50, 50, 0.1).name('Target X');
-        targetFolder.add(novaLight.target.position, 'y', -50, 50, 0.1).name('Target Y');
-        targetFolder.add(novaLight.target.position, 'z', -50, 50, 0.1).name('Target Z');
+        // const novaLightWideB = new THREE.DirectionalLight(0xff4400, 1.5);
+        // novaLightWideB.position.set(12, 6, -20);
+        // novaLightWideB.target.position.set(0, 2, -5);
+        // novaLightWideB.castShadow = false;
 
-        const novaLightHelper = new THREE.DirectionalLightHelper(novaLight, 2);
-        this.scene.add(novaLightHelper);
+        // Tighter shadow box for higher resolution shadows
+        novaLightMain.shadow.mapSize.width = 1024;
+        novaLightMain.shadow.mapSize.height = 1024;
 
-        sourceFolder.onChange(() => novaLightHelper.update());
-        targetFolder.onChange(() => novaLightHelper.update());
+        novaLightMain.shadow.camera.left = -20;
+        novaLightMain.shadow.camera.right = 20;
+        novaLightMain.shadow.camera.top = 20;
+        novaLightMain.shadow.camera.bottom = -20;
 
+        novaLightMain.shadow.camera.near = 0.5;
+        novaLightMain.shadow.camera.far = 80;
 
-        // Move the light source itself
-        const deskLight = new THREE.PointLight(0x00ffff, 5, 5)
-        const deskLight2 = new THREE.PointLight(0x00ffff, 5, 5)
-        // 3. FORCE realistic physics decay (Crucial for atmospheric lighting)
+        novaLightMain.shadow.normalBias = 0.03;
+        novaLightMain.shadow.bias = -0.0005;
+
+        // Only need to update the projection matrix ONCE after setting all camera bounds
+        novaLightMain.shadow.camera.updateProjectionMatrix();
+
+        // this.scene.add(novaLightWideA);
+        // this.scene.add(novaLightWideA.target);
+        // this.scene.add(novaLightWideB);
+        // this.scene.add(novaLightWideB.target);
+
+        // ==========================================
+        // SUPERNOVA LIGHTING GUI & HELPERS
+        // ==========================================
+        const lightFolder = this.gu.addFolder('Supernova Lights');
+
+        // 1. MAIN LIGHT (The Shadow Caster)
+        // const mainFolder = lightFolder.addFolder('Main Light (Shadow Caster)');
+        // mainFolder.add(novaLightMain, 'intensity', 0, 40, 0.1).name('Intensity');
+        // mainFolder.add(novaLightMain.position, 'x', -50, 50, 0.1).name('Pos X');
+        // mainFolder.add(novaLightMain.position, 'y', -50, 50, 0.1).name('Pos Y');
+        // mainFolder.add(novaLightMain.position, 'z', -50, 50, 0.1).name('Pos Z');
+
+        // const mainTargetFolder = mainFolder.addFolder('Target (Look At)');
+        // mainTargetFolder.add(novaLightMain.target.position, 'x', -50, 50, 0.1).name('Target X');
+        // mainTargetFolder.add(novaLightMain.target.position, 'y', -50, 50, 0.1).name('Target Y');
+        // mainTargetFolder.add(novaLightMain.target.position, 'z', -50, 50, 0.1).name('Target Z');
+
+        // 2. WIDE A (Fill Light)
+        // const wideAFolder = lightFolder.addFolder('Wide A (Fill)');
+        // wideAFolder.add(novaLightWideA, 'intensity', 0, 40, 0.1).name('Intensity');
+        // wideAFolder.add(novaLightWideA.position, 'x', -50, 50, 0.1).name('Pos X');
+        // wideAFolder.add(novaLightWideA.position, 'y', -50, 50, 0.1).name('Pos Y');
+        // wideAFolder.add(novaLightWideA.position, 'z', -50, 50, 0.1).name('Pos Z');
+
+        // // 3. WIDE B (Rim Light)
+        // const wideBFolder = lightFolder.addFolder('Wide B (Rim)');
+        // wideBFolder.add(novaLightWideB, 'intensity', 0, 40, 0.1).name('Intensity');
+        // wideBFolder.add(novaLightWideB.position, 'x', -50, 50, 0.1).name('Pos X');
+        // wideBFolder.add(novaLightWideB.position, 'y', -50, 50, 0.1).name('Pos Y');
+        // wideBFolder.add(novaLightWideB.position, 'z', -50, 50, 0.1).name('Pos Z');
+
+        // ==========================================
+        // HELPERS & UPDATERS
+        // ==========================================
+        // Add the visible lines showing light direction and shadow bounds
+        // const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
+        // const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
+        // this.scene.add(mainHelper);
+        // this.scene.add(shadowCameraHelper);
+
+        // // Force helpers to redraw when GUI sliders are moved
+        // const updateMainHelpers = () => {
+        //     mainHelper.update();
+        //     novaLightMain.shadow.camera.updateProjectionMatrix();
+        //     shadowCameraHelper.update();
+        // };
+
+        // mainFolder.onChange(updateMainHelpers);
+        // mainTargetFolder.onChange(updateMainHelpers);
+
+        // ==========================================
+        // DESK LIGHTS (Untouched)
+        // ==========================================
+        const deskLight = new THREE.PointLight(0x00ffff, 5, 5);
+        const deskLight2 = new THREE.PointLight(0x00ffff, 5, 5);
         deskLight.decay = 2;
         deskLight2.decay = 2;
-        deskLight.position.set(0, 2.5, 0) // up in the ceiling
-        deskLight2.position.set(2.5, 1.2, -4.2) // near desk
-        novaLight.position.set(4.8, 11.8, -26.7)
-        // Set the exact coordinates you want it to look at
-        novaLight.target.position.set(5, 5, -20);
+        deskLight.position.set(0, 2.5, 0); // up in the ceiling
+        deskLight2.position.set(2.5, 1.2, -4.2); // near desk
+        this.scene.add(deskLight, deskLight2);
 
-        // CRITICAL: The engine still needs the target in the scene to calculate the math
-        this.scene.add(novaLight.target);
+        // Remove the old AmbientLight
+        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); 
+
+        // (Sky Color, Ground Color, Intensity)
+        // ==========================================
+        // HEMISPHERE LIGHT & GUI
+        // ==========================================
+        // 1. Create the light and push it up into the ceiling
+        // const hemiLight = new THREE.HemisphereLight(0xff4400, 0x001122, 2.0);
+        // hemiLight.position.set(0, 20, 0); // Crucial: move it up so the gradient maps correctly
+        // this.scene.add(hemiLight);
+
+        // // 2. Set up the temporary color object (lil-gui requires hex strings for color pickers)
+        // const hemiParams = {
+        //     skyColor: '#ff4400',
+        //     groundColor: '#001122'
+        // };
+
+        // // 3. Build the GUI folder
+        // const hemiFolder = this.gu.addFolder('Ambient Fill (Hemisphere)');
+
+        // // 4. Add the controls
+        // hemiFolder.add(hemiLight, 'intensity', 0, 10, 0.1).name('Intensity');
+        // hemiFolder.add(hemiLight.position, 'y', -50, 50, 0.5).name('Height (Y)');
+
+        // // 5. Add the Color Pickers (Using onChange to update the material in real-time)
+        // hemiFolder.addColor(hemiParams, 'skyColor').name('Sky (Top) Color').onChange((value) => {
+        //     hemiLight.color.set(value);
+        // });
+        // hemiFolder.addColor(hemiParams, 'groundColor').name('Ground (Bottom) Color').onChange((value) => {
+        //     hemiLight.groundColor.set(value);
+        // });
         // const lightFolder2 = this.gu.addFolder('desk Light');
         // const sourceFolder2 = lightFolder2.addFolder('Desk Light 1');
         // sourceFolder2.add(deskLight.position, 'x', -50, 50, 0.1).name('Pos X');
@@ -263,7 +374,11 @@ export default class Experience {
         const environmentMap = loader.load('/environmentMaps/volcanic_planet._4k.hdr', (texture) => {
             environmentMap.mapping = THREE.EquirectangularReflectionMapping
 
-            this.scene.background = environmentMap
+            // This renders the skybox behind the window
+            this.scene.background = environmentMap;
+
+            // THE CRITICAL FIX: This tells every material in the room to reflect the HDR
+            // this.scene.environment = environmentMap;
         })
 
         document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
@@ -307,9 +422,9 @@ export default class Experience {
 
         const cam = this.gu.addFolder('Camera')
         // (min, max, increments), change supernova position 
-        cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
-        cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
-        cam.add(this.camera.position, 'z', -25, 25, 0.1).name('Position Z')
+        // cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
+        // cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
+        // cam.add(this.camera.position, 'z', -25, 25, 0.1).name('Position Z')
 
         // Controls
         const trackballControls = new TrackballControls(this.camera, canvas)
@@ -358,10 +473,11 @@ export default class Experience {
         const cubeHotspot = document.querySelector("#hotspot-cube")
         const enterFocusMode = (activePoint) => {
             console.log(ceilingMeshes)
+
             this.isFocused = true;
             trackballControls.enabled = false
+            controls.enabled = false
             isTransitioning = true;
-            controls.enabled = false;
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach(p => {
@@ -371,8 +487,6 @@ export default class Experience {
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
                 showItems(false) // hide ceiling only in Cube mode
-                monitorGlass.visible = false;
-                monitorFrame.visible = false;
                 lookTarget.copy(activePoint.position.clone());
                 targetFov = 13; // Isometric squeeze
 
@@ -395,19 +509,19 @@ export default class Experience {
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
-                // Keep the monitor visible!
-                lookTarget.copy(activePoint.position.clone()); // Aims exactly at the glass center
+                lookTarget.copy(activePoint.position.clone());
 
-                targetFov = 70; // A natural, slightly focused human eye FOV
+                // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
+                lookTarget.y -= 0.12;
 
-                // The Diegetic Camera Offset:
-                // Move the camera slightly up (Y) and pull it back (Z) from the screen.
-                // NOTE: Depending on how your room is rotated in Blender, you might need to adjust 
-                // the Z or X offset to pull straight back from the monitor glass.
+                // Slightly narrower than 70 so the terminal still feels focused,
+                // but not so zoomed-in that the keyboard disappears.
+                targetFov = 62;
+
                 cameraTarget.set(
                     lookTarget.x,
-                    lookTarget.y + 0.15, // Eye level, looking slightly down
-                    lookTarget.z + 1.2   // Pull back to sit in the chair
+                    lookTarget.y + 0.22,
+                    lookTarget.z + 1.55
                 );
             }
         };
@@ -429,9 +543,6 @@ export default class Experience {
             cameraTarget.copy(cameraHome);
             lookTarget.copy(lookHome);
 
-            // Ensure monitor is visible again
-            monitorFrame.visible = true;
-            monitorGlass.visible = true;
         };
 
 
@@ -490,7 +601,8 @@ export default class Experience {
             "Occluder_Floor",
             "Occluder_Ceiling",
             "Wall_mesh",
-            "Wall_mesh2"
+            "Wall_mesh2",
+            "Circle001_3"
 
         ]);
 
@@ -503,10 +615,10 @@ export default class Experience {
         };
 
 
-
         const ceilingMeshes = [];
-        const model = gltfLoader.load('/models/merged_final.glb', (gltf) => {
+        const model = gltfLoader.load('/models/merged_NewPC5.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
+                console.log(obj.name)
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS
                 if (obj.material && obj.material.transmission > 0) {
                     console.log(`🚨 Nuking transmission on: ${obj.name}`);
@@ -522,26 +634,27 @@ export default class Experience {
                     if (shouldAddHotspotOccluder(obj)) {
                         objectsArr.push(obj);
                     }
-                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021")) {
+                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001") {
                         ceilingMeshes.push(obj);
                     }
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2")  {
+                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
+                        obj.material.side = THREE.DoubleSide;
                         obj.visible = false
+
+                    }
+
+
+
+                    if (obj.name === "Mesh016_2") { // windows
+                        obj.material.transparent = true;
+                        obj.material.opacity = 0.08;
+                        obj.material.depthWrite = false;
                         obj.material.side = THREE.DoubleSide;
                     }
 
-            
-
-                    if (obj.name === "Mesh016_2" ) { // windows
-                        obj.material.transparent = true
-                        obj.material.opacity = 0.2; // 0.0 is fully transparent, 1.0 is fully opaque
-                        obj.material.depthWrite = false; // This is the magic line that stops the glitching
-                    }
-
-                    if (obj.name === "Mesh017") { // floor 
-                        // obj.castShadow = true
-                        // obj.receiveShadow = true
+                    if (obj.name === "Mesh004" || obj.name === "Mesh004_2") { // floor 
+                        obj.receiveShadow = true
                         // this.floorMesh = obj
                     }
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
@@ -555,25 +668,24 @@ export default class Experience {
                     }
 
 
-                    if (obj.name === "Cube027" || obj.name === "Cube026" || obj.name.includes("Cylinder") || obj.name === "Top_Tb_Tex_0" || obj.name === "mouse" || obj.name.includes("MSI")) {
+                    if (obj.name === "Cube027" || obj.name === "Cube003" || obj.name.includes("Cylinder") || obj.name === "mouse" || obj.name === "Cube002" || obj.namee === "Circle001_3") {
                         // Bed, controller, 
-                        // obj.castShadow = true
-                        // obj.receiveShadow = true
+                        obj.castShadow = true
+                        obj.receiveShadow = true
                     }
-                    if (obj.name.includes("MSI")) {
-                        monitorFrame = obj
-                    }
-                    if (obj.name === "Screen") {
+
+                    if (obj.name === "Top_Tb_Tex_0")
+                        obj.castShadow = true
+
+                    if (obj.name === "Cube_Screen_0") {
                         monitorGlass = obj
                         terminalPosition = obj.position
                         // Completely overwrite whatever material Blender sent
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
                         });
-                        // Slide the texture down slightly. 
-                        // Positive numbers push it up, negative push it down.
-                        this.terminal.texture.offset.y = 0.1;
-                        this.terminal.texture.repeat.set(1.6, 1.6, 1.6)
+                        this.terminal.texture.offset.y = -0.05;
+                        this.terminal.texture.repeat.set(1.3, 1.3, 1.3)
 
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
@@ -609,6 +721,7 @@ export default class Experience {
         // testSphere.position.set(0, 3, 0); // Hovering above the test plane
         // testSphere.castShadow = true;
         // this.scene.add(testSphere);
+
         // -------------------------------
 
         // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))

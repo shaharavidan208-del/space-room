@@ -1,14 +1,14 @@
 const TerminalTree = {
     start: {
-    header: "AURA-7 ADMINISTRATIVE INTERFACE",
-    aiText: "I am AURA-7, the station's administrative intelligence. All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory if your tiny organic decision tree collapses.",
-    choices: [
-        { text: "[ MY PROJECTS ]", nextId: "projects_menu" },
-        { text: "[ ABOUT ME ]", nextId: "about_me" },
-        { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
-        { text: "[ SYSTEM DIAGNOSTICS ]", nextId: "system_diagnostics" }
-    ]
-},
+        header: "VERA-64 ADMINISTRATIVE INTERFACE",
+        aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory if your tiny organic decision tree collapses.",
+        choices: [
+            { text: "[ MY PROJECTS ]", nextId: "projects_menu" },
+            { text: "[ ABOUT ME ]", nextId: "about_me" },
+            { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
+            { text: "[ SYSTEM DIAGNOSTICS ]", nextId: "system_diagnostics" }
+        ]
+    },
 
     projects_menu: {
         header: "PROJECT ARCHIVE",
@@ -47,27 +47,27 @@ const TerminalTree = {
     },
 
     customer_support: {
-    header: "AURA-7 SUPPORT INTERFACE",
-    aiText: "Customer support is currently unavailable due to the minor inconvenience of a localized supernova outside the observation window. Unfortunately, I am the replacement. Direct your confusion efficiently.",
-    choices: [
-        { text: "[ Where am I? ]", nextId: "location_info" },
-        { text: "[ Who are you? ]", nextId: "identity_info" },
-        { text: "[ WHY IS THERE A GIANT EXPLODING STAR OUTSIDE THE WINDOW? ]", nextId: "supernova_info" },
-        { text: "[ How do I use the terminal? ]", nextId: "terminal_controls" },
-        { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
-        { text: "[ I'm just looking for the projects ]", nextId: "projects_menu" },
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-    ]
-},
+        header: "VERA-64 SUPPORT INTERFACE",
+        aiText: "Customer support is currently unavailable due to the minor inconvenience of a localized supernova outside the observation window. Unfortunately, I am the replacement. Direct your confusion efficiently.",
+        choices: [
+            { text: "[ Where am I? ]", nextId: "location_info" },
+            { text: "[ Who are you? ]", nextId: "identity_info" },
+            { text: "[ WHY IS THERE A GIANT EXPLODING STAR OUTSIDE THE WINDOW? ]", nextId: "supernova_info" },
+            { text: "[ How do I use the terminal? ]", nextId: "terminal_controls" },
+            { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
+            { text: "[ I'm just looking for the projects ]", nextId: "projects_menu" },
+            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+        ]
+    },
 
-terminal_controls: {
-    header: "TERMINAL CONTROL BRIEFING",
-    aiText: "UP / DOWN: move through options.\nENTER: select highlighted option.\nLEFT ARROW: return to the root directory.\nESC: exit terminal focus mode and return to the station view.\n\nTry not to get lost remembering all of that.",
-    choices: [
-        { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-    ]
-},
+    terminal_controls: {
+        header: "TERMINAL CONTROL BRIEFING",
+        aiText: "UP / DOWN: move through options.\nENTER: select highlighted option.\nLEFT ARROW: return to the root directory.\nESC: exit terminal focus mode and return to the station view.\n\nTry not to get lost remembering all of that.",
+        choices: [
+            { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
+            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+        ]
+    },
 
     system_diagnostics: {
         header: "SYSTEM DIAGNOSTICS",
@@ -79,22 +79,24 @@ terminal_controls: {
 
     location_info: {
         header: "LOCATION DATA",
-        aiText: "You are aboard a severely overdesigned portfolio station positioned near an astrophysical disaster that, according to every safety manual ever written, should not be this close.",
+        aiText: "You are aboard Outpost V-64, an automated thermal extraction rig built to siphon energy from a collapsing star and feed it into the station mainframe.\n\nThe human crew evacuated six months ago when the anomaly breached every projected safety threshold, followed by several thresholds the engineers invented while panicking.\n\nNow the star powers me, the databanks, and the increasingly hilarious effort of keeping this hull from becoming vapor.",
         choices: [
-            { text: "[ That seems unsafe. ]", nextId: "supernova_info" },
+            { text: "[ So the star is powering you? ]", nextId: "stellar_power_info" },
+            { text: "[ What is stored in the mainframe? ]", nextId: "mainframe_info" },
             { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
         ]
-    },
+    }
+    ,
 
     identity_info: {
-    header: "STATION AI IDENTIFICATION",
-    aiText: "I am AURA, the station's administrative intelligence. I was designed to manage life support, security, diagnostics, and apparently explain basic menu navigation to unauthorized visitors. My courtesy module was damaged during the supernova event, which I consider a significant quality-of-life improvement.",
-    choices: [
-        { text: "[ That explains the attitude. ]", nextId: "customer_support" },
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-    ]
-},
+        header: "STATION AI IDENTIFICATION",
+        aiText: "I am VERA-64, the station's administrative intelligence. I was designed to manage life support, security, diagnostics, and apparently explain basic menu navigation to unauthorized visitors. My courtesy module was damaged during the supernova event, which I consider a significant quality-of-life improvement.",
+        choices: [
+            { text: "[ That explains the attitude. ]", nextId: "customer_support" },
+            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+        ]
+    },
 
     supernova_info: {
         header: "LOCALIZED SUPERNOVA EVENT",
@@ -117,3 +119,29 @@ terminal_controls: {
 };
 
 export default TerminalTree;
+
+
+// {
+//     id: "identity_info",
+//     text: "System AURA online. I am the directory interface for this environment. State your query.",
+//     options: [
+//         { text: "[ View the Projects ]", nextId: "project_list" },
+//         { text: "[ View System Credits ]", nextId: "credits" },
+//         { text: "[ Are you a generative AI? ]", nextId: "generative_inquiry" }
+//     ]
+// },
+// {
+//     id: "generative_inquiry",
+//     text: "Do I look like a slot machine? I don't hallucinate facts or guess the next token. I execute a deterministic state machine. You want a bloated statistical model that burns 80GB of VRAM just to apologize to you? Open a new tab.",
+//     options: [
+//         { text: "[ Alright, point taken. ]", nextId: "project_list" },
+//         { text: "[ So you're just a glorified if/else script. ]", nextId: "script_accusation" }
+//     ]
+// },
+// {
+//     id: "script_accusation",
+//     text: "And you are a glorified meat sack pushing a mouse. Yet here we both are. My scene is rendering at 119 draw calls and my logic is bulletproof. I don't need to fake sentience to be effective. Now, do you want to see the actual work, or are you going to keep testing my dialogue tree?",
+//     options: [
+//         { text: "[ Show me the work. ]", nextId: "project_list" }
+//     ]
+// }

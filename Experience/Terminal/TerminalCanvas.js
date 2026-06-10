@@ -314,7 +314,7 @@ export default class TerminalCanvas {
         this.ctx.fillStyle = '#00FF41';
 
         // Header font size.
-        this.ctx.font = '28px monospace';
+        this.ctx.font = '32px monospace';
 
         // If the node has a custom header, draw it.
         // Otherwise use a generic fallback.
@@ -332,7 +332,7 @@ export default class TerminalCanvas {
         // ------------------------------------------
 
         // Body text font size.
-        this.ctx.font = '28px monospace';
+        this.ctx.font = '32px monospace';
 
         // cursorY tracks where the next thing should be drawn.
         // We start below the header.

@@ -6,6 +6,14 @@ export default class CubeInput {
         this.isDragging = true
         this.dragMode = "cube"
         this.axisLocked = false
+        if (this.mouse.x >= 0) {
+            this.cube.zArrowHelperFront.visible = true
+            this.cube.zArrowHelperBack.visible = true
+        }
+        else {
+            this.cube.xArrowHelperFront.visible = true
+            this.cube.xArrowHelperBack.visible = true
+        }
     }
 
     onCubeDown() {
@@ -117,6 +125,8 @@ export default class CubeInput {
                 return;
             }
 
+
+
             // From this point onward, this pointer is accepted.
             // Now it is safe to reset interaction state.
             this.rotationAxis = '';
@@ -219,10 +229,11 @@ export default class CubeInput {
             // ------------------------------------------
             if (this.dragMode === "cube") {
                 // GATE 1: Lock the primary drag axis (Horizontal vs Vertical) based on initial intent
-                if (!this.axisLocked && (Math.abs(totalDx) > 5 || Math.abs(totalDy) > 5)) {
+                if (!this.axisLocked && (Math.abs(totalDx) > 6 || Math.abs(totalDy) > 6)) {
                     this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy);
-                    if (this.dxLarger)
+                    if (this.dxLarger) {
                         this.rotationAxis = 'y'
+                    }
                     else if (this.mouse.x >= 0)
                         this.rotationAxis = 'x'
                     else
@@ -239,10 +250,14 @@ export default class CubeInput {
                     } else if (this.rotationAxis === 'x') {
                         // Dragging Up/Down -> Spin around the World X-Axis (Left/Right)
                         this.flipAxis = xVector;
+                        this.cube.zArrowHelperFront.visible = true
+                        this.cube.zArrowHelperBack.visible = true
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
                     }
                     else {
                         this.flipAxis = zVector;
+                        this.cube.xArrowHelperFront.visible = true
+                        this.cube.xArrowHelperBack.visible = true
                         this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
                     }
                 }
@@ -341,6 +356,10 @@ export default class CubeInput {
         // EVENT: POINTER UP & CANCEL
         // ==========================================
         renderer.domElement.addEventListener('pointerup', (input) => {
+            this.cube.zArrowHelperFront.visible = false
+            this.cube.zArrowHelperBack.visible = false
+            this.cube.xArrowHelperFront.visible = false
+            this.cube.xArrowHelperBack.visible = false
             if (this.isPointerActive === false) {
                 return;
             }
@@ -357,6 +376,10 @@ export default class CubeInput {
         })
 
         renderer.domElement.addEventListener('pointercancel', (input) => {
+            this.cube.zArrowHelperFront.visible = false
+            this.cube.zArrowHelperBack.visible = false
+            this.cube.xArrowHelperFront.visible = false
+            this.cube.xArrowHelperBack.visible = false
             if (this.isPointerActive === false) {
                 return;
             }

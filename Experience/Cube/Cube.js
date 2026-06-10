@@ -22,6 +22,8 @@ const STICKER_DEPTH = 0.01;
 
 
 
+
+
 // Color palette
 // Green replaced with purple, standard red/orange shifted for better distinction.
 const colorMap = {
@@ -46,16 +48,16 @@ const colorMap = {
 export default class Cube {
 
     constructor(scene) {
-                this.pieceSize = 0.12 // Size of a single cubie 
+        this.pieceSize = 0.12 // Size of a single cubie 
         this.stickerGeometry = new THREE.PlaneGeometry(this.pieceSize * STICKER_SCALE, this.pieceSize * STICKER_SCALE);
-this.stickerMaterials = {
-    'right': new THREE.MeshBasicMaterial({ color: 0xD50032 }),
-    'left': new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
-    'top': new THREE.MeshBasicMaterial({ color: 0xFFD500 }),
-    'bottom': new THREE.MeshBasicMaterial({ color: 0x0033A0 }),
-    'front': new THREE.MeshBasicMaterial({ color: 0xE45C00 }),
-    'back': new THREE.MeshBasicMaterial({ color: 0x6E1F7A })
-};
+        this.stickerMaterials = {
+            'right': new THREE.MeshBasicMaterial({ color: 0xD50032 }),
+            'left': new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+            'top': new THREE.MeshBasicMaterial({ color: 0xFFD500 }),
+            'bottom': new THREE.MeshBasicMaterial({ color: 0x0033A0 }),
+            'front': new THREE.MeshBasicMaterial({ color: 0xE45C00 }),
+            'back': new THREE.MeshBasicMaterial({ color: 0x6E1F7A })
+        };
         this.rndAxisArr = ['x', 'y', 'z']
         this.faceName = null
         this.stickerArr = []
@@ -102,6 +104,49 @@ this.stickerMaterials = {
 
         // cubeGroupFolder.open()
         // console.log(this.getLayer('x', 0))
+        const xFront = new THREE.Vector3(1, 0, 0);
+        const xBack = new THREE.Vector3(-1, 0, 0);
+        const zFront = new THREE.Vector3(0, 0, -1);
+        const zBack = new THREE.Vector3(0, 0, 1);
+        const origin = this.cubeGroup.position.clone();
+        const length = 0.65;
+        const color = 0xff0000; // red
+
+        this.xArrowHelperFront = new THREE.ArrowHelper(
+            xFront,
+            origin,
+            length,
+            color
+        );
+
+        this.xArrowHelperBack = new THREE.ArrowHelper(
+            xBack,
+            origin,
+            length,
+            color
+        );
+
+        this.zArrowHelperFront = new THREE.ArrowHelper(
+            zFront,
+            origin,
+            length,
+            "blue"
+        );
+
+        this.zArrowHelperBack = new THREE.ArrowHelper(
+            zBack,
+            origin,
+            length,
+            "blue"
+        );
+
+
+
+        this.scene.add(this.xArrowHelperFront, this.zArrowHelperFront, this.xArrowHelperBack, this.zArrowHelperBack);
+        this.zArrowHelperFront.visible = false
+        this.zArrowHelperBack.visible = false
+        this.xArrowHelperFront.visible = false
+        this.xArrowHelperBack.visible = false
     }
 
     buildCubies() {
@@ -162,6 +207,8 @@ this.stickerMaterials = {
     }
 
 
+
+
     /**
      * Creates a colored sticker mesh and attaches it to a cubie as a child.
      * 
@@ -173,7 +220,7 @@ this.stickerMaterials = {
     addSticker(cubie, faceName, direction) {
         // Shared sticker geometry
         this.faceName = faceName
-       const sticker = new THREE.Mesh(this.stickerGeometry, this.stickerMaterials[faceName]);
+        const sticker = new THREE.Mesh(this.stickerGeometry, this.stickerMaterials[faceName]);
 
         // Distance from cubie center to its outer surface, plus a tiny buffer.
         // The +0.001 prevents z-fighting between sticker and cubie face 

@@ -103,7 +103,7 @@ float noise( in vec3 x )
             }
             
             float map(vec3 p) {
-                R(p.xz, iMouse.x*0.008*pi + iTime*0.1);
+                R(p.xz, iMouse.x*0.008*pi + iTime*0.02);
                 float NebNoise = abs(NebulaNoise(p/0.5)*0.5);
                 return NebNoise + 0.07;
             }
