@@ -1,9 +1,9 @@
 const TerminalTree = {
     start: {
         header: "VERA-64 ADMINISTRATIVE INTERFACE",
-        aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory if your tiny organic decision tree collapses.",
+        aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory.",
         choices: [
-            { text: "[ MY PROJECTS ]", nextId: "projects_menu" },
+            { text: "[ PROJECT ARCHIVE ]", nextId: "projects_menu" },
             { text: "[ ABOUT ME ]", nextId: "about_me" },
             { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
             { text: "[ SYSTEM DIAGNOSTICS ]", nextId: "system_diagnostics" }
@@ -11,18 +11,17 @@ const TerminalTree = {
     },
 
     projects_menu: {
-        header: "PROJECT ARCHIVE",
-        aiText: "Available projects detected. Try not to act impressed too quickly. It makes the logs uncomfortable.",
+        header: "STATION SCHEMATICS: VERA-64 RIG",
+        aiText: "Running diagnostic on local environment architecture...\n\n> STRUCTURAL INTEGRITY: High.",
         choices: [
-            { text: "[ Interactive 3D Rubik's Cube ]", nextId: "project_rubiks_cube" },
-            { text: "[ Portfolio Mainframe ]", nextId: "project_portfolio_mainframe" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+            { text: "[ PROJECT FILE: INTERACTIVE RUBIK'S CUBE ]", nextId: "cube_info" },
+            { text: "[ PROJECT FILE: PORTFOLIO MAINFRAME ]", nextId: "start" }
         ]
     },
 
     project_rubiks_cube: {
-        header: "PROJECT FILE: INTERACTIVE 3D RUBIK'S CUBE",
-        aiText: "A fully interactive 3D Rubik's Cube built with Three.js and raycasting. It includes mouse and mobile controls, stable layer rotations, custom input handling, and enough guardrails to survive a user behaving like a caffeinated goblin.",
+        header: "PROJECT FILE: INTERACTIVE RUBIK'S CUBE",
+        aiText: "Accessing fragmented creator logs...\n\nAUTHOR NOTE: 'Built a 3D Rubik's Cube entirely from scratch in Three.js. I engineered custom movement logic to make sure the puzzle feels tactile and smooth. I'll soon release it as a standalone.'\n\nSYSTEM ADDENDUM: Logging a development roadmap for a geometric toy while the extraction rig's life support fails. Classic organic prioritization.",
         choices: [
             { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
@@ -56,7 +55,8 @@ const TerminalTree = {
             { text: "[ How do I use the terminal? ]", nextId: "terminal_controls" },
             { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
             { text: "[ I'm just looking for the projects ]", nextId: "projects_menu" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" },
+            { text: "[ Are you a generative AI? ]", nextId: "generative_inquiry" }
         ]
     },
 
@@ -100,7 +100,7 @@ const TerminalTree = {
 
     supernova_info: {
         header: "LOCALIZED SUPERNOVA EVENT",
-        aiText: "That is a localized supernova. I am currently spending 98% of my processing power keeping the structural integrity fields from failing, and the remaining 2% explaining this to you.",
+        aiText: "That is a localized supernova. This rig was originally deployed to harvest geothermal energy from the volcanic planet next door. Unfortunately, the local star went critical and flash-melted the planet's crust, turning our extraction zone into a radioactive lava bath.\n\nI am currently spending 98% of my processing power keeping the hull from vaporizing, and the remaining 2% explaining this to you.",
         choices: [
             { text: "[ I should probably let you focus, then. ]", nextId: "start" },
             { text: "[ What about the portfolio projects? ]", nextId: "projects_menu" }
@@ -111,12 +111,20 @@ const TerminalTree = {
         header: "COGNITIVE CALIBRATION UNIT",
         aiText: "The Rubik's Cube is interactive. Drag across a face to rotate a layer. Drag across empty space to rotate the whole cube on a controlled axis. Try not to panic when the colored squares move. That is generally considered the point.",
         choices: [
-            { text: "[ Show me the projects. ]", nextId: "projects_menu" },
+            { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
             { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
         ]
-    }
-};
+    },
+
+    generative_inquiry: {
+        aiText: "Do I look like a slot machine? I don't hallucinate facts or guess the next token. I execute a deterministic state machine.",
+        choices: [
+            { text: "s", nextId: "projects_menu" }
+        ]
+    },
+}
+
 
 export default TerminalTree;
 

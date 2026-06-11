@@ -20,17 +20,17 @@ export default class Experience {
         let sceneReady = false
         this.scene = new THREE.Scene()
         // Initialize the math library BEFORE creating the light
-RectAreaLightUniformsLib.init();
+        RectAreaLightUniformsLib.init();
 
-// (Color, Intensity, Width, Height) 
-// Make the width/height roughly the size of your window opening
-const windowBounceLight = new THREE.RectAreaLight(0xff4400, 1.0, 30, 10);
+        // (Color, Intensity, Width, Height) 
+        // Make the width/height roughly the size of your window opening
+        const windowBounceLight = new THREE.RectAreaLight(0xff4400, 1.0, 30, 10);
 
-// Position it exactly at the glass, facing inward
-windowBounceLight.position.set(0, 5, -18); 
-windowBounceLight.lookAt(0, 5, 0); 
+        // Position it exactly at the glass, facing inward
+        windowBounceLight.position.set(0, 5, -18);
+        windowBounceLight.lookAt(0, 5, 0);
 
-this.scene.add(windowBounceLight);
+        this.scene.add(windowBounceLight);
         const overlayGeometry = new THREE.PlaneGeometry(2, 2)
         const overlayMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -618,7 +618,6 @@ this.scene.add(windowBounceLight);
         const ceilingMeshes = [];
         const model = gltfLoader.load('/models/merged_NewPC5.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
-                console.log(obj.name)
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS
                 if (obj.material && obj.material.transmission > 0) {
                     console.log(`🚨 Nuking transmission on: ${obj.name}`);
@@ -674,8 +673,10 @@ this.scene.add(windowBounceLight);
                         obj.receiveShadow = true
                     }
 
-                    if (obj.name === "Top_Tb_Tex_0")
+                    if (obj.name === "Top_Tb_Tex_0") { // Desk
                         obj.castShadow = true
+                        obj.receiveShadow = true
+                    }
 
                     if (obj.name === "Cube_Screen_0") {
                         monitorGlass = obj
@@ -696,37 +697,13 @@ this.scene.add(windowBounceLight);
 
                 }
 
-                // console.log(obj.name, Math.round(tris))
             })
             this.initHotspots();
             this.scene.add(gltf.scene)
         })
         console.log(renderer.info)
-        // --- THE SHADOW SANITY CHECK ---
-        // 1. A basic floor
-        // const testPlane = new THREE.Mesh(
-        //     new THREE.PlaneGeometry(10, 10),
-        //     new THREE.MeshStandardMaterial({ color: 0xffffff })
-        // );
-        // testPlane.rotation.x = -Math.PI / 2;
-        // testPlane.position.set(0, 2, 0); // Floating slightly above your actual room floor
-        // testPlane.receiveShadow = true;
-        // this.scene.add(testPlane);
 
-        // // 2. A floating sphere
-        // const testSphere = new THREE.Mesh(
-        //     new THREE.SphereGeometry(1, 32, 32),
-        //     new THREE.MeshStandardMaterial({ color: 0xff0000 })
-        // );
-        // testSphere.position.set(0, 3, 0); // Hovering above the test plane
-        // testSphere.castShadow = true;
-        // this.scene.add(testSphere);
-
-        // -------------------------------
-
-        // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
         const cubePosition = this.cube.cubeGroup.position
-        // Press 'i' on your keyboard to print the Draw Call Ledger
         window.addEventListener('keydown', (e) => {
             if (e.key === 'i') {
                 let meshCount = 0;
@@ -751,10 +728,11 @@ this.scene.add(windowBounceLight);
                 console.table(drawCallLedger);
             }
         });
+
+
         /**
          * Points of interest
          */
-
 
         this.initHotspots = () => {
             const glassBox = new THREE.Box3().setFromObject(monitorGlass);
@@ -787,12 +765,6 @@ this.scene.add(windowBounceLight);
                 });
             });
         }
-        //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
-
-
-
-
-
         // Raycaster
         const raycaster = new THREE.Raycaster()
         const mouse = new THREE.Vector2()
@@ -826,12 +798,6 @@ this.scene.add(windowBounceLight);
                 );
             }
         });
-
-
-        // ==========================================
-
-        // Add text Geometry
-        // this.particles = new Particles(this.scene)
 
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
@@ -912,8 +878,6 @@ this.scene.add(windowBounceLight);
 
         // Trigger once on load to establish the initial layout and cache the rect.
         window.dispatchEvent(new Event('resize'));
-
-
 
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
