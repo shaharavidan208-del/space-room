@@ -11,8 +11,9 @@ import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
 import CubeInput from './Cube/CubeInput.js'
 import gsap from 'gsap'
-import TerminalCanvas from './Terminal/TerminalCanvas.js'; // /models/ReUpload23.glb
+import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+
 
 export default class Experience {
     constructor(canvas) {
@@ -30,7 +31,21 @@ export default class Experience {
         windowBounceLight.position.set(0, 5, -18);
         windowBounceLight.lookAt(0, 5, 0);
 
-        this.scene.add(windowBounceLight);
+
+        const FLOOR_DETAIL_LAYER = 1;
+
+        const floorDetailLight = new THREE.RectAreaLight(0xb8dfff, 0.75, 9, 5);
+
+        // Place it above the middle/front floor area
+        floorDetailLight.position.set(0, 2.4, -1.2);
+
+        // Aim it down at the floor
+        floorDetailLight.lookAt(0, 0, -1.2);
+
+        // Make it affect only meshes you opt into
+        floorDetailLight.layers.set(FLOOR_DETAIL_LAYER);
+
+        this.scene.add(floorDetailLight);
         const overlayGeometry = new THREE.PlaneGeometry(2, 2)
         const overlayMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -53,6 +68,49 @@ export default class Experience {
         this.scene.add(overlay)
         this.gu = new GUI()
         this.terminal = new TerminalCanvas(this);
+
+        /**
+        * Lights
+        */
+        // ---------------------------------------------------------
+        // WARM FLOOR BOUNCE
+        // currently disabled, but kept for GUI testing
+        // ---------------------------------------------------------
+        const floorBounceLight = new THREE.RectAreaLight(0xffffff, 0.0, 28.6, 4.0);
+
+        floorBounceLight.position.set(1.2, -7.5, -11.8);
+        floorBounceLight.lookAt(11.7, 0, 0);
+
+        this.scene.add(floorBounceLight);
+
+
+
+        // ---------------------------------------------------------
+        // COOL FLOOR DETAIL LIGHT
+        // final-ish favorite version
+        // ---------------------------------------------------------
+        const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
+
+        coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
+        coolFloorDetailLight.lookAt(3.8, 0, 2.1);
+
+        this.scene.add(coolFloorDetailLight);
+
+        const coolFloorDetailLight2 = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
+
+        coolFloorDetailLight2.position.set(10, -9.2, -4.9);
+        coolFloorDetailLight2.lookAt(3.8, 0, 2.1);
+
+
+        const coolFloorDetailLight3 = new THREE.RectAreaLight(0x7eb5e2, 1, 22, 9);
+
+        coolFloorDetailLight3.position.set(-5, -9.2, -4.9);
+        coolFloorDetailLight3.lookAt(3.8, 0, 2.1);
+
+
+
+
+
 
         //         /**
         //  * Loaders
@@ -105,9 +163,6 @@ export default class Experience {
          */
 
 
-        // 1. Drop the global ambient wash
-        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-        // this.scene.add(ambientLight);
 
         // 2. The Supernova Rim Light (Warm)
         const novaLight = new THREE.DirectionalLight(0xff4400, 20); // Deep orange/red, very intense
@@ -167,7 +222,31 @@ export default class Experience {
             lookZ: 0
         };
 
-        const novaLightMain = new THREE.DirectionalLight(0xff4400, 14);
+        const novaLightMainParams = {
+            color: "'#da581c'",
+            intensity: 14
+        };
+
+        const novaLightMain = new THREE.DirectionalLight(0xda581c, 25);
+
+        novaLightMain.position.set(4.8, 11.8, -26.7);
+        novaLightMain.target.position.set(5, 5, -20);
+
+        this.scene.add(novaLightMain);
+        this.scene.add(novaLightMain.target);
+
+        const mainLightFolder = this.gu.addFolder('Main Light');
+
+        // mainLightFolder
+        //     .addColor(novaLightMainParams, 'color')
+        //     .name('Color')
+        //     .onChange((value) => {
+        //         novaLightMain.color.set(value);
+        //     });
+
+        // mainLightFolder
+        //     .add(novaLightMain, 'intensity', 0, 40, 0.1)
+        //     .name('Intensity');
         novaLightMain.position.set(4.8, 23, -26.7); // Pushed back outside
         novaLightMain.target.position.set(5, 5, -5);  // Aimed forward INTO the room
         novaLightMain.castShadow = true;
@@ -212,9 +291,9 @@ export default class Experience {
         // ==========================================
         // SUPERNOVA LIGHTING GUI & HELPERS
         // ==========================================
-        const lightFolder = this.gu.addFolder('Supernova Lights');
+        // const lightFolder = this.gu.addFolder('Supernova Lights');
 
-        // 1. MAIN LIGHT (The Shadow Caster)
+        // // 1. MAIN LIGHT (The Shadow Caster)
         // const mainFolder = lightFolder.addFolder('Main Light (Shadow Caster)');
         // mainFolder.add(novaLightMain, 'intensity', 0, 40, 0.1).name('Intensity');
         // mainFolder.add(novaLightMain.position, 'x', -50, 50, 0.1).name('Pos X');
@@ -240,16 +319,16 @@ export default class Experience {
         // wideBFolder.add(novaLightWideB.position, 'y', -50, 50, 0.1).name('Pos Y');
         // wideBFolder.add(novaLightWideB.position, 'z', -50, 50, 0.1).name('Pos Z');
 
-        // ==========================================
-        // HELPERS & UPDATERS
-        // ==========================================
-        // Add the visible lines showing light direction and shadow bounds
-        // const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
-        // const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
-        // this.scene.add(mainHelper);
-        // this.scene.add(shadowCameraHelper);
 
-        // // Force helpers to redraw when GUI sliders are moved
+        // HELPERS & UPDATERS
+
+        // Add the visible lines showing light direction and shadow bounds
+        const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
+        const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
+        this.scene.add(mainHelper);
+        this.scene.add(shadowCameraHelper);
+
+        // Force helpers to redraw when GUI sliders are moved
         // const updateMainHelpers = () => {
         //     mainHelper.update();
         //     novaLightMain.shadow.camera.updateProjectionMatrix();
@@ -376,16 +455,17 @@ export default class Experience {
 
             // This renders the skybox behind the window
             this.scene.background = environmentMap;
+            environmentMap.mapping = THREE.EquirectangularReflectionMapping
+            this.scene.background = environmentMap
+            this.scene.environment = environmentMap
 
-            // THE CRITICAL FIX: This tells every material in the room to reflect the HDR
-            // this.scene.environment = environmentMap;
         })
 
         document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
 
 
         // Camera
-        this.camera = new THREE.PerspectiveCamera(65,
+        this.camera = new THREE.PerspectiveCamera(70,
             window.innerWidth / window.innerHeight,
             0.1, // near
             1000, // far
@@ -457,11 +537,11 @@ export default class Experience {
         const lookHome = new THREE.Vector3(0.9, 1.24, 0);
 
         // --- NEW FOV VARIABLES ---
-        const homeFov = 65;
+        const homeFov = this.camera.fov;
         let targetFov = homeFov; // We will lerp toward this value
 
-        function showItems(visibility) {
-            ceilingMeshes.forEach((ceilingMesh) => {
+        function showItems(visibility, meshArray) {
+            meshArray.forEach((ceilingMesh) => {
                 ceilingMesh.visible = visibility;
                 console.log("entered show items")
             });
@@ -470,10 +550,9 @@ export default class Experience {
         /**
          * focus mode on cube
          */
+        const cubeControlsHint = document.querySelector('#cube-controls-hint');
         const cubeHotspot = document.querySelector("#hotspot-cube")
         const enterFocusMode = (activePoint) => {
-            console.log(ceilingMeshes)
-
             this.isFocused = true;
             trackballControls.enabled = false
             controls.enabled = false
@@ -486,7 +565,9 @@ export default class Experience {
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
-                showItems(false) // hide ceiling only in Cube mode
+                showItems(false, ceilingMeshes) // hide ceiling only in Cube mode
+                showItems(false, monitorMeshes)
+                cubeControlsHint.classList.add('visible');
                 lookTarget.copy(activePoint.position.clone());
                 targetFov = 13; // Isometric squeeze
 
@@ -527,7 +608,9 @@ export default class Experience {
         };
 
         const exitFocusMode = () => {
-            showItems(true) // unhide ceiling
+            showItems(true, ceilingMeshes) // unhide ceiling
+            showItems(true, monitorMeshes)
+            cubeControlsHint.classList.remove('visible');
             this.isFocused = true; // Prevents spam clicking during animation
             trackballControls.enabled = true
             isTransitioning = true;
@@ -606,6 +689,7 @@ export default class Experience {
 
         ]);
 
+
         const shouldAddHotspotOccluder = (obj) => {
             if (hotspotOccluderNames.has(obj.name)) {
                 return true;
@@ -613,14 +697,37 @@ export default class Experience {
 
             return false;
         };
-
-
+        console.log(renderer.info)
+        const monitorMeshes = []
         const ceilingMeshes = [];
-        const model = gltfLoader.load('/models/merged_NewPC5.glb', (gltf) => {
+        console.log(renderer.info)
+        gltfLoader.load('/models/cursedTiles-v1.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
+                if (!obj.isMesh) {
+                    return;
+                }
+
+                obj.layers.enable(FLOOR_DETAIL_LAYER);
+            });
+
+            this.scene.add(gltf.scene);
+        });
+
+
+
+        const model = gltfLoader.load('/models/newFloorSetups2.glb', (gltf) => {
+            gltf.scene.traverse((obj) => {
+                if (!obj.isMesh) {
+                    return;
+                }
+
+
+
+
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS
                 if (obj.material && obj.material.transmission > 0) {
-                    console.log(`🚨 Nuking transmission on: ${obj.name}`);
+
+                    console.log(`🚨 Nuking transmission on: ${obj.name}` + "🤬");
 
                     // Force transmission to 0 to cancel the background render pass
                     obj.material.transmission = 0;
@@ -628,8 +735,14 @@ export default class Experience {
                     // Ensure it falls back to standard, cheap transparency
                     obj.material.transparent = true;
                     obj.material.needsUpdate = true;
+                    // IF YOU RE-ENABLE THIS I WILL FIND YOU 🤬
                 }
                 if (obj.isMesh) {
+
+                    if (obj.name.includes("Auto") || obj.name === "") {
+                        monitorMeshes.push(obj)
+                    }
+
                     if (shouldAddHotspotOccluder(obj)) {
                         objectsArr.push(obj);
                     }
@@ -640,6 +753,7 @@ export default class Experience {
                     if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
                         obj.material.side = THREE.DoubleSide;
                         obj.visible = false
+                        console.log("it's here")
 
                     }
 
@@ -653,7 +767,6 @@ export default class Experience {
                     }
 
                     if (obj.name === "Mesh004" || obj.name === "Mesh004_2") { // floor 
-                        obj.receiveShadow = true
                         // this.floorMesh = obj
                     }
                     // 3. If it's just a normal PC part, nuke the grey and make it pitch black
@@ -673,12 +786,11 @@ export default class Experience {
                         obj.receiveShadow = true
                     }
 
-                    if (obj.name === "Top_Tb_Tex_0") { // Desk
+                    if (obj.name === "Top_Tb_Tex_0")
                         obj.castShadow = true
-                        obj.receiveShadow = true
-                    }
 
                     if (obj.name === "Cube_Screen_0") {
+                        monitorMeshes.push(obj)
                         monitorGlass = obj
                         terminalPosition = obj.position
                         // Completely overwrite whatever material Blender sent
@@ -701,9 +813,10 @@ export default class Experience {
             this.initHotspots();
             this.scene.add(gltf.scene)
         })
-        console.log(renderer.info)
 
+        // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
         const cubePosition = this.cube.cubeGroup.position
+        // Press 'i' on your keyboard to print the Draw Call Ledger
         window.addEventListener('keydown', (e) => {
             if (e.key === 'i') {
                 let meshCount = 0;
@@ -728,11 +841,10 @@ export default class Experience {
                 console.table(drawCallLedger);
             }
         });
-
-
         /**
          * Points of interest
          */
+
 
         this.initHotspots = () => {
             const glassBox = new THREE.Box3().setFromObject(monitorGlass);
@@ -765,6 +877,12 @@ export default class Experience {
                 });
             });
         }
+        //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
+
+
+
+
+
         // Raycaster
         const raycaster = new THREE.Raycaster()
         const mouse = new THREE.Vector2()
@@ -799,9 +917,9 @@ export default class Experience {
             }
         });
 
+
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
-
 
         // ---------------------------------------------------------
         // VIEWPORT & ASPECT RATIO MANAGER
@@ -810,7 +928,7 @@ export default class Experience {
         // This physically shrinks the canvas on standard 16:9 or 16:10 monitors, 
         // acting as a massive fill-rate optimization by saving the GPU from 
         // rendering the empty space at the top and bottom of the screen.
-        const TARGET_ASPECT = 23 / 9;
+        const TARGET_ASPECT = 21 / 9;
 
         let hotspotNeedUpdate = false
         window.addEventListener('resize', () => {
@@ -829,9 +947,10 @@ export default class Experience {
 
             let DYNAMIC_TARGET_ASPECT = TARGET_ASPECT; // start by assuming we want the cinematic 23/9 crop (Default state). 
 
-            if (isPortrait) {
+            if (isPortrait || windowAspect >= DYNAMIC_TARGET_ASPECT) {
                 // Mobile: Abandon the crop and use the phone's native aspect ratio to fill the screen
                 DYNAMIC_TARGET_ASPECT = windowAspect; // the aspect ratio just becomes the phone's native 
+
             }
 
             // create two mutable variables and initially set them to fill 100% of the screen
@@ -844,10 +963,6 @@ export default class Experience {
                 // if the window is narrower than target (e.g., standard 16:9 monitor).
                 // Keep max width, shrink height. Flexbox will auto-center it, creating Top/Bottom black bars.
                 canvasHeight = window.innerWidth / DYNAMIC_TARGET_ASPECT;
-            } else {
-                // Window is wider than target (e.g., 32:9 ultra-wide monitor).
-                // Keep max height, shrink width. Flexbox auto-centers it, creating Left/Right black bars (Pillarboxing).
-                canvasWidth = window.innerHeight * DYNAMIC_TARGET_ASPECT;
             }
 
             // 1. Lock the Three.js Camera frustum to the new mathematical ratio
@@ -878,6 +993,8 @@ export default class Experience {
 
         // Trigger once on load to establish the initial layout and cache the rect.
         window.dispatchEvent(new Event('resize'));
+
+
 
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
@@ -939,7 +1056,6 @@ export default class Experience {
             }
             const target = controls.target
             if (sceneReady === true && this.points && hotspotNeedUpdate) {
-                console.log(renderer.info)
                 for (const point of this.points) {
                     // Convert the hotspot's 3D world position into normalized screen coordinates.
                     // After projection:

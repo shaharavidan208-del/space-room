@@ -188,3 +188,84 @@ canvas {
         border-color: rgba(0, 255, 255, 0.3);
     }
 }
+
+/* ---------------------------------------------------------
+   CUBE CONTROL HINT HUD
+   --------------------------------------------------------- */
+.scene-frame {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+
+.cube-controls-hint {
+   position: absolute;
+    top: 18px;
+    left: 18px;
+    z-index: 30;
+
+    min-width: 235px;
+    padding: 12px 14px;
+
+    font-family: 'Audiowide', sans-serif;
+    font-size: 10px;
+    line-height: 1.55;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+
+    color: #d8ffff;
+    background: rgba(0, 8, 12, 0.72);
+    border: 1px solid rgba(0, 255, 255, 0.45);
+    box-shadow:
+        0 0 12px rgba(0, 255, 255, 0.25),
+        inset 0 0 18px rgba(0, 255, 255, 0.08);
+
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+
+.cube-controls-hint.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.hint-title {
+    margin-bottom: 8px;
+
+    color: #ffffff;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+
+    text-shadow:
+        0 0 5px rgba(0, 255, 255, 0.9),
+        0 0 12px rgba(0, 255, 255, 0.45);
+}
+
+.hint-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.hint-key {
+    color: #ff8a3d;
+    white-space: nowrap;
+}
+
+.hint-divider {
+    height: 1px;
+    margin: 8px 0;
+
+    background: linear-gradient(
+        90deg,
+        rgba(0, 255, 255, 0.0),
+        rgba(0, 255, 255, 0.55),
+        rgba(0, 255, 255, 0.0)
+    );
+}

@@ -229,7 +229,7 @@ export default class CubeInput {
             // ------------------------------------------
             if (this.dragMode === "cube") {
                 // GATE 1: Lock the primary drag axis (Horizontal vs Vertical) based on initial intent
-                if (!this.axisLocked && (Math.abs(totalDx) > 6 || Math.abs(totalDy) > 6)) {
+                if (!this.axisLocked && (Math.abs(totalDx) > 8 || Math.abs(totalDy) > 8)) {
                     this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy);
                     if (this.dxLarger) {
                         this.rotationAxis = 'y'
@@ -293,7 +293,7 @@ export default class CubeInput {
                       drag distance inside one of its axes (x, y, or z). */
                 const rotationVector = this.hitLocalNormal.clone().cross(this.dragDelta);
                 // Phase 1: Determine Rotation Intent (Which layer are we spinning?)
-                if (!this.axisLocked && dragDistance > 0.025) {
+                if (!this.axisLocked && dragDistance > 0.03) {
                     this.dragMode = "layer"
                     this.axisLocked = true
 
