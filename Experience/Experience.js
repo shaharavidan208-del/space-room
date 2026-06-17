@@ -325,9 +325,6 @@ export default class Experience {
         // Add the visible lines showing light direction and shadow bounds
         const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
         const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
-        this.scene.add(mainHelper);
-        this.scene.add(shadowCameraHelper);
-
         // Force helpers to redraw when GUI sliders are moved
         // const updateMainHelpers = () => {
         //     mainHelper.update();
@@ -349,50 +346,6 @@ export default class Experience {
         deskLight2.position.set(2.5, 1.2, -4.2); // near desk
         this.scene.add(deskLight, deskLight2);
 
-        // Remove the old AmbientLight
-        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); 
-
-        // (Sky Color, Ground Color, Intensity)
-        // ==========================================
-        // HEMISPHERE LIGHT & GUI
-        // ==========================================
-        // 1. Create the light and push it up into the ceiling
-        // const hemiLight = new THREE.HemisphereLight(0xff4400, 0x001122, 2.0);
-        // hemiLight.position.set(0, 20, 0); // Crucial: move it up so the gradient maps correctly
-        // this.scene.add(hemiLight);
-
-        // // 2. Set up the temporary color object (lil-gui requires hex strings for color pickers)
-        // const hemiParams = {
-        //     skyColor: '#ff4400',
-        //     groundColor: '#001122'
-        // };
-
-        // // 3. Build the GUI folder
-        // const hemiFolder = this.gu.addFolder('Ambient Fill (Hemisphere)');
-
-        // // 4. Add the controls
-        // hemiFolder.add(hemiLight, 'intensity', 0, 10, 0.1).name('Intensity');
-        // hemiFolder.add(hemiLight.position, 'y', -50, 50, 0.5).name('Height (Y)');
-
-        // // 5. Add the Color Pickers (Using onChange to update the material in real-time)
-        // hemiFolder.addColor(hemiParams, 'skyColor').name('Sky (Top) Color').onChange((value) => {
-        //     hemiLight.color.set(value);
-        // });
-        // hemiFolder.addColor(hemiParams, 'groundColor').name('Ground (Bottom) Color').onChange((value) => {
-        //     hemiLight.groundColor.set(value);
-        // });
-        // const lightFolder2 = this.gu.addFolder('desk Light');
-        // const sourceFolder2 = lightFolder2.addFolder('Desk Light 1');
-        // sourceFolder2.add(deskLight.position, 'x', -50, 50, 0.1).name('Pos X');
-        // sourceFolder2.add(deskLight.position, 'y', -50, 50, 0.1).name('Pos Y');
-        // sourceFolder2.add(deskLight.position, 'z', -50, 50, 0.1).name('Pos Z');
-        // sourceFolder2.add(deskLight, 'intensity', 0, 40, 0.1).name('Intensity');
-
-        // const sourceFolder3 = lightFolder2.addFolder('Desk Light 2');
-        // sourceFolder3.add(deskLight2.position, 'x', -50, 50, 0.1).name('Pos X');
-        // sourceFolder3.add(deskLight2.position, 'y', -50, 50, 0.1).name('Pos Y');
-        // sourceFolder3.add(deskLight2.position, 'z', -50, 50, 0.1).name('Pos Z');
-        // sourceFolder3.add(deskLight2, 'intensity', 0, 40, 0.1).name('Intensity');
 
         this.scene.add(deskLight, deskLight2)
         /**
@@ -413,7 +366,6 @@ export default class Experience {
         //     visible: true
         // })
 
-        // Add the TextureLoader at the top of Experience.js if you haven't already
         const textureLoader = new THREE.TextureLoader(loadingManager);
 
         // Load the noise image
@@ -543,7 +495,6 @@ export default class Experience {
         function showItems(visibility, meshArray) {
             meshArray.forEach((ceilingMesh) => {
                 ceilingMesh.visible = visibility;
-                console.log("entered show items")
             });
         }
 
@@ -685,7 +636,8 @@ export default class Experience {
             "Occluder_Ceiling",
             "Wall_mesh",
             "Wall_mesh2",
-            "Circle001_3"
+            "Circle001_3",
+            "Occluder_Wall"
 
         ]);
 
@@ -700,22 +652,11 @@ export default class Experience {
         console.log(renderer.info)
         const monitorMeshes = []
         const ceilingMeshes = [];
-        console.log(renderer.info)
-        gltfLoader.load('/models/cursedTiles-v1.glb', (gltf) => {
-            gltf.scene.traverse((obj) => {
-                if (!obj.isMesh) {
-                    return;
-                }
-
-                obj.layers.enable(FLOOR_DETAIL_LAYER);
-            });
-
-            this.scene.add(gltf.scene);
-        });
+       
 
 
 
-        const model = gltfLoader.load('/models/newFloorSetups2.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -727,7 +668,6 @@ export default class Experience {
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS
                 if (obj.material && obj.material.transmission > 0) {
 
-                    console.log(`🚨 Nuking transmission on: ${obj.name}` + "🤬");
 
                     // Force transmission to 0 to cancel the background render pass
                     obj.material.transmission = 0;
@@ -753,7 +693,6 @@ export default class Experience {
                     if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
                         obj.material.side = THREE.DoubleSide;
                         obj.visible = false
-                        console.log("it's here")
 
                     }
 
@@ -1062,9 +1001,7 @@ export default class Experience {
                     // x and y are between -1 and 1 when visible on screen.
                     // z tells us whether the point is in front of or behind the camera.
                     const screenPos = point.position.clone();
-                    // console.log("Before projection: ", screenPos)
                     screenPos.project(this.camera);
-                    // console.log("After projection: ", screenPos)
 
                     // [ SCREEN VISIBILITY CHECK ]
                     // If the hotspot is outside the camera view, hide it immediately and do an early exit.
