@@ -155,7 +155,7 @@ export default class Experience {
 
         // FPS counter 
         const stats = new Stats();
-        document.body.appendChild(stats.dom);
+        // document.body.appendChild(stats.dom);
 
 
         /**
@@ -656,7 +656,7 @@ export default class Experience {
 
 
 
-        const model = gltfLoader.load('/models/newSetup.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup3.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -698,7 +698,7 @@ export default class Experience {
 
 
 
-                    if (obj.name === "Mesh016_2") { // windows
+                    if (obj.name === "Mesh011_3") { // windows
                         obj.material.transparent = true;
                         obj.material.opacity = 0.08;
                         obj.material.depthWrite = false;
@@ -965,7 +965,7 @@ export default class Experience {
 
 
             const elapsedTime = clock.getElapsedTime();
-            stats.begin();
+            // stats.begin();
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true
@@ -1061,7 +1061,7 @@ export default class Experience {
             trackballControls.target.set(target.x, target.y, target.z)
             trackballControls.update()
             // Go through each points 
-            stats.end();
+            // stats.end();
             requestAnimationFrame(tick);
         };
         tick()
