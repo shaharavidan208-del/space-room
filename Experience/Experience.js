@@ -381,7 +381,7 @@ export default class Experience {
             position: new THREE.Vector3(-15, 5, 50),
             scale: 8,
             visible: true,
-            noiseMap: noiseTexture // <--- Add this new option
+            noiseMap: noiseTexture
         });
 
         this.supernova.mesh.position.x = -15
@@ -396,6 +396,8 @@ export default class Experience {
         // novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
         //     this.supernova.mesh.scale.setScalar(val)
         // })
+
+        
 
 
 
@@ -736,8 +738,8 @@ export default class Experience {
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
                         });
-                        this.terminal.texture.offset.y = -0.05;
-                        this.terminal.texture.repeat.set(1.3, 1.3, 1.3)
+                        this.terminal.texture.offset.y = -0.12;
+                        this.terminal.texture.repeat.set(1.35, 1.35, 1.35)
 
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
@@ -1057,8 +1059,8 @@ export default class Experience {
             // Update helpers in real-time if you move sliders in the GUI
             // mainLightHelper.update();
             // shadowCameraHelper.update();
-            controls.update();
             trackballControls.target.set(target.x, target.y, target.z)
+            controls.update();
             trackballControls.update()
             // Go through each points 
             // stats.end();

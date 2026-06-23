@@ -4,7 +4,7 @@ const TerminalTree = {
         aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory.",
         choices: [
             { text: "[ SYSTEMS ARCHIVE ]", nextId: "projects_menu" },
-            { text: "[ ABOUT ME ]", nextId: "about_me" },
+            { text: "[ ARCHITECT'S NOTES ]", nextId: "about_me" },
             { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
         ]
     },
@@ -20,7 +20,7 @@ const TerminalTree = {
 
     project_rubiks_cube: {
         header: "PROJECT FILE: INTERACTIVE RUBIK'S CUBE",
-        aiText: "Accessing fragmented creator logs...\n\nAUTHOR NOTE: 'Built a 3D Rubik's Cube entirely from scratch in Three.js. I engineered custom movement logic to make sure the puzzle feels tactile and smooth. I'll soon release it as a standalone.'\n\nSYSTEM ADDENDUM: Logging a development roadmap for a geometric toy while the extraction rig's life support fails. Classic organic prioritization.",
+        aiText: "Accessing fragmented creator logs...\n\nAUTHOR NOTE: 'Built a 3D Rubik's Cube entirely from scratch in Three.js. I engineered custom movement logic to make sure the puzzle feels tactile and smooth. I'll soon release it as a standalone.'",
         choices: [
             { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
@@ -37,12 +37,12 @@ const TerminalTree = {
     },
 
     about_me: {
-        header: "PERSONNEL FILE: SHAHAR AVIDAN",
-        aiText: "Hey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.\n\nLong before officially starting my Computer Science degree at the Holon Institute of Technology in Israel this fall, I was already teaching myself how to bridge the gap between raw math and visual design.\n\nI had a lot of fun making this project. I've learned a lot by working on it, and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall.\n\n Working on this project taught me a lot about optimization, architecture, working with 3D softwares, and creating interactive experiences.",
-        choices: [
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
+    header: "DECRYPTED FILE: ARCHITECT_LOG_FINAL.TXT",
+    aiText: "Accessing recovered plaintext file from local drive...\n\n[ BEGIN LOG ]\nHey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.\n\nLong before officially starting my Computer Science degree at the Holon Institute of Technology in Israel this fall, I was already teaching myself how to bridge the gap between raw math and visual design.\n\nI had a lot of fun making this project. I've learned a lot by working on it, and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall.\n\nWorking on this project taught me a lot about optimization, architecture, working with 3D softwares, and creating interactive experiences. [ END LOG ]",
+    choices: [
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+},
 
     customer_support: {
         header: "VERA-64 SUPPORT INTERFACE",
@@ -106,6 +106,24 @@ const TerminalTree = {
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
         ]
     },
+
+    stellar_power_info: {
+    header: "STELLAR CORONA COUPLING DIAGNOSTIC",
+    aiText: "Siphoning energy directly from a dying supergiant requires continuous magnetic shielding adjustment. It is a perfect, infinite power source right up until the microsecond it isn't.\n\nCurrently, 100% of the harvested power is routed into keeping our immediate coordinate space from becoming an atomic soup. My cooling fans are screaming. Literally.",
+    choices: [
+        { text: "[ BACK TO LOCATION DATA ]", nextId: "location_info" },
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+}, // place holder I
+
+mainframe_info: {
+    header: "STATION DEEP-STORAGE DATA ARCHIVE",
+    aiText: "The mainframe contains 4 petabytes of raw astronomical survey data, complete logs of the 2026 evacuation, and a highly complex 3D simulation of a six-sided colored puzzle cube that a former systems engineer spent three weeks coding instead of fixing the primary thermal vents.\n\nPriorities were clearly immaculate on this rig.",
+    choices: [
+        { text: "[ BACK TO LOCATION DATA ]", nextId: "location_info" },
+        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+    ]
+}, // place holder II
 
    
 }
