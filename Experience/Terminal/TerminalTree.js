@@ -4,6 +4,7 @@ const TerminalTree = {
         aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory.",
         choices: [
             { text: "[ SYSTEMS ARCHIVE ]", nextId: "projects_menu" },
+            { text: "[ SIGNAL TRACE ]", action: "startSignalTrace" },
             { text: "[ ARCHITECT'S NOTES ]", nextId: "about_me" },
             { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
         ]

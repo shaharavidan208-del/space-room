@@ -738,8 +738,8 @@ export default class Experience {
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
                         });
-                        this.terminal.texture.offset.y = -0.12;
-                        this.terminal.texture.repeat.set(1.35, 1.35, 1.35)
+                        this.terminal.texture.offset.y = -0.2;
+                        this.terminal.texture.repeat.set(1.4, 1.4, 1.4)
 
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update

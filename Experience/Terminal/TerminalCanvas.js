@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import TerminalTree from './TerminalTree.js';
+import SignalTrace from './SignalTrace.js';
+
 
 export default class TerminalCanvas {
     constructor(experience) {
@@ -7,6 +9,9 @@ export default class TerminalCanvas {
         // This lets the terminal know things about the 3D scene,
         // such as whether the user is currently focused on the terminal.
         this.experience = experience;
+
+        this.mode = "dialogue" // on default, mode should be dialogue
+
 
         // ==========================================
         // 1. OFF-SCREEN CANVAS SETUP
@@ -35,7 +40,7 @@ export default class TerminalCanvas {
         // This texture will later be assigned to the monitor screen material.
         // Whatever we draw on this canvas becomes visible on the 3D monitor.
         this.texture = new THREE.CanvasTexture(this.canvas);
-
+        
         // Texture wrapping controls what happens when UVs sample outside the texture.
         // ClampToEdge prevents the texture from repeating/tapping pixels from the opposite side.
         // This is safer for UI screens because we usually do not want repeated terminal text.
@@ -64,10 +69,8 @@ export default class TerminalCanvas {
         // Tracks which choice is currently highlighted inside the current node.
         // 0 = first choice
         // 1 = second choice
-        // Later, this should probably be renamed to selectedChoiceIndex,
-        // because this system is no longer only dialogue.
         this.dialogueSelectedIndex = 0;
-
+        this.signalTrace = new SignalTrace(this);
         // Set up keyboard input and draw the first frame immediately.
         this.setupHiddenInput();
         this.draw();
@@ -192,11 +195,16 @@ export default class TerminalCanvas {
     if (this.experience.currPointName !== "Terminal") {
         return;
     }
+    if (this.mode === "signalTrace") {
+    this.signalTrace.handleKeyDown(event)
+    return
+}
+
 
     // Get the current node from the terminal tree.
     // currentNodeId is the "address" of the current terminal screen.
     const currentNode = TerminalTree[this.currentNodeId];
-
+    console.log(currentNode)
     // Safety check.
     // If currentNodeId points to a missing node, redraw will show the error screen.
     // We return here so key input doesn't crash when trying to read choices.
@@ -204,6 +212,7 @@ export default class TerminalCanvas {
         this.draw();
         return;
     }
+
 
     // Some nodes might not have choices.
     // If choices is missing, we use an empty array so the rest of the code stays safe.
@@ -240,6 +249,12 @@ export default class TerminalCanvas {
     else if (event.key === 'Enter') {
         // Get the currently highlighted choice.
         const selectedChoice = choices[this.dialogueSelectedIndex];
+        if(selectedChoice.action === "startSignalTrace") // If the current highlighted choice is Signal Trace then we initiate the game
+        {
+            this.dialogueSelectedIndex = 0 // temporary, because for now we're not in the dialogue tree anymore
+            this.signalTrace.startSignalTrace()
+            return
+        }
 
         // If the selected choice has a nextId, move to that node.
         if (selectedChoice.nextId) {
@@ -319,13 +334,13 @@ export default class TerminalCanvas {
         // If the node has a custom header, draw it.
         // Otherwise use a generic fallback.
         if (node.header) {
-            this.ctx.fillText(node.header, 50, 80);
+            this.ctx.fillText(node.header, 50, 140);
         } else {
-            this.ctx.fillText('TERMINAL', 50, 80);
+            this.ctx.fillText('TERMINAL', 50, 140);
         }
 
         // Simple divider line below the header.
-        this.ctx.fillText('------------------------', 50, 115);
+        this.ctx.fillText('---------------------------------', 50, 165);
 
         // ------------------------------------------
         // 5. DRAW BODY TEXT
@@ -336,7 +351,7 @@ export default class TerminalCanvas {
 
         // cursorY tracks where the next thing should be drawn.
         // We start below the header.
-        let cursorY = 180;
+        let cursorY = 240;
 
         // Draw the node's main text if it exists.
         if (node.aiText) {
@@ -441,11 +456,3 @@ export default class TerminalCanvas {
     // 3. RENDER BASED ON CURRENT MODE
     // We use a switch statement to ask the State Machine what we should be drawing right now.
 
-
-    // ==========================================
-    // 6. THE GPU TRIGGER (CRITICAL)
-    // ==========================================
-    // The 3D graphics card (GPU) has no idea that we just changed pixels on the 2D canvas in RAM.
-    // If we do not set this flag to true, the monitor in your 3D room will never update.
-    // This line tells Three.js: "Hey, the canvas changed. Upload the new frame to the GPU immediately."
-    // this.texture.needsUpdate = true;
