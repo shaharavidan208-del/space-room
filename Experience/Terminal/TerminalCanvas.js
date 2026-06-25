@@ -25,7 +25,7 @@ export default class TerminalCanvas {
         // Set the internal pixel resolution of the canvas.
         // This is not the CSS size. This is the actual texture resolution.
         // Higher resolution = sharper text when the 3D camera zooms into the monitor.
-        this.canvas.width = 1024;
+        this.canvas.width = 1084;
         this.canvas.height = 1024;
 
         // Get the 2D drawing context.
