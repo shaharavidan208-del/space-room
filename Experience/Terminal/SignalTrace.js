@@ -6,7 +6,7 @@ export default class SignalTrace {
         // Borrow the terminal's canvas.
         // SignalTrace will draw onto the same canvas that is already used as the monitor texture.
         this.canvas = this.terminal.canvas;
-        
+
 
         // Borrow the 2D drawing context.
         // This is what lets us draw text, rectangles, grid lines, pipes, etc.
@@ -17,7 +17,7 @@ export default class SignalTrace {
         this.texture = this.terminal.texture;
 
 
-       
+
         /**
          * Grid propeties
          */
@@ -37,11 +37,11 @@ export default class SignalTrace {
         * the range is between 0 and 4 for now
         */
         this.cursor = { row: 2, col: 2 }
-         this.pipeRenderer = new SignalTracePipeRenderer(
-    this.ctx,
-    this.tileSize,
-    this.tileGap
-)
+        this.pipeRenderer = new SignalTracePipeRenderer(
+            this.ctx,
+            this.tileSize,
+            this.tileGap
+        )
         /**
  * Temporary pipe grid.
  * Each tile stores which directions its pipe connects to.
@@ -63,7 +63,7 @@ export default class SignalTrace {
          * Background styling
          */
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height) // clear the whole terminal screen
-        this.ctx.fillStyle = "#031416" 
+        this.ctx.fillStyle = "#050505"
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height) // fill the rect with the current fillStyle
 
         /**
@@ -76,12 +76,12 @@ export default class SignalTrace {
 
 
         // Draw temporary status text.
-        this.ctx.fillStyle = "#8fb7b0";
+        this.ctx.fillStyle = "rgba(0, 255, 65, 0.72)"
         this.ctx.font = "28px monospace";
         this.ctx.fillText("ARCHIVE RECOVERY PROTOCOL INITIALIZED", 80, 170);
 
         // Temporary instruction text.
-        this.ctx.fillStyle = "#4f7f78";
+        this.ctx.fillStyle = "rgba(0, 255, 65, 0.42)"
         this.ctx.font = "28px monospace";
         this.ctx.fillText("Awaiting signal grid initialization...", 80, 230);
         this.drawBoardPlaceholder()
@@ -117,15 +117,14 @@ export default class SignalTrace {
                 /**
                  * Default tile background.
                  */
-                this.ctx.fillStyle = "rgba(0, 255, 65, 0.08)"
+                this.ctx.fillStyle = "rgba(0, 255, 65, 0.035)"
                 this.ctx.fillRect(x, y, this.tileSize, this.tileSize)
 
                 /**
                  * Default tile border.
                  */
-                this.ctx.strokeStyle = "rgba(0, 255, 65, 0.22)" // border style
-                
-                this.ctx.lineWidth = 10 // lineWidth controls how thick the outline is.
+                this.ctx.strokeStyle = "rgba(0, 255, 65, 0.13)"
+                this.ctx.lineWidth = 8
                 this.ctx.strokeRect(x, y, this.tileSize, this.tileSize) // this draws the actual rectangle
 
                 /**
@@ -191,50 +190,79 @@ export default class SignalTrace {
         /**
          * Draw the node label.
          */
-        this.ctx.fillStyle = "#d8fff7"
+        this.ctx.fillStyle = "#d8ffdc"
         this.ctx.font = "26px monospace"
         this.ctx.textAlign = "center"
         this.ctx.fillText(label, centerX, centerY + 24)
     }
 
     drawCursor(x, y) {
-        /**
-         * Save the current canvas drawing state.
-         * The cursor uses stronger glow/stroke settings,
-         * and we don't want those settings leaking into other drawings.
-         */
-        this.ctx.save()
+    /**
+     * Draw a corner-bracket cursor instead of a full rectangle.
+     * This highlights the selected tile without covering the pipe details.
+     */
+    this.ctx.save()
 
-        /**
-         * Cursor glow.
-         * This makes the selected tile feel active.
-         */
-        this.ctx.shadowColor = "#d8fff7"
-        this.ctx.shadowBlur = 2
+    /**
+     * Cursor style.
+     * It should be readable, but not dominate the pipe.
+     */
+    this.ctx.strokeStyle = "rgba(216, 255, 220, 0.9)"
+    this.ctx.lineWidth = 1
+    this.ctx.shadowColor = "#00FF41"
+    this.ctx.shadowBlur = 1
+    this.ctx.lineCap = "square"
 
-        /**
-         * Bright cursor border.
-         */
-        this.ctx.strokeStyle = "#d8fff7"
-        this.ctx.lineWidth = 12
+    /**
+     * Cursor padding from the tile edge.
+     * Higher value = cursor moves inward.
+     */
+    const padding = 10
 
-        /**
-         * Draw the cursor slightly inside the tile.
-         * This prevents the cursor from being clipped or fighting too much
-         * with the thick default tile border.
-         */
-        this.ctx.strokeRect(
-            x + 8,
-            y + 8,
-            this.tileSize - 16,
-            this.tileSize - 16
-        )
+    /**
+     * Length of each corner bracket arm.
+     */
+    const cornerLength = 26
 
-        /**
-         * Restore the old drawing state.
-         */
-        this.ctx.restore()
-    }
+    const left = x + padding
+    const right = x + this.tileSize - padding
+    const top = y + padding
+    const bottom = y + this.tileSize - padding
+
+    this.ctx.beginPath()
+
+    /**
+     * Top-left corner.
+     */
+    this.ctx.moveTo(left + cornerLength, top)
+    this.ctx.lineTo(left, top)
+    this.ctx.lineTo(left, top + cornerLength)
+
+    /**
+     * Top-right corner.
+     */
+    this.ctx.moveTo(right - cornerLength, top)
+    this.ctx.lineTo(right, top)
+    this.ctx.lineTo(right, top + cornerLength)
+
+    /**
+     * Bottom-right corner.
+     */
+    this.ctx.moveTo(right, bottom - cornerLength)
+    this.ctx.lineTo(right, bottom)
+    this.ctx.lineTo(right - cornerLength, bottom)
+
+    /**
+     * Bottom-left corner.
+     */
+    this.ctx.moveTo(left + cornerLength, bottom)
+    this.ctx.lineTo(left, bottom)
+    this.ctx.lineTo(left, bottom - cornerLength)
+
+    this.ctx.stroke()
+
+    this.ctx.restore()
+}
 
     handleKeyDown(event) {
         /**
@@ -311,55 +339,55 @@ export default class SignalTrace {
         this.drawBootScreen()
     }
 
-    
 
-  createTestGrid() {
-    /**
-     * Temporary test layout.
-     * This creates a path with corners so we can test curved pipe rendering.
-     *
-     * Path:
-     * SRC -> right -> up -> right -> right -> down -> right -> ARC
-     */
-    return [
-        [
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] }
-        ],
-        [
-            { connections: [] },
-            { connections: ["down", "right"] },
-            { connections: ["left", "right"] },
-            { connections: ["left", "down"] },
-            { connections: [] }
-        ],
-        [
-            { connections: ["right"] },
-            { connections: ["left", "up"] },
-            { connections: [] },
-            { connections: ["up", "right"] },
-            { connections: ["left"] }
-        ],
-        [
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] }
-        ],
-        [
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] },
-            { connections: [] }
+
+    createTestGrid() {
+        /**
+         * Temporary test layout.
+         * This creates a path with corners so we can test curved pipe rendering.
+         *
+         * Path:
+         * SRC -> right -> up -> right -> right -> down -> right -> ARC
+         */
+        return [
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: ["down", "right"] },
+                { connections: ["left", "right"] },
+                { connections: ["left", "down"] },
+                { connections: [] }
+            ],
+            [
+                { connections: ["right"] },
+                { connections: ["left", "up"] },
+                { connections: [] },
+                { connections: ["up", "right"] },
+                { connections: ["left"] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] }
+            ]
         ]
-    ]
-}
-   
+    }
 
-    
+
+
 }

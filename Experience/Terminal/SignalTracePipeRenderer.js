@@ -9,19 +9,19 @@ export default class SignalTracePipeRenderer {
      * This keeps Signal Trace visually connected to TerminalCanvas.
      */
     this.colors = {
-        terminalGreen: "#00FF41",
-        terminalBackground: "#050505",
+    terminalGreen: "#00FF41",
+    terminalBackground: "#050505",
 
-        pipeOuter: "#061006",
-        pipeDark: "#0b2410",
-        pipeMid: "#1f6b2d",
-        pipeBright: "#00FF41",
-        pipeHighlight: "#a8ffb8",
+    pipeOuter: "#020602",
+    pipeDark: "#061006",
+    pipeMid: "#123d18",
+    pipeBright: "#00FF41",
+    pipeHighlight: "#b8ffc0",
 
-        clampDark: "#041006",
-        clampMid: "#1f6b2d",
-        clampBright: "#00FF41"
-    }
+    clampDark: "#020602",
+    clampMid: "#16491f",
+    clampBright: "#00FF41"
+}
 }
 
    drawPipe(x, y, tile) {
@@ -202,13 +202,13 @@ createPipeBodyGradient(x, y, connections) {
      * Terminal green material:
      * dark edge -> green body -> bright scanline-like reflection -> dark edge.
      */
-    gradient.addColorStop(0.00, "#061006")
-    gradient.addColorStop(0.18, "#0f3518")
-    gradient.addColorStop(0.34, "#1f6b2d")
-    gradient.addColorStop(0.50, "#00FF41")
-    gradient.addColorStop(0.64, "#7dff8c")
-    gradient.addColorStop(0.82, "#16491f")
-    gradient.addColorStop(1.00, "#041006")
+    gradient.addColorStop(0.00, "#020602")
+gradient.addColorStop(0.18, "#071407")
+gradient.addColorStop(0.34, "#123d18")
+gradient.addColorStop(0.50, "#1f6b2d")
+gradient.addColorStop(0.64, "#00FF41")
+gradient.addColorStop(0.78, "#16491f")
+gradient.addColorStop(1.00, "#020602")
 
     return gradient
 }
