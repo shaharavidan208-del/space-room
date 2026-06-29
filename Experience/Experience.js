@@ -8,8 +8,8 @@ import SupernovaRemnant from './SupernovaRemnant.js'
 import Particles from './Particles.js'
 import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
-import CubeInput from './Cube/CubeInput.js' 
-import gsap from 'gsap' 
+import CubeInput from './Cube/CubeInput.js'
+import gsap from 'gsap'
 import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
@@ -17,8 +17,8 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 export default class Experience {
     constructor(canvas) {
         // Scene
-        let sceneReady = false 
-        this.scene = new THREE.Scene() 
+        let sceneReady = false
+        this.scene = new THREE.Scene()
         // Initialize the math library BEFORE creating the light
         RectAreaLightUniformsLib.init();
         // (Color, Intensity, Width, Height) 
@@ -88,7 +88,7 @@ export default class Experience {
         // ---------------------------------------------------------
         const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
 
-        coolFloorDetailLight.position.set(3.8, -9.2, -4.9); 
+        coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
         coolFloorDetailLight.lookAt(3.8, 0, 2.1);
 
         this.scene.add(coolFloorDetailLight);
@@ -275,7 +275,7 @@ export default class Experience {
         novaLightMain.shadow.camera.far = 80;
 
         novaLightMain.shadow.normalBias = 0.03;
-        novaLightMain.shadow.bias = -0.0005; 
+        novaLightMain.shadow.bias = -0.0005;
 
         // Only need to update the projection matrix ONCE after setting all camera bounds
         novaLightMain.shadow.camera.updateProjectionMatrix();
@@ -369,7 +369,7 @@ export default class Experience {
         const noiseTexture = textureLoader.load('/textures/noise.png');
 
         // CRITICAL for Shadertoy noise ports: Set it to repeat infinitely
-        noiseTexture.wrapS = THREE.RepeatWrapping; 
+        noiseTexture.wrapS = THREE.RepeatWrapping;
         noiseTexture.wrapT = THREE.RepeatWrapping;
         noiseTexture.minFilter = THREE.LinearMipmapLinearFilter;
 
@@ -394,7 +394,7 @@ export default class Experience {
         //     this.supernova.mesh.scale.setScalar(val)
         // })
 
-        
+
 
 
 
@@ -477,7 +477,7 @@ export default class Experience {
         const lookTarget = this.cube.cubeGroup.position.clone(); // this is the point the camera will look at when focusing on a hotspot
 
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
-        const isometricDistance = 1.8; 
+        const isometricDistance = 1.8;
         const cameraTarget = new THREE.Vector3(
             lookTarget.x + isometricDistance,
             lookTarget.y + isometricDistance,
@@ -523,7 +523,7 @@ export default class Experience {
 
                 const currentWindowAspect = window.innerWidth / window.innerHeight;
                 const BASE_ASPECT = 16 / 9; // default aspect ratio for the isometric distance calculation
-                let scaleFactor = 1.0; 
+                let scaleFactor = 1.0;
                 if (currentWindowAspect < BASE_ASPECT) { // if the window is taller than 16:9, we need to scale the distance to maintain the correct isometric perspective
                     scaleFactor = BASE_ASPECT / currentWindowAspect; // this is crucial for maintaining the correct isometric distance when the window is taller than 16:9
                 }
@@ -632,12 +632,12 @@ export default class Experience {
         };
         console.log(renderer.info)
         const monitorMeshes = []
-        const ceilingMeshes = []; 
-       
+        const ceilingMeshes = [];
+
+        let monitorMesh
 
 
-
-        const model = gltfLoader.load('/models/newSetup3.glb', (gltf) => { 
+        const model = gltfLoader.load('/models/newSetup5.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -677,6 +677,11 @@ export default class Experience {
 
                     }
 
+                    if (obj.name === "Cube_Screen_0001") {
+                        "Cube_Screen_0"
+                        obj.visible = false
+                        monitorMesh = obj
+                    }
 
 
                     if (obj.name === "Mesh011_3") { // windows
@@ -802,42 +807,124 @@ export default class Experience {
 
 
 
+        console.log(this)
 
-        // Raycaster
-        const raycaster = new THREE.Raycaster()
-        const mouse = new THREE.Vector2()
+       const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
 
-        // ==========================================
-        // 🚨 TEMP DEBUG TOOL: CLICK TO GET MESH NAME
-        // ==========================================
-        const debugRaycaster = new THREE.Raycaster();
-        const debugMouse = new THREE.Vector2();
+const getSignalTrace = () => {
+    if (this.currPointName !== "Terminal") {
+        return null
+    }
 
-        window.addEventListener('click', (event) => {
-            // 1. Convert mouse pixel coordinates to WebGL Normalized Device Coordinates (-1 to +1)
-            debugMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            debugMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    if (this.terminal.mode !== "signalTrace") {
+        return null
+    }
 
-            // 2. Shoot the laser from the camera through the mouse position
-            debugRaycaster.setFromCamera(debugMouse, this.camera);
+    if (!this.terminal.signalTrace) {
+        return null
+    }
 
-            // 3. Get an array of every object the laser hit (true = check all nested children)
-            const intersects = debugRaycaster.intersectObjects(this.scene.children, true);
+    return this.terminal.signalTrace
+}
 
-            // 4. If we hit something, print the very first object (the closest one) to the console
-            if (intersects.length > 0) {
-                const hitObject = intersects[0].object;
+const getTerminalCanvasPositionFromPointerEvent = (event) => {
+    if (!monitorGlass) {
+        return null
+    }
 
-                console.log(
-                    `🎯 TARGET ACQUIRED:`,
-                    `\nName: "${hitObject.name}"`,
-                    `\nType: ${hitObject.type}`,
-                    `\nMaterial:`, hitObject.material
-                );
-            }
-        });
+    const rect = renderer.domElement.getBoundingClientRect()
 
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
+    raycaster.setFromCamera(pointer, this.camera)
+
+    const hits = raycaster.intersectObject(monitorGlass)
+
+    if (hits.length === 0) {
+        return null
+    }
+
+    const hit = hits[0]
+
+    if (!hit.uv) {
+        return null
+    }
+
+    const rawU = hit.uv.x
+    const rawV = hit.uv.y
+
+    /**
+     * Your current calibration.
+     * This maps the raycast mesh UV to the visible terminal canvas.
+     */
+    const transformedU = rawU * this.terminal.texture.repeat.x + this.terminal.texture.offset.x
+    const transformedV = rawV * this.terminal.texture.repeat.y + this.terminal.texture.offset.y
+
+    const canvasX = transformedU * this.terminal.canvas.width
+    const canvasY = (1 - transformedV) * this.terminal.canvas.height
+
+    return {
+        x: canvasX,
+        y: canvasY
+    }
+}
+
+const handleMonitorPointerDown = (event) => {
+    const signalTrace = getSignalTrace()
+
+    if (!signalTrace) {
+        return
+    }
+
+    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+
+    if (!canvasPosition) {
+        return
+    }
+
+    renderer.domElement.setPointerCapture(event.pointerId)
+
+    signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
+}
+
+const handleMonitorPointerMove = (event) => {
+    const signalTrace = getSignalTrace()
+
+    if (!signalTrace) {
+        return
+    }
+
+    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+
+    if (!canvasPosition) {
+        return
+    }
+
+    signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
+}
+
+const handleMonitorPointerUp = (event) => {
+    const signalTrace = getSignalTrace()
+
+    if (!signalTrace) {
+        return
+    }
+
+    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+
+    if (!canvasPosition) {
+        signalTrace.handlePointerCancel()
+        return
+    }
+
+    signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
+}
+
+renderer.domElement.addEventListener("pointerdown", handleMonitorPointerDown)
+renderer.domElement.addEventListener("pointermove", handleMonitorPointerMove)
+renderer.domElement.addEventListener("pointerup", handleMonitorPointerUp)
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 

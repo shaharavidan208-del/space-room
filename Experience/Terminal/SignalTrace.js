@@ -1,7 +1,7 @@
 import SignalTracePipeRenderer from './SignalTracePipeRenderer.js'
-import SignalTraceRotationPulse from './SignalTraceRotationPulse.js'
 import SignalTraceLevelOne from './SignalTraceLevelOne.js'
 import SignalTraceLevelTwo from './SignalTraceLevelTwo.js'
+import SignalTraceDragController from './SignalTraceDragController.js'
 export default class SignalTrace {
     constructor(terminal) {
         this.terminal = terminal;  // store a reference to the terminal 
@@ -53,24 +53,13 @@ export default class SignalTrace {
         */
         this.cursor = { row: 2, col: 2 }
 
-        /**
-         * Handles the short pulse feedback effect when a tile rotates.
-         * SignalTrace owns the gameplay state, while this class owns the pulse animation.
-         * The rotation pulse is drawn above the pipe, but below the cursor, so it does not obscure the cursor.
-         */
-        this.rotationPulse = new SignalTraceRotationPulse(
-            this.ctx,
-            this.tileSize,
-            () => {
-                this.drawBootScreen()
-            }
-        )
-
         this.pipeRenderer = new SignalTracePipeRenderer(
             this.ctx,
             this.tileSize,
             this.tileGap
         )
+
+        this.dragController = new SignalTraceDragController(this)
         /**
  * Whether the current pipe layout creates
  * a valid signal path from SRC to ARC.
@@ -81,7 +70,6 @@ export default class SignalTrace {
  * Create the current level grid.
  * 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
  * SignalTrace owns the active grid state after this point,
- * because rotations will mutate this grid.
  */
         this.grid = this.level.createGrid()
 
@@ -153,7 +141,7 @@ export default class SignalTrace {
 
     /**
      * Draw the current signal connection status and controls.
-     * This is called whenever the status changes, like after a tile rotation.
+     * This is called whenever the status changes
      * It is also called once when Signal Trace first starts.
      */
     drawSignalStatusText() {
@@ -187,12 +175,12 @@ export default class SignalTrace {
          */
         this.ctx.fillStyle = "rgba(0, 255, 65, 0.38)"
         this.ctx.font = "22px monospace"
-        this.ctx.fillText("ARROWS: MOVE  //  SPACE: ROTATE MODULE", 80, 270)
+        this.ctx.fillText("ARROWS: MOVE", 80, 270)
     }
 
 
     /**
-     * Redraw the full Signal Trace screen without any pulse effect.
+     * Redraw the full Signal Trace screen
      * This is called after a pulse finishes, so the tile returns to normal.
      */
     drawBoardPlaceholder() {
@@ -207,16 +195,20 @@ export default class SignalTrace {
          * Center the board horizontally on the terminal canvas.
          */
         const boardStartX = (this.canvas.width - boardWidth) / 2
-
+        console.log("boardStartX:" + boardStartX)
+        console.log("boardStartY:" + this.boardStartY)
+        console.log("Board Width:" + boardWidth)
         /**
          * Draw every tile in the grid.
          */
+
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 const x = boardStartX + col * (this.tileSize + this.tileGap) // determine the x position for the next tile
                 // the position is calculated by the size of the tile + its gap, multiplied by the column
                 // first tile starts at boardStartX
                 const y = this.boardStartY + row * (this.tileSize + this.tileGap) // same logic as with x 
+
 
 
                 /**
@@ -240,13 +232,6 @@ export default class SignalTrace {
                 const tile = this.grid[row][col]
                 this.pipeRenderer.drawPipe(x, y, tile)
 
-                /**
-                 * If this tile was recently rotated, draw a short pulse effect.
-                 * This happens after the pipe is drawn, so the glow appears above the pipe.
-                 * It happens before the cursor, so the cursor stays readable.
-                 */
-                this.rotationPulse.draw(x, y, row, col)
-
                 // If this tile is currently selected, draw a brighter cursor border.
                 if (row === this.cursor.row && col === this.cursor.col) {
                     this.drawCursor(x, y)
@@ -268,7 +253,138 @@ export default class SignalTrace {
                 }
             }
         }
+        this.dragController.drawHeldPipe()
     }
+
+    getBoardStartX() {
+    const boardWidth = this.cols * this.tileSize + (this.cols - 1) * this.tileGap
+    const boardStartX = (this.canvas.width - boardWidth) / 2
+
+    return boardStartX
+}
+
+getTileAtCanvasPosition(canvasX, canvasY) {
+    const boardStartX = this.getBoardStartX()
+
+    const localX = canvasX - boardStartX
+    const localY = canvasY - this.boardStartY
+
+    if (localX < 0) {
+        return null
+    }
+
+    if (localY < 0) {
+        return null
+    }
+
+    const tileStep = this.tileSize + this.tileGap
+
+    const col = Math.floor(localX / tileStep)
+    const row = Math.floor(localY / tileStep)
+
+    if (!this.isInsideBoard(row, col)) {
+        return null
+    }
+
+    /**
+     * Reject clicks inside the gap between tiles.
+     */
+    const insideTileX = localX % tileStep
+    const insideTileY = localY % tileStep
+
+    if (insideTileX > this.tileSize) {
+        return null
+    }
+
+    if (insideTileY > this.tileSize) {
+        return null
+    }
+
+    return {
+        row: row,
+        col: col
+    }
+}
+
+canPickUpTile(row, col) {
+    if (!this.isInsideBoard(row, col)) {
+        return false
+    }
+
+    const tile = this.grid[row][col]
+
+    if (!tile) {
+        return false
+    }
+
+    if (tile.locked) {
+        return false
+    }
+
+    if (tile.blocked) {
+        return false
+    }
+
+    if (!tile.connections) {
+        return false
+    }
+
+    if (tile.connections.length === 0) {
+        return false
+    }
+
+    return true
+}
+
+canDropTile(row, col) {
+    if (!this.isInsideBoard(row, col)) {
+        return false
+    }
+
+    const tile = this.grid[row][col]
+
+    if (!tile) {
+        return false
+    }
+
+    if (tile.locked) {
+        return false
+    }
+
+    if (tile.blocked) {
+        return false
+    }
+
+    if (!tile.connections) {
+        return true
+    }
+
+    if (tile.connections.length > 0) {
+        return false
+    }
+
+    return true
+}
+
+updateSignalState() {
+    this.signalConnected = this.checkSignalPath()
+}
+
+handlePointerDown(canvasX, canvasY) {
+    this.dragController.handlePointerDown(canvasX, canvasY)
+}
+
+handlePointerMove(canvasX, canvasY) {
+    this.dragController.handlePointerMove(canvasX, canvasY)
+}
+
+handlePointerUp(canvasX, canvasY) {
+    this.dragController.handlePointerUp(canvasX, canvasY)
+}
+
+handlePointerCancel() {
+    this.dragController.cancelDrag()
+}
     /**
      * Draw a node at the specified position.
      * @param {number} x - the tile's top-left X position
@@ -390,7 +506,6 @@ export default class SignalTrace {
     handleKeyDown(event) {
         /**
          * Arrow keys move the selected tile cursor.
-         * Space rotates the currently selected pipe tile.
          */
 
         if (event.key === "ArrowUp") {
@@ -414,136 +529,8 @@ export default class SignalTrace {
         }
 
 
-        if (event.key === " ") { // Space key (why empty string? Because event.key is a string with the space character)
-            event.preventDefault() // preventDefault() stops the browser from treating Space as a scroll command
-            this.rotateSelectedTile() // Rotate the selected tile
-            return // Return early to prevent the browser from doing its default behavior 
-        }
+
     }
-
-
-    /**
-     * Rotation logic for the currently selected tile.
-     * Rotate the currently selected tile, if it is not the source or target.
-     * This changes the game state and triggers a redraw of the screen.
-     * @returns {void} 
-     */
-    rotateSelectedTile() {
-        /**
-         * Get the currently selected tile position.
-         */
-        const row = this.cursor.row
-        const col = this.cursor.col
-
-        /**
-         * Do not rotate the source tile.
-         * The source is a fixed starting point for the signal.
-         */
-        if (row === this.source.row && col === this.source.col) {
-            return
-        }
-
-        /**
-         * Do not rotate the target/archive tile.
-         * The archive is a fixed endpoint for the signal.
-         */
-        if (row === this.target.row && col === this.target.col) {
-            return
-        }
-
-        /**
-         * Get the tile from the grid.
-         */
-        const tile = this.grid[row][col] // each tile is an object with a "connections" array that lists the directions of the pipes in that tile
-
-        if (!tile) {
-            return // If the tile does not exist, do nothing.) 
-        }
-
-        /**
-         * Empty tiles have no pipe to rotate.
-         */
-        if (!tile.connections || tile.connections.length === 0) {
-            return
-        }
-
-        /**
-         * Build a new list of rotated connections.
-         *
-         * Example:
-         * "up" becomes "right"
-         * "right" becomes "down"
-         * "down" becomes "left"
-         * "left" becomes "up"
-         */
-        const rotatedConnections = [] // make a new array to hold the rotated connections, because we don't want to modify the original array while we're iterating over it.
-
-        /**
-         * Loop through each connection direction in the connections array in tile and rotate it clockwise.
-         * The rotated direction is pushed into the new array.
-         */
-        for (const direction of tile.connections) {
-            const rotatedDirection = this.rotateDirectionClockwise(direction) // rotate the direction clockwise
-            rotatedConnections.push(rotatedDirection) // add the rotated direction to the new array
-        }
-
-        /**
-        * Replace the tile's old connections with the rotated ones.
-        * This changes the actual game state.
-        */
-        tile.connections = rotatedConnections
-
-        this.signalConnected = this.checkSignalPath() // Check if the signal connects now or if connection broke since the last rotation.
-
-        /**
-         * Temporary debug log.
-         */
-        console.log("SIGNAL CONNECTED:", this.signalConnected)
-
-        /**
-         * Start a short pulse effect on the rotated tile.
-         * The pulse animation handles redrawing the screen.
-         */
-        this.rotationPulse.start(row, col)
-    }
-
-
-    /**
-     * Rotate a connection direction clockwise.
-     * @param {String} direction - the current connection direction ("up", "down", "left", "right") 
-     * @returns {String} - the rotated connection direction
-     */
-
-    rotateDirectionClockwise(direction) {
-        /**
-         * Convert one connection direction into its clockwise version.
-         *
-         * This represents rotating the whole pipe tile 90 degrees clockwise.
-         */
-        if (direction === "up") {
-            return "right"
-        }
-
-        if (direction === "right") {
-            return "down"
-        }
-
-        if (direction === "down") {
-            return "left"
-        }
-
-        if (direction === "left") {
-            return "up"
-        }
-
-        /**
-         * Fallback.
-         * If an unknown direction somehow appears, return it unchanged
-         * instead of breaking the game.
-         */
-        return direction
-    }
-
     /**
      * This method checks whether the signal can travel
      * from the source tile to the target/archive tile.
