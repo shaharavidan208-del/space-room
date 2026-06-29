@@ -45,7 +45,6 @@ export default class SignalTracePipeRenderer {
         if (!tile.connections || tile.connections.length === 0) {
             return
         }
-        console.log(tile)
         const connections = tile.connections
 
         // calculate the center of the tile

@@ -56,6 +56,7 @@ export default class SignalTrace {
         /**
          * Handles the short pulse feedback effect when a tile rotates.
          * SignalTrace owns the gameplay state, while this class owns the pulse animation.
+         * The rotation pulse is drawn above the pipe, but below the cursor, so it does not obscure the cursor.
          */
         this.rotationPulse = new SignalTraceRotationPulse(
             this.ctx,
@@ -78,6 +79,7 @@ export default class SignalTrace {
 
         /**
  * Create the current level grid.
+ * 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
  * SignalTrace owns the active grid state after this point,
  * because rotations will mutate this grid.
  */
@@ -95,6 +97,10 @@ export default class SignalTrace {
 
     }
 
+
+    /**
+     * Go from dialogue into Signal Trace mode in the terminal
+     */
     startSignalTrace() {
         this.isRunning = true;
         this.terminal.mode = "signalTrace"
@@ -102,6 +108,12 @@ export default class SignalTrace {
         this.drawBootScreen();
     }
 
+
+    /**
+     * Draw the initial Signal Trace screeen with title, status, and board.
+     * This is called when Signal Trace first starts,
+     * and also whenever the screen needs to be redrawn.
+     */
     drawBootScreen() {
         /**
          * Background styling
@@ -138,6 +150,12 @@ export default class SignalTrace {
         this.texture.needsUpdate = true;
     }
 
+
+    /**
+     * Draw the current signal connection status and controls.
+     * This is called whenever the status changes, like after a tile rotation.
+     * It is also called once when Signal Trace first starts.
+     */
     drawSignalStatusText() {
         /**
          * Default status is disconnected.
@@ -173,13 +191,10 @@ export default class SignalTrace {
     }
 
 
-
-
-
-
-
-
-
+    /**
+     * Redraw the full Signal Trace screen without any pulse effect.
+     * This is called after a pulse finishes, so the tile returns to normal.
+     */
     drawBoardPlaceholder() {
         /**
          * Calculate the full board width.
@@ -255,7 +270,7 @@ export default class SignalTrace {
         }
     }
     /**
-     * 
+     * Draw a node at the specified position.
      * @param {number} x - the tile's top-left X position
      * @param {number} y - the tile's top-left Y position
      * @param {String} color - the node color, like green for SRC or orange for ARC
@@ -292,6 +307,12 @@ export default class SignalTrace {
         this.ctx.fillText(label, centerX, centerY + 24)
     }
 
+
+    /**
+     * Draw the cursor at the specified position.
+     * @param {number} x - the tile's top-left X position
+     * @param {number} y - the tile's top-left Y position
+     */
     drawCursor(x, y) {
         /**
          * Draw a corner-bracket cursor instead of a full rectangle.
@@ -360,6 +381,12 @@ export default class SignalTrace {
         this.ctx.restore()
     }
 
+
+    /**
+     * Handle key down events for the Signal Trace screen.
+     * @param {KeyboardEvent} event - the key down event
+     * @returns {boolean} - true if the event was handled, false otherwise (handled means we return early and don't let the browser do its default behavior) 
+     */
     handleKeyDown(event) {
         /**
          * Arrow keys move the selected tile cursor.
@@ -386,20 +413,21 @@ export default class SignalTrace {
             return
         }
 
-        /**
-         * Space rotates the selected tile clockwise.
-         *
-         * preventDefault() stops the browser from treating Space
-         * like a page-scroll key while the game is active.
-         */
-        if (event.key === " ") {
-            console.log("entered key event")
-            event.preventDefault()
-            this.rotateSelectedTile()
-            return
+
+        if (event.key === " ") { // Space key (why empty string? Because event.key is a string with the space character)
+            event.preventDefault() // preventDefault() stops the browser from treating Space as a scroll command
+            this.rotateSelectedTile() // Rotate the selected tile
+            return // Return early to prevent the browser from doing its default behavior 
         }
     }
 
+
+    /**
+     * Rotation logic for the currently selected tile.
+     * Rotate the currently selected tile, if it is not the source or target.
+     * This changes the game state and triggers a redraw of the screen.
+     * @returns {void} 
+     */
     rotateSelectedTile() {
         /**
          * Get the currently selected tile position.
@@ -426,14 +454,10 @@ export default class SignalTrace {
         /**
          * Get the tile from the grid.
          */
-        const tile = this.grid[row][col]
+        const tile = this.grid[row][col] // each tile is an object with a "connections" array that lists the directions of the pipes in that tile
 
-        /**
-         * Safety check.
-         * If the tile does not exist for some reason, do nothing.
-         */
         if (!tile) {
-            return
+            return // If the tile does not exist, do nothing.) 
         }
 
         /**
@@ -452,33 +476,24 @@ export default class SignalTrace {
          * "down" becomes "left"
          * "left" becomes "up"
          */
-        const rotatedConnections = []
+        const rotatedConnections = [] // make a new array to hold the rotated connections, because we don't want to modify the original array while we're iterating over it.
 
+        /**
+         * Loop through each connection direction in the connections array in tile and rotate it clockwise.
+         * The rotated direction is pushed into the new array.
+         */
         for (const direction of tile.connections) {
-            const rotatedDirection = this.rotateDirectionClockwise(direction)
-            rotatedConnections.push(rotatedDirection)
+            const rotatedDirection = this.rotateDirectionClockwise(direction) // rotate the direction clockwise
+            rotatedConnections.push(rotatedDirection) // add the rotated direction to the new array
         }
 
         /**
- * Replace the tile's old connections with the rotated ones.
- * This changes the actual game state.
- */
+        * Replace the tile's old connections with the rotated ones.
+        * This changes the actual game state.
+        */
         tile.connections = rotatedConnections
 
-        /**
-  * Check whether the current board state creates
-  * a complete path from SRC to ARC.
-  *
-  * For now, we only log the result.
-  * Later, this can trigger a success screen or signal animation.
-  */
-        /**
- * Check whether the current board state creates
- * a complete path from SRC to ARC.
- *
- * Store the result on the class so the UI can read it.
- */
-        this.signalConnected = this.checkSignalPath()
+        this.signalConnected = this.checkSignalPath() // Check if the signal connects now or if connection broke since the last rotation.
 
         /**
          * Temporary debug log.
@@ -491,6 +506,13 @@ export default class SignalTrace {
          */
         this.rotationPulse.start(row, col)
     }
+
+
+    /**
+     * Rotate a connection direction clockwise.
+     * @param {String} direction - the current connection direction ("up", "down", "left", "right") 
+     * @returns {String} - the rotated connection direction
+     */
 
     rotateDirectionClockwise(direction) {
         /**
@@ -522,54 +544,66 @@ export default class SignalTrace {
         return direction
     }
 
+    /**
+     * This method checks whether the signal can travel
+     * from the source tile to the target/archive tile.
+     * It does not draw anything.
+     * It only returns true or false.
+     */
     checkSignalPath() {
-        /**
-         * This method checks whether the signal can travel
-         * from the source tile to the target/archive tile.
-         *
-         * It does not draw anything.
-         * It only returns true or false.
-         */
 
         /**
-         * visited keeps track of tiles we already checked.
-         * This prevents the search from getting stuck in loops.
-         *
-         * Example key:
-         * "2,3" means row 2, col 3.
+         * Visited Tracks which grid positions have already been checked.
+         * This prevents the path search from looping forever through connected pipes.
+         * Positions are stored as strings like "2,3" because Set values are unique and fast to check with visited.has(positionKey).
+         * and fast to check with visited.has(positionKey).
          */
         const visited = new Set()
 
         /**
+         * This is an array of objects that represent the row/col positions of tiles to check.
          * The stack stores tiles that still need to be checked.
          * We start from the source tile.
          */
         const stack = [
             {
-                row: this.source.row,
-                col: this.source.col
+                row: this.source.row, // start the search from the source tile (row 4, col 0)
+                col: this.source.col // the source tile is the starting point for the signal
             }
         ]
+
 
         /**
          * Keep searching while there are still tiles to check.
          */
         while (stack.length > 0) {
+            console.log("Stack length before pop:", stack.length)
+            console.log("Stack before pop:", [...stack])
             /**
              * Take one tile position from the stack.
              */
-            const currentPosition = stack.pop()
+            const currentPosition = stack.pop() // pop() removes the last element from the stack and returns it. this is the current tile we are checking.
+            console.log("Popped position:", currentPosition)
+            console.log("Stack length after pop:", stack.length)
+            console.log("Stack after pop:", [...stack]) // ...stack creates a shallow copy of the stack array for logging, so we can see the state of the stack after popping.
             const row = currentPosition.row
             const col = currentPosition.col
 
             /**
              * Create a unique text key for this tile position.
              */
-            const positionKey = `${row},${col}`
-
+            const positionKey = `${row},${col}` // create a unique string key for the current tile position, like "2,3" for row 2, col 3
+            // $ means we are using a template literal, which allows us to embed expressions inside a string. the backticks `` allow us to use ${} to insert variables into the string.
             /**
              * If we already checked this tile, skip it.
              */
+
+
+            /**
+            * If this position was already processed, skip it.
+            * This prevents loops and avoids checking the same tile twice
+            * when multiple pipe branches lead to the same position.
+            */
             if (visited.has(positionKey)) {
                 continue
             }
@@ -586,19 +620,16 @@ export default class SignalTrace {
             if (this.isTargetPosition(row, col)) {
                 return true
             }
-
             /**
              * Get the current tile from the grid.
              */
             const currentTile = this.grid[row][col]
-
             /**
              * If the tile does not exist, skip it.
              */
             if (!currentTile) {
                 continue
             }
-
             /**
              * If the tile has no pipe connections, the signal cannot continue.
              */
@@ -606,11 +637,16 @@ export default class SignalTrace {
                 continue
             }
 
+
+
             /**
+             * Now we know the current tile exists and has connections.
+             * so we can try to move the signal through each connection direction.
+             * The signal can only continue if the neighbor tile exists and connects back to the current tile.
              * Try moving through each connection direction.
              */
             for (const direction of currentTile.connections) {
-                const neighborPosition = this.getNeighborPosition(row, col, direction)
+                const neighborPosition = this.getNeighborPosition(row, col, direction) // get the row/col of the neighboring tile in the current direction
 
                 /**
                  * If the neighbor would be outside the board, ignore it.
@@ -619,7 +655,7 @@ export default class SignalTrace {
                     continue
                 }
 
-                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col] // get the neighboring tile from the grid
 
                 /**
                  * The current tile and neighbor tile must connect to each other.
@@ -647,6 +683,12 @@ export default class SignalTrace {
         return false
     }
 
+    /**
+     * Check whether a row/col position is the archive target.
+     * @param {*Number} row the row index of the tile to check
+     * @param {*Number} col the column index of the tile to check
+     * @returns {boolean} true if the position is the target, false otherwise
+     */
     isTargetPosition(row, col) {
         /**
          * Check whether a row/col position is the archive target.
@@ -658,6 +700,12 @@ export default class SignalTrace {
         return false
     }
 
+    /**
+     * Check if a row/col position exists inside the grid.
+     * @param {*Number} row the row index to check
+     * @param {*Number} col the column index to check
+     * @returns {boolean} true if the position is inside the board, false otherwise
+     */
     isInsideBoard(row, col) {
         /**
          * Check if a row/col position exists inside the grid.
@@ -682,6 +730,15 @@ export default class SignalTrace {
         return true
     }
 
+
+    /**
+     * Get the row and column of the neighboring tile in the specified direction.
+     * We need this for pathfinding, because the signal can only move through connected pipes.
+     * @param {*Number} row the row index of the current tile
+     * @param {*Number} col the column index of the current tile
+     * @param {*String} direction the direction to move (up, down, left, right)
+     * @returns {Object} the row and column of the neighboring tile
+     */
     getNeighborPosition(row, col, direction) {
         /**
          * Convert a direction into the neighboring grid position.
@@ -730,6 +787,12 @@ export default class SignalTrace {
         }
     }
 
+    /**
+     * Get the opposite direction of the specified direction.
+     * We need this for pathfinding, because the signal can only move through connected pipes.
+     * @param {*String} direction the direction to get the opposite of
+     * @returns {String} the opposite direction
+     */
     getOppositeDirection(direction) {
         /**
          * The neighbor must connect back from the opposite side.
@@ -757,6 +820,13 @@ export default class SignalTrace {
         return null
     }
 
+    /**
+     * Check whether two tiles are connected in the specified direction.
+     * @param {*Object} currentTile the tile to check
+     * @param {*Object} neighborTile the neighboring tile to check
+     * @param {*String} direction the direction to check
+     * @returns {boolean} true if the tiles are connected, false otherwise
+     */
     tilesConnect(currentTile, neighborTile, direction) {
         /**
          * Check whether the current tile and neighbor tile

@@ -1,4 +1,4 @@
-export default class SignalTraceLevelTwo {
+export default class SignalTraceLevelThree {
     constructor() {
         /**
          * Level display info.
@@ -18,8 +18,8 @@ export default class SignalTraceLevelTwo {
          * SRC is the signal source.
          * ARC is the archive target.
          */
-        this.source = { row: 4, col: 0 }
-        this.target = { row: 0, col: 4 }
+        this.source = { row: 2, col: 0 }
+        this.target = { row: 2, col: 4 }
     }
 
     /**
@@ -41,11 +41,11 @@ export default class SignalTraceLevelTwo {
             // first row
             [
                 // this is the first row of the grid
-                { connections: ["down","left"] }, // [0,0]
+                { connections: ["down","right"] }, // [0,0]
                 { connections: ["left","right"] }, // [0,1]
                 { connections: ["left","down"] }, // [0,2]
                 { connections: ["left","right"] }, // [0,3]
-                { connections: ["down"] }
+                { connections: [] }
                 // 5 columns for the first row, all empty tiles with no connections
             ],
 
@@ -64,15 +64,15 @@ export default class SignalTraceLevelTwo {
                  * Intended solved state: ["left", "right"]
                  * Current state is vertical, so it needs rotation.
                  */
-                { connections: ["up", "right"] },
+                { connections: ["up", "down"] },
 
                 /**
                  * Intended solved state: ["left", "down"]
                  * Current state is rotated one step away.
                  */
-                { connections: ["up", "left"] },
+                { connections: ["up", "right"] },
 
-                { connections: ["down", "up"] }
+                { connections: ["left", "up"] }
             ],
 
             // third row
@@ -97,14 +97,14 @@ export default class SignalTraceLevelTwo {
                  */
                 { connections: ["up", "right", "left"] },
 
-                { connections: ["down", "up"] }
+                { connections: [] }
             ],
             [
+                { connections: ["up", "right"] },
+                { connections: ["left", "up", "down"] },
                 { connections: ["down", "right"] },
-                { connections: ["right", "up", "down"] },
-                { connections: ["down", "left"] },
                 { connections: ["left", "up"] },
-                { connections: ["up", "left"] }
+                { connections: [] }
             ],
             [
                 { connections: ["right"] },

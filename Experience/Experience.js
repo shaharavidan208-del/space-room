@@ -4,13 +4,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import SupernovaRemnant from './SupernovaRemnant.js'
 import Particles from './Particles.js'
 import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
-import CubeInput from './Cube/CubeInput.js'
-import gsap from 'gsap'
+import CubeInput from './Cube/CubeInput.js' 
+import gsap from 'gsap' 
 import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
@@ -18,11 +17,10 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 export default class Experience {
     constructor(canvas) {
         // Scene
-        let sceneReady = false
-        this.scene = new THREE.Scene()
+        let sceneReady = false 
+        this.scene = new THREE.Scene() 
         // Initialize the math library BEFORE creating the light
         RectAreaLightUniformsLib.init();
-
         // (Color, Intensity, Width, Height) 
         // Make the width/height roughly the size of your window opening
         const windowBounceLight = new THREE.RectAreaLight(0xff4400, 1.0, 30, 10);
@@ -54,7 +52,7 @@ export default class Experience {
             },
             vertexShader: `
         void main() {
-            gl_Position = vec4(position, 1.0);
+            gl_Position = vec4(position, 1.0); 
         }
     `,
             fragmentShader: `
@@ -68,7 +66,6 @@ export default class Experience {
         this.scene.add(overlay)
         this.gu = new GUI()
         this.terminal = new TerminalCanvas(this);
-
         /**
         * Lights
         */
@@ -91,7 +88,7 @@ export default class Experience {
         // ---------------------------------------------------------
         const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
 
-        coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
+        coolFloorDetailLight.position.set(3.8, -9.2, -4.9); 
         coolFloorDetailLight.lookAt(3.8, 0, 2.1);
 
         this.scene.add(coolFloorDetailLight);
@@ -278,7 +275,7 @@ export default class Experience {
         novaLightMain.shadow.camera.far = 80;
 
         novaLightMain.shadow.normalBias = 0.03;
-        novaLightMain.shadow.bias = -0.0005;
+        novaLightMain.shadow.bias = -0.0005; 
 
         // Only need to update the projection matrix ONCE after setting all camera bounds
         novaLightMain.shadow.camera.updateProjectionMatrix();
@@ -372,7 +369,7 @@ export default class Experience {
         const noiseTexture = textureLoader.load('/textures/noise.png');
 
         // CRITICAL for Shadertoy noise ports: Set it to repeat infinitely
-        noiseTexture.wrapS = THREE.RepeatWrapping;
+        noiseTexture.wrapS = THREE.RepeatWrapping; 
         noiseTexture.wrapT = THREE.RepeatWrapping;
         noiseTexture.minFilter = THREE.LinearMipmapLinearFilter;
 
@@ -386,8 +383,8 @@ export default class Experience {
 
         this.supernova.mesh.position.x = -15
         this.supernova.mesh.position.y = 6
-        this.supernova.mesh.position.z = -850
-        this.supernova.mesh.scale.setScalar(175)
+        this.supernova.mesh.position.z = -850 // very far away in the distance, so it looks like it's outside the window, but not too far so it doesn't get clipped by the far plane
+        this.supernova.mesh.scale.setScalar(175) // huge scale to make it look like it's far away in the distance
         // const novaFolder = gu.addFolder('Supernova')
         // // (min, max, increments), change supernova position 
         // novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
@@ -477,10 +474,10 @@ export default class Experience {
 
         // Hot spot variables
         this.isFocused = false;
-        const lookTarget = this.cube.cubeGroup.position.clone();
+        const lookTarget = this.cube.cubeGroup.position.clone(); // this is the point the camera will look at when focusing on a hotspot
 
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
-        const isometricDistance = 1.8;
+        const isometricDistance = 1.8; 
         const cameraTarget = new THREE.Vector3(
             lookTarget.x + isometricDistance,
             lookTarget.y + isometricDistance,
@@ -496,14 +493,14 @@ export default class Experience {
 
         function showItems(visibility, meshArray) {
             meshArray.forEach((ceilingMesh) => {
-                ceilingMesh.visible = visibility;
+                ceilingMesh.visible = visibility; // toggle visibility based on the parameter
             });
         }
 
         /**
          * focus mode on cube
          */
-        const cubeControlsHint = document.querySelector('#cube-controls-hint');
+        const cubeControlsHint = document.querySelector('#cube-controls-hint'); // UI for the cube controls 
         const cubeHotspot = document.querySelector("#hotspot-cube")
         const enterFocusMode = (activePoint) => {
             this.isFocused = true;
@@ -525,16 +522,15 @@ export default class Experience {
                 targetFov = 13; // Isometric squeeze
 
                 const currentWindowAspect = window.innerWidth / window.innerHeight;
-                const BASE_ASPECT = 16 / 9;
-                let scaleFactor = 1.0;
-                if (currentWindowAspect < BASE_ASPECT) {
-                    scaleFactor = BASE_ASPECT / currentWindowAspect;
+                const BASE_ASPECT = 16 / 9; // default aspect ratio for the isometric distance calculation
+                let scaleFactor = 1.0; 
+                if (currentWindowAspect < BASE_ASPECT) { // if the window is taller than 16:9, we need to scale the distance to maintain the correct isometric perspective
+                    scaleFactor = BASE_ASPECT / currentWindowAspect; // this is crucial for maintaining the correct isometric distance when the window is taller than 16:9
                 }
 
-                const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.3));
-
+                const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.2)); // multiply by 0.2 to reduce the effect of the scale factor, making it less extreme for taller windows.
                 cameraTarget.set(
-                    lookTarget.x + dynamicDistance,
+                    lookTarget.x + dynamicDistance, // 
                     lookTarget.y + dynamicDistance,
                     lookTarget.z + dynamicDistance
                 );
@@ -595,27 +591,10 @@ export default class Experience {
         });
 
 
-
-
-        const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-
-
-        gltfLoader.setDRACOLoader(dracoLoader);
-        const pcParams = {
-            color: '#151515',   // Use a hex string for the GUI color picker
-            roughness: 0.65,
-            metalness: 0.40,
-            clearcoat: 0.1,     // Bonus: Adds a premium glossy shell over the metal
-            clearcoatRoughness: 0.2
-        };
-
-
-
         console.log(renderer.info)
         // טעינת המודל
         let walls;
-        let monitorGlass; // x = 6.50067 m , y = 4.63503 m , z = 1.45205 m
+        let monitorGlass; // x = 6.50067 m , y = 4.63503 m , z = 1.45205 m 
         let monitorFrame;
         let terminalPosition;
 
@@ -653,12 +632,12 @@ export default class Experience {
         };
         console.log(renderer.info)
         const monitorMeshes = []
-        const ceilingMeshes = [];
+        const ceilingMeshes = []; 
        
 
 
 
-        const model = gltfLoader.load('/models/newSetup3.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup3.glb', (gltf) => { 
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -667,7 +646,7 @@ export default class Experience {
 
 
 
-                // KILL THE DOUBLE-RENDER TRANSMISSION PASS
+                // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
                 if (obj.material && obj.material.transmission > 0) {
 
 
@@ -677,7 +656,7 @@ export default class Experience {
                     // Ensure it falls back to standard, cheap transparency
                     obj.material.transparent = true;
                     obj.material.needsUpdate = true;
-                    // IF YOU RE-ENABLE THIS I WILL FIND YOU 🤬
+                    // IF YOU RE-ENABLE THIS I WILL FIND YOU 🤬 
                 }
                 if (obj.isMesh) {
 
@@ -688,8 +667,8 @@ export default class Experience {
                     if (shouldAddHotspotOccluder(obj)) {
                         objectsArr.push(obj);
                     }
-                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001") {
-                        ceilingMeshes.push(obj);
+                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001")) {
+                        ceilingMeshes.push(obj); // it will catch all the ceiling meshes and hide them when the cube is focused on, but not when the terminal is focused on
                     }
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
                     if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {

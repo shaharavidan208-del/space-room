@@ -166,8 +166,8 @@ export default class CubeInput {
                 this.hitCubie = stickerHits[0].object.parent;
                 // Clone normal to avoid aliasing, then translate it from Local to World space
                 this.hitStickerNormal = stickerHits[0].face.normal.clone()
-                    .transformDirection(stickerHits[0].object.matrixWorld)
-                    .round();
+                    .transformDirection(stickerHits[0].object.matrixWorld) 
+                    .round(); // round to nearest integer to avoid floating point errors. we do this because we want to know which face of the cube was clicked, not the exact world direction.
 
                 /* Snap the virtual graph paper onto the sticker:
                    - Normal: Tilts the infinite sheet so it faces this exact direction.
@@ -187,7 +187,7 @@ export default class CubeInput {
                 // This forces the sticker to remember its true identity (e.g., White is always Top), 
                 // completely ignoring how the user tumbled the camera or the puzzle!
                 const inverseCubeRotation = this.cube.cubeGroup.quaternion.clone().invert();
-                this.hitLocalNormal = this.hitStickerNormal.clone().applyQuaternion(inverseCubeRotation).round();
+                this.hitLocalNormal = this.hitStickerNormal.clone().applyQuaternion(inverseCubeRotation).round(); // We apply inverse quaternion to world normal to get local normal, then round to nearest integer to avoid floating point errors. we do this because we want to know which face of the cube was clicked, not the exact world direction.
                 this.axisLocked = false
                 this.onCubeDown();
                 return;
@@ -264,22 +264,27 @@ export default class CubeInput {
             }
 
             // Update NDC and Raycaster for 3D logic
-            const rect = renderer.domElement.getBoundingClientRect();
+            const rect = renderer.domElement.getBoundingClientRect(); // Get the exact boundaries of the canvas on the screen
             const canvasX = input.clientX - rect.left;
             const canvasY = input.clientY - rect.top;
             this.mouse.x = (canvasX / rect.width) * 2 - 1;
             this.mouse.y = -(canvasY / rect.height) * 2 + 1;
-            this.raycaster.setFromCamera(this.mouse, this.experience.camera);
+            this.raycaster.setFromCamera(this.mouse, this.experience.camera); // Update the raycaster to point through the new mouse position
 
             // ------------------------------------------
             // TRACK 2: LAYER ROTATION (2D/3D HYBRID)
             // ------------------------------------------
             if (this.dragMode !== "cube") {
-                // Shoot the laser at the drag plane
+                // Shoot the laser at the drag plane so we can find the exact 3D point under the mouse cursor
                 const planeHit = this.raycaster.ray.intersectPlane(this.dragPlane, this.currentDragWorld);
                 // The Safe Guard: Bail out if ray is perfectly parallel to plane (prevents stale data loops)
-                if (!planeHit) return;
-                // transform world into local
+                if (!planeHit) return; 
+                /**
+                 * transform world coordinates into local coordinates relative to the cube group. 
+                 * This is necessary because the cube can be rotated in 3D space, and we want to measure the drag distance in the cube's local space, 
+                 * not the world space.
+                 * if we didn't do this, the drag distance would be skewed by the cube's rotation, and the layer rotation would be at affected by the camera, which means different rotations at different camera angles, which is not what we want.
+                 */
                 this.currentDragLocal = this.cube.cubeGroup.worldToLocal(this.currentDragWorld);
 
                 // Calculate the exact X, Y, and Z distances the mouse moved in Local Space
@@ -299,7 +304,7 @@ export default class CubeInput {
 
                     // The Tournament: Compare absolute values inside rotationVector to find the dominant axis
                     this.rotationAxis = axes.reduce((champion, challenger) => {
-                        return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger;
+                        return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger; 
                     });
 
                     this.direction = Math.sign(rotationVector[this.rotationAxis]); // using the rotation axis that we determined, check if the direction is positive or negative
@@ -311,14 +316,18 @@ export default class CubeInput {
                 // Phase 2: Execute Hybrid Rotation
                 if (this.axisLocked) {
                     const lastFrameDelta = this.currentDragLocal.clone().sub(this.prevDragLocal);
+                    /**
+                     * framerotationVector is the cross product of the hitLocalNormal and the lastFrameDelta, which gives us a vector that represents the rotation direction and magnitude for this frame.
+                     * This is an array of 3 numbers, where the index of the largest absolute value corresponds to the axis of rotation (x, y, or z), and the sign of that value corresponds to the direction of rotation (positive or negative). (eg: [0, 1, 0] means rotation around the y-axis in the positive direction) 
+                     */
                     const frameRotationVector = this.hitLocalNormal.clone().cross(lastFrameDelta);
 
                     // Hybrid Architecture: Decouple physical feel from 3D distortion
                     // 1. SPEED: Use physical 2D screen distance (eliminates horizon distortion)
-                    const screenDistance = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                    const screenDistance = Math.sqrt(this.dx * this.dx + this.dy * this.dy); // we use square root of sum of squares to get the Euclidean distance (Pythagorean theorem) of the mouse movement in pixels
 
                     // 2. DIRECTION: Use 3D cross product exclusively for logic sign (1 or -1)
-                    const frameSign = Math.sign(frameRotationVector[this.rotationAxis]);
+                    const frameSign = Math.sign(frameRotationVector[this.rotationAxis]); // Math.sign() returns 1 for positive numbers, -1 for negative numbers, and 0 for zero. This gives us the direction of rotation based on the cross product.
 
                     // 3. SYNTHESIS: Speed driven by 2D, Direction driven by 3D
                     const rotationAmount = screenDistance * frameSign * 0.010;
