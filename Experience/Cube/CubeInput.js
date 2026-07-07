@@ -6,7 +6,7 @@ export default class CubeInput {
         this.isDragging = true
         this.dragMode = "cube"
         this.axisLocked = false
-        if (this.mouse.x >= 0) {
+        if (this.isLMB) {
             this.cube.zArrowHelperFront.visible = true
             this.cube.zArrowHelperBack.visible = true
         }
@@ -21,8 +21,8 @@ export default class CubeInput {
     }
 
     onDragEnd() {
-        const isLMB = this.button === 0;
-
+        this.isRMB = false
+        this.isLMB = false
         // Snap whole-cube rotations to the nearest 90 degrees (Pi/2)
         if (this.dragMode === 'cube') {
             this.cube.rotator.isAnimating = true
@@ -117,9 +117,9 @@ export default class CubeInput {
         // Fires when any mouse button is pressed or screen is touched
         // ==========================================
         renderer.domElement.addEventListener('pointerdown', (input) => {
-
-            const isLMB = input.button === 0; // Works for touch too!
-            if (this.isDragging || !isLMB || !this.experience.isFocused || this.cube.rotator.isAnimating || this.experience.currPointName !== "RubiksCube") return;
+            this.isLMB = input.button === 0; // Left Mouse Button
+            this.isRMB = input.button === 2; // Right Mouse Button
+            if (this.isDragging || (!this.isLMB && !this.isRMB) || !this.experience.isFocused || this.cube.rotator.isAnimating || this.experience.currPointName !== "RubiksCube") return;
 
             if (this.isPointerActive === true) {
                 return;
@@ -134,6 +134,14 @@ export default class CubeInput {
 
             this.isPointerActive = true;
             this.activePointerId = input.pointerId;
+            this.button = input.button
+            this.isTouchPointer = false
+
+            if (input.pointerType === "touch") {
+                this.isTouchPointer = true
+                this.isLMB = false
+                this.isRMB = false
+            }
 
             this.dx = input.clientX - this.prevX;
             this.dy = input.clientY - this.prevY;
@@ -166,7 +174,7 @@ export default class CubeInput {
                 this.hitCubie = stickerHits[0].object.parent;
                 // Clone normal to avoid aliasing, then translate it from Local to World space
                 this.hitStickerNormal = stickerHits[0].face.normal.clone()
-                    .transformDirection(stickerHits[0].object.matrixWorld) 
+                    .transformDirection(stickerHits[0].object.matrixWorld)
                     .round(); // round to nearest integer to avoid floating point errors. we do this because we want to know which face of the cube was clicked, not the exact world direction.
 
                 /* Snap the virtual graph paper onto the sticker:
@@ -214,7 +222,7 @@ export default class CubeInput {
                 return;
             }
 
-            if (input.pointerId !== this.activePointerId) {
+            if (input.pointerId !== this.activePointerId) { // mobile safety: ignore other fingers while dragging with one finger
                 return;
             }
             this.dx = input.clientX - this.prevX
@@ -227,41 +235,54 @@ export default class CubeInput {
             // ------------------------------------------
             // TRACK 1: WHOLE CUBE ROTATION
             // ------------------------------------------
+            // ------------------------------------------
+            // TRACK 1: WHOLE CUBE ROTATION
+            // ------------------------------------------
             if (this.dragMode === "cube") {
-                // GATE 1: Lock the primary drag axis (Horizontal vs Vertical) based on initial intent
+                // GATE 1: Lock the primary drag axis
                 if (!this.axisLocked && (Math.abs(totalDx) > 8 || Math.abs(totalDy) > 8)) {
-                    this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy);
+                    this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy)
+
                     if (this.dxLarger) {
                         this.rotationAxis = 'y'
                     }
-                    else if (this.mouse.x >= 0)
-                        this.rotationAxis = 'x'
-                    else
-                        this.rotationAxis = 'z'
-                    this.axisLocked = true;
+                    else {
+                        if (this.isRMB) {
+                            this.rotationAxis = 'z'
+                        }
+                        else if (this.isLMB) {
+                            this.rotationAxis = 'x'
+                        }
+                        else {
+                            if (this.mouse.x >= 0) {
+                                this.rotationAxis = 'x'
+                            }
+                            else {
+                                this.rotationAxis = 'z'
+                            }
+                        }
+                    }
+
+                    this.axisLocked = true
                 }
 
                 // GATE 2: Spin the entire cube group
                 if (this.axisLocked) {
-                    if (this.dxLarger) {
-                        // Dragging Left/Right -> Spin around the World Y-Axis (Up/Down)
-                        this.flipAxis = yVector;
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dx * this.sensitivity);
-                    } else if (this.rotationAxis === 'x') {
-                        // Dragging Up/Down -> Spin around the World X-Axis (Left/Right)
-                        this.flipAxis = xVector;
-                        this.cube.zArrowHelperFront.visible = true
-                        this.cube.zArrowHelperBack.visible = true
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
+                    if (this.rotationAxis === 'y') {
+                        this.flipAxis = yVector
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dx * this.sensitivity)
+                    }
+                    else if (this.rotationAxis === 'x') {
+                        this.flipAxis = xVector
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity)
                     }
                     else {
-                        this.flipAxis = zVector;
-                        this.cube.xArrowHelperFront.visible = true
-                        this.cube.xArrowHelperBack.visible = true
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity);
+                        this.flipAxis = zVector
+                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity)
                     }
                 }
             }
+
 
             // Update NDC and Raycaster for 3D logic
             const rect = renderer.domElement.getBoundingClientRect(); // Get the exact boundaries of the canvas on the screen
@@ -278,7 +299,7 @@ export default class CubeInput {
                 // Shoot the laser at the drag plane so we can find the exact 3D point under the mouse cursor
                 const planeHit = this.raycaster.ray.intersectPlane(this.dragPlane, this.currentDragWorld);
                 // The Safe Guard: Bail out if ray is perfectly parallel to plane (prevents stale data loops)
-                if (!planeHit) return; 
+                if (!planeHit) return;
                 /**
                  * transform world coordinates into local coordinates relative to the cube group. 
                  * This is necessary because the cube can be rotated in 3D space, and we want to measure the drag distance in the cube's local space, 
@@ -304,7 +325,7 @@ export default class CubeInput {
 
                     // The Tournament: Compare absolute values inside rotationVector to find the dominant axis
                     this.rotationAxis = axes.reduce((champion, challenger) => {
-                        return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger; 
+                        return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger;
                     });
 
                     this.direction = Math.sign(rotationVector[this.rotationAxis]); // using the rotation axis that we determined, check if the direction is positive or negative
@@ -403,5 +424,6 @@ export default class CubeInput {
             this.dragMode = null
             this.isDragging = false
         })
+
     }
 }

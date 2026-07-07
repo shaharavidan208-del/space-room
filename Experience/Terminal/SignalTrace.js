@@ -2,6 +2,8 @@ import SignalTracePipeRenderer from './SignalTracePipeRenderer.js'
 import SignalTraceLevelOne from './SignalTraceLevelOne.js'
 import SignalTraceLevelTwo from './SignalTraceLevelTwo.js'
 import SignalTraceDragController from './SignalTraceDragController.js'
+import SignalTraceInventory from './SignalTraceInventory.js'
+import SignalTraceEndpointRenderer from './SignalTraceEndpointRenderer.js'
 export default class SignalTrace {
     constructor(terminal) {
         this.terminal = terminal;  // store a reference to the terminal 
@@ -28,9 +30,16 @@ export default class SignalTrace {
         this.rows = this.level.rows
         this.cols = this.level.cols
 
-        this.tileSize = 120
+        this.tileSize = 170
         this.tileGap = 8
-        this.boardStartY = 320
+
+        this.boardStartY = 300
+
+        this.titleFontSize = 52
+        this.subtitleFontSize = 36
+        this.statusFontSize = 36
+        this.controlsFontSize = 28
+        this.nodeLabelFontSize = 32
 
         /**
          * Copy the level endpoints into SignalTrace.
@@ -38,33 +47,40 @@ export default class SignalTrace {
          */
         this.source = {
             row: this.level.source.row,
-            col: this.level.source.col
+            col: this.level.source.col,
+            direction: this.level.source.direction
+        }
+
+        if (!this.source.direction) {
+            this.source.direction = "right"
         }
 
         this.target = {
             row: this.level.target.row,
-            col: this.level.target.col
+            col: this.level.target.col,
+            direction: this.level.target.direction
         }
-        /**
-        * Cursor position.
-        * This represents the currently selected tile.
-        * For now it starts in the center of the board.
-        * the range is between 0 and 4 for now
-        */
-        this.cursor = { row: 2, col: 2 }
+
+        if (!this.target.direction) {
+            this.target.direction = "left"
+        }
+
 
         this.pipeRenderer = new SignalTracePipeRenderer(
             this.ctx,
             this.tileSize,
             this.tileGap
         )
+        this.endpointRenderer = new SignalTraceEndpointRenderer(this)
+
+        this.inventory = new SignalTraceInventory(this)
 
         this.dragController = new SignalTraceDragController(this)
         /**
  * Whether the current pipe layout creates
  * a valid signal path from SRC to ARC.
  */
-        this.signalConnected = false
+        this.signalConnected;
 
         /**
  * Create the current level grid.
@@ -72,12 +88,13 @@ export default class SignalTrace {
  * SignalTrace owns the active grid state after this point,
  */
         this.grid = this.level.createGrid()
+        console.log("grid propeties:" + this.grid)
 
         /**
          * Check the starting board state.
          * This lets the status text be correct immediately when Signal Trace opens.
          */
-        this.signalConnected = this.checkSignalPath()
+        // this.signalConnected = this.checkSignalPath()
         /**
  * Current Signal Trace level.
  * The level class owns the puzzle layout data.
@@ -97,6 +114,10 @@ export default class SignalTrace {
     }
 
 
+
+
+
+
     /**
      * Draw the initial Signal Trace screeen with title, status, and board.
      * This is called when Signal Trace first starts,
@@ -111,28 +132,22 @@ export default class SignalTrace {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height) // fill the rect with the current fillStyle
 
         /**
-         * Title styling
-         */
+ * Title styling
+ */
         this.ctx.fillStyle = "#00FF41"
-        this.ctx.font = "32px monospace";
-        this.ctx.textAlign = "left";
-        this.ctx.fillText("SIGNAL TRACE ONLINE", 80, 120);
-
+        this.ctx.font = `${this.titleFontSize}px monospace`
+        this.ctx.textAlign = "left"
+        this.ctx.fillText("SIGNAL TRACE ONLINE", 90, 125)
 
         // Draw temporary status text.
         this.ctx.fillStyle = "rgba(0, 255, 65, 0.72)"
-        this.ctx.font = "28px monospace";
-        this.ctx.fillText("ARCHIVE RECOVERY PROTOCOL INITIALIZED", 80, 170);
-
-        // Temporary instruction text.
-        this.ctx.fillStyle = "rgba(0, 255, 65, 0.42)"
-        this.ctx.font = "28px monospace";
-        /**
- * Draw current signal connection status and controls.
- */
-        this.drawSignalStatusText()
-
+        this.ctx.font = `${this.subtitleFontSize}px monospace`
+        this.ctx.fillText("ARCHIVE RECOVERY PROTOCOL INITIALIZED", 90, 185)
         this.drawBoardPlaceholder()
+        /**
+         * Draw current signal connection status and controls.
+         */
+        this.drawSignalStatusText()
 
         // Tell Three.js that the canvas texture changed.
         this.texture.needsUpdate = true;
@@ -162,20 +177,20 @@ export default class SignalTrace {
         }
 
         /**
-         * Draw the status line.
-         */
+ * Draw the status line.
+ */
         this.ctx.fillStyle = statusColor
-        this.ctx.font = "28px monospace"
+        this.ctx.font = `${this.statusFontSize}px monospace`
         this.ctx.textAlign = "left"
-        this.ctx.fillText(statusText, 700, 230)
+        this.ctx.fillText(statusText, 90, 245)
 
         /**
          * Draw control hint under the status.
          * This is useful now that the puzzle is interactive.
          */
+        this.ctx.font = "40px monospace"
         this.ctx.fillStyle = "rgba(0, 255, 65, 0.38)"
-        this.ctx.font = "22px monospace"
-        this.ctx.fillText("ARROWS: MOVE", 80, 270)
+        this.ctx.fillText("DRAG MODULES TO REBUILD SIGNAL PATH", 1080, 200)
     }
 
 
@@ -194,8 +209,8 @@ export default class SignalTrace {
         /**
          * Center the board horizontally on the terminal canvas.
          */
-        const boardStartX = (this.canvas.width - boardWidth) / 2
-        console.log("boardStartX:" + boardStartX)
+        this.boardStartX = (this.canvas.width - boardWidth) / 2 - 400 // change to this because now I'll have access to it anywhere in the class
+        console.log("boardStartX:" + this.boardStartX)
         console.log("boardStartY:" + this.boardStartY)
         console.log("Board Width:" + boardWidth)
         /**
@@ -204,7 +219,7 @@ export default class SignalTrace {
 
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
-                const x = boardStartX + col * (this.tileSize + this.tileGap) // determine the x position for the next tile
+                const x = this.boardStartX + col * (this.tileSize + this.tileGap) // determine the x position for the next tile
                 // the position is calculated by the size of the tile + its gap, multiplied by the column
                 // first tile starts at boardStartX
                 const y = this.boardStartY + row * (this.tileSize + this.tileGap) // same logic as with x 
@@ -229,162 +244,151 @@ export default class SignalTrace {
  * The tile data comes from this.grid using the current row/col.
  * This must happen after the tile background, otherwise the background covers it.
  */
+
                 const tile = this.grid[row][col]
                 this.pipeRenderer.drawPipe(x, y, tile)
 
-                // If this tile is currently selected, draw a brighter cursor border.
-                if (row === this.cursor.row && col === this.cursor.col) {
-                    this.drawCursor(x, y)
-                }
-                /**
-                 * If this tile is the source, draw the source node.
-                 */
-                if (row === this.source.row && col === this.source.col) {
-                    this.drawNode(x, y, "#00ff99", "SRC")
-                }
-
-                /**
-                 * If this tile is the target, draw the archive node.
-                 */
-                if (row === this.target.row && col === this.target.col) {
-                    this.drawNode(x, y, "#ff8a3d", "ARC") // At tile position x/y,
-                    // draw a glowing green node,
-                    // with the label SRC.
-                }
             }
         }
+        this.endpointRenderer.drawEndpoint(this.source, "SRC")
+        this.endpointRenderer.drawEndpoint(this.target, "ARC")
+
+        this.inventory.draw()
+
         this.dragController.drawHeldPipe()
     }
 
-    getBoardStartX() {
-    const boardWidth = this.cols * this.tileSize + (this.cols - 1) * this.tileGap
-    const boardStartX = (this.canvas.width - boardWidth) / 2
 
-    return boardStartX
-}
 
-getTileAtCanvasPosition(canvasX, canvasY) {
-    const boardStartX = this.getBoardStartX()
+    getTileAtCanvasPosition(canvasX, canvasY) {
+        const boardStartX = this.boardStartX
 
-    const localX = canvasX - boardStartX
-    const localY = canvasY - this.boardStartY
+        const localX = canvasX - boardStartX
+        const localY = canvasY - this.boardStartY
 
-    if (localX < 0) {
-        return null
+        if (localX < 0) {
+            return null
+        }
+
+        if (localY < 0) {
+            return null
+        }
+
+        const tileStep = this.tileSize + this.tileGap
+
+        const col = Math.floor(localX / tileStep)
+        const row = Math.floor(localY / tileStep)
+
+        if (!this.isInsideBoard(row, col)) {
+            return null
+        }
+
+        /**
+         * Reject clicks inside the gap between tiles.
+         */
+        const insideTileX = localX % tileStep
+        const insideTileY = localY % tileStep
+
+        if (insideTileX > this.tileSize) {
+            return null
+        }
+
+        if (insideTileY > this.tileSize) {
+            return null
+        }
+
+        return {
+            row: row,
+            col: col
+        }
     }
 
-    if (localY < 0) {
-        return null
-    }
+    canPickUpTile(row, col) {
+        if (!this.isInsideBoard(row, col)) {
+            return false
+        }
+        if (this.isEndpointPosition(row, col)) {
+            return false
+        }
 
-    const tileStep = this.tileSize + this.tileGap
+        const tile = this.grid[row][col]
 
-    const col = Math.floor(localX / tileStep)
-    const row = Math.floor(localY / tileStep)
+        if (!tile) {
+            return false
+        }
 
-    if (!this.isInsideBoard(row, col)) {
-        return null
-    }
+        if (tile.locked) {
+            return false
+        }
 
-    /**
-     * Reject clicks inside the gap between tiles.
-     */
-    const insideTileX = localX % tileStep
-    const insideTileY = localY % tileStep
+        if (tile.blocked) {
+            return false
+        }
 
-    if (insideTileX > this.tileSize) {
-        return null
-    }
+        if (!tile.connections) {
+            return false
+        }
 
-    if (insideTileY > this.tileSize) {
-        return null
-    }
+        if (tile.connections.length === 0) {
+            return false
+        }
 
-    return {
-        row: row,
-        col: col
-    }
-}
-
-canPickUpTile(row, col) {
-    if (!this.isInsideBoard(row, col)) {
-        return false
-    }
-
-    const tile = this.grid[row][col]
-
-    if (!tile) {
-        return false
-    }
-
-    if (tile.locked) {
-        return false
-    }
-
-    if (tile.blocked) {
-        return false
-    }
-
-    if (!tile.connections) {
-        return false
-    }
-
-    if (tile.connections.length === 0) {
-        return false
-    }
-
-    return true
-}
-
-canDropTile(row, col) {
-    if (!this.isInsideBoard(row, col)) {
-        return false
-    }
-
-    const tile = this.grid[row][col]
-
-    if (!tile) {
-        return false
-    }
-
-    if (tile.locked) {
-        return false
-    }
-
-    if (tile.blocked) {
-        return false
-    }
-
-    if (!tile.connections) {
         return true
     }
 
-    if (tile.connections.length > 0) {
-        return false
+    canDropTile(row, col) {
+        if (!this.isInsideBoard(row, col)) {
+            return false
+        }
+
+        if (this.isEndpointPosition(row, col)) {
+            return false
+        }
+
+        const tile = this.grid[row][col]
+
+        if (!tile) {
+            return false
+        }
+
+        if (tile.locked) {
+            return false
+        }
+
+        if (tile.blocked) {
+            return false
+        }
+
+        if (!tile.connections) {
+            return true
+        }
+
+        if (tile.connections.length > 0) {
+            return false
+        }
+
+        return true
     }
 
-    return true
-}
+    updateSignalState() {
+        this.signalConnected = this.checkSignalPath()
+    }
 
-updateSignalState() {
-    this.signalConnected = this.checkSignalPath()
-}
+    handlePointerDown(canvasX, canvasY) {
+        this.dragController.handlePointerDown(canvasX, canvasY)
+    }
 
-handlePointerDown(canvasX, canvasY) {
-    this.dragController.handlePointerDown(canvasX, canvasY)
-}
+    handlePointerMove(canvasX, canvasY) {
+        this.dragController.handlePointerMove(canvasX, canvasY)
+    }
 
-handlePointerMove(canvasX, canvasY) {
-    this.dragController.handlePointerMove(canvasX, canvasY)
-}
+    handlePointerUp(canvasX, canvasY) {
+        this.dragController.handlePointerUp(canvasX, canvasY)
+    }
 
-handlePointerUp(canvasX, canvasY) {
-    this.dragController.handlePointerUp(canvasX, canvasY)
-}
-
-handlePointerCancel() {
-    this.dragController.cancelDrag()
-}
+    handlePointerCancel() {
+        this.dragController.cancelDrag()
+    }
     /**
      * Draw a node at the specified position.
      * @param {number} x - the tile's top-left X position
@@ -415,260 +419,177 @@ handlePointerCancel() {
         // It removes the shadow settings so the next things you draw don’t accidentally glow too.
 
         /**
-         * Draw the node label.
-         */
+ * Draw the node label.
+ */
         this.ctx.fillStyle = "#d8ffdc"
-        this.ctx.font = "26px monospace"
+        this.ctx.font = `${this.nodeLabelFontSize}px monospace`
         this.ctx.textAlign = "center"
-        this.ctx.fillText(label, centerX, centerY + 24)
+        this.ctx.fillText(label, centerX, centerY + 28)
     }
 
 
-    /**
-     * Draw the cursor at the specified position.
-     * @param {number} x - the tile's top-left X position
-     * @param {number} y - the tile's top-left Y position
-     */
-    drawCursor(x, y) {
-        /**
-         * Draw a corner-bracket cursor instead of a full rectangle.
-         * This highlights the selected tile without covering the pipe details.
-         */
-        this.ctx.save()
-
-        /**
-         * Cursor style.
-         * It should be readable, but not dominate the pipe.
-         */
-        this.ctx.strokeStyle = "rgba(216, 255, 220, 0.9)"
-        this.ctx.lineWidth = 1
-        this.ctx.shadowColor = "#00FF41"
-        this.ctx.shadowBlur = 1
-        this.ctx.lineCap = "square"
-
-        /**
-         * Cursor padding from the tile edge.
-         * Higher value = cursor moves inward.
-         */
-        const padding = 10
-
-        /**
-         * Length of each corner bracket arm.
-         */
-        const cornerLength = 26
-
-        const left = x + padding
-        const right = x + this.tileSize - padding
-        const top = y + padding
-        const bottom = y + this.tileSize - padding
-
-        this.ctx.beginPath()
-
-        /**
-         * Top-left corner.
-         */
-        this.ctx.moveTo(left + cornerLength, top)
-        this.ctx.lineTo(left, top)
-        this.ctx.lineTo(left, top + cornerLength)
-
-        /**
-         * Top-right corner.
-         */
-        this.ctx.moveTo(right - cornerLength, top)
-        this.ctx.lineTo(right, top)
-        this.ctx.lineTo(right, top + cornerLength)
-
-        /**
-         * Bottom-right corner.
-         */
-        this.ctx.moveTo(right, bottom - cornerLength)
-        this.ctx.lineTo(right, bottom)
-        this.ctx.lineTo(right - cornerLength, bottom)
-
-        /**
-         * Bottom-left corner.
-         */
-        this.ctx.moveTo(left + cornerLength, bottom)
-        this.ctx.lineTo(left, bottom)
-        this.ctx.lineTo(left, bottom - cornerLength)
-
-        this.ctx.stroke()
-
-        this.ctx.restore()
-    }
-
-
-    /**
-     * Handle key down events for the Signal Trace screen.
-     * @param {KeyboardEvent} event - the key down event
-     * @returns {boolean} - true if the event was handled, false otherwise (handled means we return early and don't let the browser do its default behavior) 
-     */
-    handleKeyDown(event) {
-        /**
-         * Arrow keys move the selected tile cursor.
-         */
-
-        if (event.key === "ArrowUp") {
-            this.moveCursor(-1, 0)
-            return
-        }
-
-        else if (event.key === "ArrowDown") {
-            this.moveCursor(1, 0)
-            return
-        }
-
-        else if (event.key === "ArrowLeft") {
-            this.moveCursor(0, -1)
-            return
-        }
-
-        else if (event.key === "ArrowRight") {
-            this.moveCursor(0, 1)
-            return
-        }
 
 
 
-    }
-    /**
-     * This method checks whether the signal can travel
-     * from the source tile to the target/archive tile.
-     * It does not draw anything.
-     * It only returns true or false.
-     */
+
     checkSignalPath() {
-
-        /**
-         * Visited Tracks which grid positions have already been checked.
-         * This prevents the path search from looping forever through connected pipes.
-         * Positions are stored as strings like "2,3" because Set values are unique and fast to check with visited.has(positionKey).
-         * and fast to check with visited.has(positionKey).
-         */
         const visited = new Set()
+        const stack = []
 
-        /**
-         * This is an array of objects that represent the row/col positions of tiles to check.
-         * The stack stores tiles that still need to be checked.
-         * We start from the source tile.
-         */
-        const stack = [
-            {
-                row: this.source.row, // start the search from the source tile (row 4, col 0)
-                col: this.source.col // the source tile is the starting point for the signal
-            }
-        ]
+        this.addSourceNeighborPipesToStack(stack)
 
-
-        /**
-         * Keep searching while there are still tiles to check.
-         */
         while (stack.length > 0) {
-            console.log("Stack length before pop:", stack.length)
-            console.log("Stack before pop:", [...stack])
-            /**
-             * Take one tile position from the stack.
-             */
-            const currentPosition = stack.pop() // pop() removes the last element from the stack and returns it. this is the current tile we are checking.
-            console.log("Popped position:", currentPosition)
-            console.log("Stack length after pop:", stack.length)
-            console.log("Stack after pop:", [...stack]) // ...stack creates a shallow copy of the stack array for logging, so we can see the state of the stack after popping.
+            const currentPosition = stack.pop()
+
             const row = currentPosition.row
             const col = currentPosition.col
+            const positionKey = `${row},${col}`
 
-            /**
-             * Create a unique text key for this tile position.
-             */
-            const positionKey = `${row},${col}` // create a unique string key for the current tile position, like "2,3" for row 2, col 3
-            // $ means we are using a template literal, which allows us to embed expressions inside a string. the backticks `` allow us to use ${} to insert variables into the string.
-            /**
-             * If we already checked this tile, skip it.
-             */
-
-
-            /**
-            * If this position was already processed, skip it.
-            * This prevents loops and avoids checking the same tile twice
-            * when multiple pipe branches lead to the same position.
-            */
             if (visited.has(positionKey)) {
                 continue
             }
 
-            /**
-             * Mark this tile as checked.
-             */
             visited.add(positionKey)
 
-            /**
-             * If this tile is the archive/target,
-             * the signal path is complete.
-             */
-            if (this.isTargetPosition(row, col)) {
+            const currentTile = this.grid[row][col]
+
+            if (!this.isPipeTile(currentTile)) {
+                continue
+            }
+
+            if (this.pipeConnectsToTarget(row, col, currentTile)) {
                 return true
             }
-            /**
-             * Get the current tile from the grid.
-             */
-            const currentTile = this.grid[row][col]
-            /**
-             * If the tile does not exist, skip it.
-             */
-            if (!currentTile) {
-                continue
-            }
-            /**
-             * If the tile has no pipe connections, the signal cannot continue.
-             */
-            if (!currentTile.connections || currentTile.connections.length === 0) {
-                continue
-            }
 
-
-
-            /**
-             * Now we know the current tile exists and has connections.
-             * so we can try to move the signal through each connection direction.
-             * The signal can only continue if the neighbor tile exists and connects back to the current tile.
-             * Try moving through each connection direction.
-             */
             for (const direction of currentTile.connections) {
-                const neighborPosition = this.getNeighborPosition(row, col, direction) // get the row/col of the neighboring tile in the current direction
+                const neighborPosition = this.getNeighborPosition(row, col, direction)
 
-                /**
-                 * If the neighbor would be outside the board, ignore it.
-                 */
                 if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
                     continue
                 }
 
-                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col] // get the neighboring tile from the grid
+                if (this.isSourcePosition(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
 
-                /**
-                 * The current tile and neighbor tile must connect to each other.
-                 */
+                if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
                 if (!this.tilesConnect(currentTile, neighborTile, direction)) {
                     continue
                 }
 
                 const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
 
-                /**
-                 * If we have not already checked this neighbor,
-                 * add it to the stack so the signal can continue from there.
-                 */
                 if (!visited.has(neighborKey)) {
                     stack.push(neighborPosition)
                 }
             }
         }
 
-        /**
-         * If the search ends without reaching the target,
-         * there is no complete signal path.
-         */
         return false
     }
+
+    addSourceNeighborPipesToStack(stack) {
+        const directions = ["up", "down", "left", "right"]
+
+        for (const direction of directions) {
+            const neighborPosition = this.getNeighborPosition(
+                this.source.row,
+                this.source.col,
+                direction
+            )
+
+            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+            if (!this.isPipeTile(neighborTile)) {
+                continue
+            }
+
+            const directionBackToSource = this.getOppositeDirection(direction)
+
+            if (!directionBackToSource) {
+                continue
+            }
+
+            if (!neighborTile.connections.includes(directionBackToSource)) {
+                continue
+            }
+
+            stack.push({
+                row: neighborPosition.row,
+                col: neighborPosition.col
+            })
+        }
+    }
+
+    isPipeTile(tile) {
+        if (!tile) {
+            return false
+        }
+
+        if (!tile.connections) {
+            return false
+        }
+
+        if (tile.connections.length === 0) {
+            return false
+        }
+
+        return true
+    }
+
+    pipeConnectsToTarget(row, col, tile) {
+        if (!this.isPipeTile(tile)) {
+            return false
+        }
+
+        for (const direction of tile.connections) {
+            const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    isSourcePosition(row, col) {
+        if (row === this.source.row && col === this.source.col) {
+            return true
+        }
+
+        return false
+    }
+
+    isEndpointPosition(row, col) {
+        if (this.isSourcePosition(row, col)) {
+            return true
+        }
+
+        if (this.isTargetPosition(row, col)) {
+            return true
+        }
+
+        return false
+    }
+
+
 
     /**
      * Check whether a row/col position is the archive target.
@@ -866,54 +787,164 @@ handlePointerCancel() {
         return true
     }
 
-    moveCursor(rowChange, colChange) {
-        /**
-         * Calculate where the cursor wants to move.
-         * We do not apply it immediately, because first we need to check boundaries.
-         */
-        const nextRow = this.cursor.row + rowChange
-        const nextCol = this.cursor.col + colChange
 
-        /**
-         * Prevent moving above the first row.
-         */
-        if (nextRow < 0) {
-            return
+    checkSignalPath() {
+        const visited = new Set()
+        const stack = []
+
+        this.addSourceNeighborPipesToStack(stack)
+
+        while (stack.length > 0) {
+            const currentPosition = stack.pop()
+
+            const row = currentPosition.row
+            const col = currentPosition.col
+            const positionKey = `${row},${col}`
+
+            if (visited.has(positionKey)) {
+                continue
+            }
+
+            visited.add(positionKey)
+
+            const currentTile = this.grid[row][col]
+
+            if (!this.isPipeTile(currentTile)) {
+                continue
+            }
+
+            if (this.pipeConnectsToTarget(row, col, currentTile)) {
+                return true
+            }
+
+            for (const direction of currentTile.connections) {
+                const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+                if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+
+                if (this.isSourcePosition(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+
+                if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+
+                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+                if (!this.tilesConnect(currentTile, neighborTile, direction)) {
+                    continue
+                }
+
+                const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
+
+                if (!visited.has(neighborKey)) {
+                    stack.push(neighborPosition)
+                }
+            }
         }
 
-        /**
-         * Prevent moving below the last row.
-         */
-        if (nextRow >= this.rows) {
-            return
-        }
-
-        /**
-         * Prevent moving left of the first column.
-         */
-        if (nextCol < 0) {
-            return
-        }
-
-        /**
-         * Prevent moving right of the last column.
-         */
-        if (nextCol >= this.cols) {
-            return
-        }
-
-        /**
-         * The move is valid, so update the cursor position.
-         */
-        this.cursor.row = nextRow
-        this.cursor.col = nextCol
-
-        /**
-         * Redraw the Signal Trace screen so the cursor appears in its new position.
-         */
-        this.drawBootScreen()
+        return false
     }
 
+    addSourceNeighborPipesToStack(stack) {
+        const directions = ["up", "down", "left", "right"]
+
+        for (const direction of directions) {
+            const neighborPosition = this.getNeighborPosition(
+                this.source.row,
+                this.source.col,
+                direction
+            )
+
+            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+            if (!this.isPipeTile(neighborTile)) {
+                continue
+            }
+
+            const directionBackToSource = this.getOppositeDirection(direction)
+
+            if (!directionBackToSource) {
+                continue
+            }
+
+            if (!neighborTile.connections.includes(directionBackToSource)) {
+                continue
+            }
+
+            stack.push({
+                row: neighborPosition.row,
+                col: neighborPosition.col
+            })
+        }
+    }
+
+    isPipeTile(tile) {
+        if (!tile) {
+            return false
+        }
+
+        if (!tile.connections) {
+            return false
+        }
+
+        if (tile.connections.length === 0) {
+            return false
+        }
+
+        return true
+    }
+
+    pipeConnectsToTarget(row, col, tile) {
+        if (!this.isPipeTile(tile)) {
+            return false
+        }
+
+        for (const direction of tile.connections) {
+            const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    isSourcePosition(row, col) {
+        if (row === this.source.row && col === this.source.col) {
+            return true
+        }
+
+        return false
+    }
+
+    isEndpointPosition(row, col) {
+        if (this.isSourcePosition(row, col)) {
+            return true
+        }
+
+        if (this.isTargetPosition(row, col)) {
+            return true
+        }
+
+        return false
+    }
 
 
 

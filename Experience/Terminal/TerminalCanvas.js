@@ -25,8 +25,8 @@ export default class TerminalCanvas {
         // Set the internal pixel resolution of the canvas.
         // This is not the CSS size. This is the actual texture resolution.
         // Higher resolution = sharper text when the 3D camera zooms into the monitor.
-        this.canvas.width = 1084;
-        this.canvas.height = 1024;
+        this.canvas.width = 1920;
+        this.canvas.height = 1200;
 
         // Get the 2D drawing context.
         // This is the "brush" we use to draw text, rectangles, highlights, etc.
@@ -44,8 +44,8 @@ export default class TerminalCanvas {
         // Texture wrapping controls what happens when UVs sample outside the texture.
         // ClampToEdge prevents the texture from repeating/tapping pixels from the opposite side.
         // This is safer for UI screens because we usually do not want repeated terminal text.
-        this.texture.wrapS = THREE.ClampToEdgeWrapping;
-        this.texture.wrapT = THREE.ClampToEdgeWrapping;
+        this.texture.wrapS = THREE.MirroredRepeatWrapping;
+        this.texture.wrapT = THREE.MirroredRepeatWrapping;
 
         // Texture filtering controls how the texture is sampled when scaled.
         // LinearFilter gives smoother text.
@@ -75,6 +75,24 @@ export default class TerminalCanvas {
         this.setupHiddenInput();
         this.draw();
     }
+
+    downloadCanvasImage(fileName = "terminal-screen.png") {
+    this.canvas.toBlob((blob) => {
+        if (!blob) {
+            console.warn("Canvas export failed.")
+            return
+        }
+
+        const url = URL.createObjectURL(blob)
+
+        const link = document.createElement("a")
+        link.href = url
+        link.download = fileName
+        link.click()
+
+        URL.revokeObjectURL(url)
+    }, "image/png")
+}
 
     // ==========================================
     // 4. KEYBOARD INTERCEPTION
@@ -196,8 +214,11 @@ export default class TerminalCanvas {
         return;
     }
     if (this.mode === "signalTrace") {
-    this.signalTrace.handleKeyDown(event)
-    return
+        if(event.key === "ArrowLeft") {
+            this.mode = "dialogue"
+            this.returnToMainMenu()
+        }
+        return
 }
 
 
@@ -325,76 +346,88 @@ export default class TerminalCanvas {
         // 4. DRAW HEADER
         // ------------------------------------------
 
+        const paddingX = 70
+        const headerFontSize = 60
+        const bodyFontSize = 50
+        const choiceFontSize = 45
+        const bodyLineHeight = 56
+        const choiceLineHeight = 62
+        const highlightHeight = 52
+
         // Terminal green.
         this.ctx.fillStyle = '#00FF41';
 
         // Header font size.
-        this.ctx.font = '32px monospace';
+        this.ctx.font = `${headerFontSize}px monospace`
 
         // If the node has a custom header, draw it.
         // Otherwise use a generic fallback.
         if (node.header) {
-            this.ctx.fillText(node.header, 50, 140);
+            this.ctx.fillText(node.header, paddingX, 135)
         } else {
-            this.ctx.fillText('TERMINAL', 50, 140);
+            this.ctx.fillText('TERMINAL', paddingX, 135)
         }
-
         // Simple divider line below the header.
-        this.ctx.fillText('---------------------------------', 50, 165);
+        this.ctx.fillText('---------------------------------', paddingX, 170)
 
         // ------------------------------------------
         // 5. DRAW BODY TEXT
         // ------------------------------------------
 
         // Body text font size.
-        this.ctx.font = '32px monospace';
+        this.ctx.font = `${bodyFontSize}px monospace`
 
         // cursorY tracks where the next thing should be drawn.
         // We start below the header.
         let cursorY = 240;
 
-        // Draw the node's main text if it exists.
+         // Draw the node's main text if it exists.
         if (node.aiText) {
-            // wrapText draws the full message across multiple lines
-            // and returns the Y position after the final line.
-            const paddingX = 50;
-            const maxTextWidth = this.canvas.width - paddingX * 2.4;
-            // Hey wrapText, draw this body text starting at X=50, Y=cursorY, don’t exceed 900 pixels wide, and move down 36 pixels per wrapped line. Then tell me where you ended.
-            cursorY = this.drawWrappedText(node.aiText, paddingX, cursorY, maxTextWidth, 45);
+            const maxTextWidth = this.canvas.width - paddingX * 2.6
+
+            cursorY = this.drawWrappedText(
+                node.aiText,
+                paddingX,
+                cursorY,
+                maxTextWidth,
+                bodyLineHeight
+            )
 
             // Add extra spacing between body text and choices.
-            cursorY += 40;
+            cursorY += 45
         }
 
-        // ------------------------------------------
-        // 6. DRAW CHOICES
-        // ------------------------------------------
+        this.ctx.font = `${choiceFontSize}px monospace`
 
-        // Only draw choices if this node actually has choices.
+          // Only draw choices if this node actually has choices.
         if (node.choices && node.choices.length > 0) {
             for (let i = 0; i < node.choices.length; i++) {
-                const choice = node.choices[i];
+                const choice = node.choices[i]
 
                 // If this choice is currently selected,
                 // draw a green highlight bar behind it.
                 if (i === this.dialogueSelectedIndex) {
-                    this.ctx.fillStyle = '#00FF41';
+                    this.ctx.fillStyle = '#00FF41'
 
                     // Highlight rectangle.
-                    // Starts slightly left of the text and extends most of the terminal width.
-                    this.ctx.fillRect(40, cursorY - 28, 920, 38);
+                    this.ctx.fillRect(
+                        paddingX - 15,
+                        cursorY - 39,
+                        1120,
+                        highlightHeight
+                    )
 
                     // Selected text becomes dark so it is readable on the green bar.
-                    this.ctx.fillStyle = '#050505';
-                    this.ctx.fillText(`> ${choice.text}`, 55, cursorY);
-                } else { // if i!==this.dialogueSelectedIndex
+                    this.ctx.fillStyle = '#050505'
+                    this.ctx.fillText(`> ${choice.text}`, paddingX, cursorY)
+                } else {
                     // Normal unselected choice.
-                    this.ctx.fillStyle = '#00FF41';
-                    this.ctx.fillText(`  ${choice.text}`, 55, cursorY);
+                    this.ctx.fillStyle = '#00FF41'
+                    this.ctx.fillText(`  ${choice.text}`, paddingX, cursorY)
                 }
 
                 // Move down before drawing the next choice.
-                cursorY += 48;
+                cursorY += choiceLineHeight
             }
         }
 

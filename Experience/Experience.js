@@ -637,7 +637,7 @@ export default class Experience {
         let monitorMesh
 
 
-        const model = gltfLoader.load('/models/newSetup5.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup6.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -722,12 +722,11 @@ export default class Experience {
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
                         });
-                        this.terminal.texture.offset.y = -0.2;
-                        this.terminal.texture.repeat.set(1.4, 1.4, 1.4)
-
+                        
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
                         obj.material.map = this.terminal.texture;
+                        this.terminal.texture.repeat.set(1, 1); // No tiling
                         obj.material.needsUpdate = true;
                     }
 
@@ -809,69 +808,74 @@ export default class Experience {
 
         console.log(this)
 
-       const raycaster = new THREE.Raycaster()
-const pointer = new THREE.Vector2()
+        const raycaster = new THREE.Raycaster()
+        const pointer = new THREE.Vector2()
 
-const getSignalTrace = () => {
-    if (this.currPointName !== "Terminal") {
-        return null
-    }
+        const getSignalTrace = () => {
+            if (this.currPointName !== "Terminal") {
+                return null
+            }
 
-    if (this.terminal.mode !== "signalTrace") {
-        return null
-    }
+            if (this.terminal.mode !== "signalTrace") {
+                return null
+            }
 
-    if (!this.terminal.signalTrace) {
-        return null
-    }
+            if (!this.terminal.signalTrace) {
+                return null
+            }
 
-    return this.terminal.signalTrace
-}
+            return this.terminal.signalTrace
+        }
 
-const getTerminalCanvasPositionFromPointerEvent = (event) => {
-    if (!monitorGlass) {
-        return null
-    }
+        /**
+         * Given a pointer event, this function calculates the corresponding position on the terminal's canvas.
+         * It uses raycasting to determine where the pointer intersects with the monitor glass and then maps that intersection to the terminal's canvas coordinates. 
+         * @param {*} event the pointer event (e.g., mouse click or touch) from which to derive the position.
+         * @returns an object with x and y properties representing the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
+         */
+        const getTerminalCanvasPositionFromPointerEvent = (event) => {
+            if (!monitorGlass) {
+                return null
+            }
 
-    const rect = renderer.domElement.getBoundingClientRect()
+            const rect = renderer.domElement.getBoundingClientRect()
 
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
-    raycaster.setFromCamera(pointer, this.camera)
+            raycaster.setFromCamera(pointer, this.camera)
 
-    const hits = raycaster.intersectObject(monitorGlass)
+            const hits = raycaster.intersectObject(monitorGlass)
 
-    if (hits.length === 0) {
-        return null
-    }
+            if (hits.length === 0) {
+                return null
+            }
 
-    const hit = hits[0]
+            const hit = hits[0]
 
-    if (!hit.uv) {
-        return null
-    }
+            if (!hit.uv) {
+                return null
+            }
 
-    const rawU = hit.uv.x
-    const rawV = hit.uv.y
+            const rawU = hit.uv.x
+            const rawV = hit.uv.y
 
-    /**
-     * Your current calibration.
-     * This maps the raycast mesh UV to the visible terminal canvas.
-     */
-    const transformedU = rawU * this.terminal.texture.repeat.x + this.terminal.texture.offset.x
-    const transformedV = rawV * this.terminal.texture.repeat.y + this.terminal.texture.offset.y
 
-    const canvasX = transformedU * this.terminal.canvas.width
-    const canvasY = (1 - transformedV) * this.terminal.canvas.height
+            const canvasX = rawU * this.terminal.canvas.width // Map the transformed U to the canvas width
+            const canvasY = (1 - rawV) * this.terminal.canvas.height // Invert Y because canvas coordinates start from the top-left
 
-    return {
-        x: canvasX,
-        y: canvasY
-    }
-}
-
-const handleMonitorPointerDown = (event) => {
+            return {
+                x: canvasX,
+                y: canvasY
+            }
+        }
+        /**
+         * Handles pointer events on the monitor.
+         * @param {*} event the pointer event (e.g., mouse click or touch) that occurred on the monitor.
+         * @param {*} type the type of pointer event: "down", "move", or "up".
+         * @returns the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
+         */
+        const handleMonitorPointerEvent = (event, type) => {
     const signalTrace = getSignalTrace()
 
     if (!signalTrace) {
@@ -881,50 +885,49 @@ const handleMonitorPointerDown = (event) => {
     const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
 
     if (!canvasPosition) {
+        if (type === "up") {
+            signalTrace.handlePointerCancel()
+        }
+
         return
     }
 
-    renderer.domElement.setPointerCapture(event.pointerId)
+    if (type === "down") {
+        renderer.domElement.setPointerCapture(event.pointerId) // set pointer capture is critical for touch events, otherwise the pointerup event won't fire if the user drags outside the canvas
+        signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
+    }
+    else if (type === "move") {
+        signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
+    }
+    else if (type === "up") {
+        signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
 
-    signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
+        if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+            renderer.domElement.releasePointerCapture(event.pointerId)
+        }
+    }
 }
 
-const handleMonitorPointerMove = (event) => {
+renderer.domElement.addEventListener("pointercancel", (event) => {
     const signalTrace = getSignalTrace()
 
     if (!signalTrace) {
         return
     }
 
-    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+    signalTrace.handlePointerCancel()
 
-    if (!canvasPosition) {
-        return
+    if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId)
     }
+})
+       
+        
 
-    signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
-}
+        renderer.domElement.addEventListener("pointerdown", (event) => handleMonitorPointerEvent(event, "down"))
+        renderer.domElement.addEventListener("pointermove", (event) => handleMonitorPointerEvent(event, "move"))
+        renderer.domElement.addEventListener("pointerup", (event) => handleMonitorPointerEvent(event, "up"))
 
-const handleMonitorPointerUp = (event) => {
-    const signalTrace = getSignalTrace()
-
-    if (!signalTrace) {
-        return
-    }
-
-    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
-
-    if (!canvasPosition) {
-        signalTrace.handlePointerCancel()
-        return
-    }
-
-    signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
-}
-
-renderer.domElement.addEventListener("pointerdown", handleMonitorPointerDown)
-renderer.domElement.addEventListener("pointermove", handleMonitorPointerMove)
-renderer.domElement.addEventListener("pointerup", handleMonitorPointerUp)
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 
