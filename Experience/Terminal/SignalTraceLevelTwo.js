@@ -10,8 +10,8 @@ export default class SignalTraceLevelTwo {
         /**
          * Board size for this level.
          */
-        this.rows = 4
-        this.cols = 4
+        this.rows = 5
+        this.cols = 5
 
         /**
          * Fixed signal endpoints.
@@ -20,36 +20,45 @@ export default class SignalTraceLevelTwo {
          */
         this.source = {
             row: 0,
-            direction: "right"
+            col: 0
         }
 
         this.target = {
-            row: 0,
-            direction: "left"
+            row: 4,
+            col: 3
         }
         this.inventory = [
             {
-                label: "H-LINE",
-                connections: ["left", "right"],
-                count: 2
-            },
-            {
                 label: "V-LINE",
                 connections: ["up", "down"],
-                count: 1
+                count: 5
             },
             {
                 label: "CORNER RD",
                 connections: ["right", "down"],
                 count: 1
-            }
+            },
+            {
+            connections: ["left", "down"],
+                count: 2
+            },
+            {
+            connections: ["up", "right"],
+                count: 1
+            },
+             {
+            connections: ["up", "left"],
+                count: 1
+            },
+
         ]
 
     }
 
     createGrid() {
         return [
-            [
+             [
+                { connections: ["right"] },
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
@@ -61,12 +70,6 @@ export default class SignalTraceLevelTwo {
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
                 { connections: [] },
                 { connections: [] }
             ],
@@ -74,6 +77,23 @@ export default class SignalTraceLevelTwo {
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: ["up"] },
                 { connections: [] },
                 { connections: [] }
             ]

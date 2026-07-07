@@ -2,12 +2,14 @@ export default class SignalTraceDragController {
     constructor(signalTrace) {
         this.signalTrace = signalTrace
 
-        this.heldTile = null
+        this.heldTile = null // the pipe currently being dragged
 
-        this.originType = null
-        this.sourcePosition = null
-        this.sourceInventoryIndex = null
-
+        this.originType = null // where the dragged pipe came from "board" or "inventory"
+        this.sourcePosition = null // = original row/col if the pipe came from the board
+        this.sourceInventoryIndex = null // inventory slot index if the pipe came from inventory
+        /**
+         * current mouse position in terminal canvas pixels
+         */
         this.dragCanvasX = 0
         this.dragCanvasY = 0
     }
@@ -58,7 +60,7 @@ export default class SignalTraceDragController {
             connections: []
         }
 
-        this.signalTrace.updateSignalState()
+        this.signalTrace.updateSignalState() // update the signal state to reflect the removal of the tile.
         this.signalTrace.drawBootScreen()
 
         return true
@@ -79,6 +81,8 @@ export default class SignalTraceDragController {
         this.originType = "inventory"
         this.sourcePosition = null
         this.sourceInventoryIndex = inventoryPosition.index
+
+        this.signalTrace.inventory.changeSlotCount(this.sourceInventoryIndex, -1)
 
         this.dragCanvasX = canvasX
         this.dragCanvasY = canvasY
@@ -109,16 +113,23 @@ export default class SignalTraceDragController {
 
         const tilePosition = this.signalTrace.getTileAtCanvasPosition(canvasX, canvasY)
 
+        /**
+         * if the pointer is over a valid board tile, and the tile can accept a new pipe,
+         * place the held pipe there and finish the drag operation.
+         * otherwise, restore the held pipe to its original location.
+         * finally, clear the held pipe and redraw the screen.
+         * update the signal state to reflect any changes.
+         */
         if (tilePosition && this.signalTrace.canDropTile(tilePosition.row, tilePosition.col)) {
             this.placeHeldTile(tilePosition.row, tilePosition.col)
-            this.finishSuccessfulDrop()
+            this.clearHeldTile()
+            this.signalTrace.updateSignalState()
+            this.signalTrace.drawBootScreen()
         } else {
-            this.restoreHeldTile()
+            this.cancelDrag()
         }
 
-        this.clearHeldTile()
-        this.signalTrace.updateSignalState()
-        this.signalTrace.drawBootScreen()
+
     }
 
     cancelDrag() {
@@ -137,21 +148,26 @@ export default class SignalTraceDragController {
         this.signalTrace.grid[row][col] = this.heldTile
     }
 
-    finishSuccessfulDrop() {
-        if (this.originType === "inventory") {
-            this.signalTrace.inventory.decreaseSlotCount(this.sourceInventoryIndex)
-        }
-    }
+
 
     restoreHeldTile() {
-        if (this.originType === "board") {
-            if (!this.sourcePosition) {
-                return
-            }
-
-            this.signalTrace.grid[this.sourcePosition.row][this.sourcePosition.col] = this.heldTile
+    if (this.originType === "board") {
+        if (!this.sourcePosition) {
+            return
         }
+
+        this.signalTrace.grid[this.sourcePosition.row][this.sourcePosition.col] = this.heldTile
+        return
     }
+
+    if (this.originType === "inventory") {
+        if (this.sourceInventoryIndex === null) {
+            return
+        }
+
+        this.signalTrace.inventory.changeSlotCount(this.sourceInventoryIndex, 1)
+    }
+}
 
     clearHeldTile() {
         this.heldTile = null
@@ -184,7 +200,7 @@ export default class SignalTraceDragController {
         ctx.strokeRect(x, y, signalTrace.tileSize, signalTrace.tileSize)
 
         ctx.globalAlpha = 0.92
-        signalTrace.pipeRenderer.drawPipe(x, y, this.heldTile)
+        signalTrace.pipeRenderer.drawPipe(x, y, this.heldTile) // draw the pipe at the updated mouse coordinates
 
         ctx.restore()
     }

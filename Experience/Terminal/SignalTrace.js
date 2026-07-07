@@ -1,9 +1,10 @@
 import SignalTracePipeRenderer from './SignalTracePipeRenderer.js'
 import SignalTraceLevelOne from './SignalTraceLevelOne.js'
 import SignalTraceLevelTwo from './SignalTraceLevelTwo.js'
+import SignalTraceLevelThree from './SignalTraceLevelThree.js'
+import SignalTraceLevelFour from './SignalTraceLevelFour.js'
 import SignalTraceDragController from './SignalTraceDragController.js'
 import SignalTraceInventory from './SignalTraceInventory.js'
-import SignalTraceEndpointRenderer from './SignalTraceEndpointRenderer.js'
 export default class SignalTrace {
     constructor(terminal) {
         this.terminal = terminal;  // store a reference to the terminal 
@@ -21,7 +22,7 @@ export default class SignalTrace {
         // After drawing to the canvas, we need to tell Three.js that the texture changed.
         this.texture = this.terminal.texture;
 
-        this.level = new SignalTraceLevelTwo()
+        this.level = new SignalTraceLevelFour()
 
         /**
  * Grid properties.
@@ -30,7 +31,7 @@ export default class SignalTrace {
         this.rows = this.level.rows
         this.cols = this.level.cols
 
-        this.tileSize = 170
+        this.tileSize = 140
         this.tileGap = 8
 
         this.boardStartY = 300
@@ -61,9 +62,13 @@ export default class SignalTrace {
             direction: this.level.target.direction
         }
 
+        
+
         if (!this.target.direction) {
             this.target.direction = "left"
         }
+
+    
 
 
         this.pipeRenderer = new SignalTracePipeRenderer(
@@ -71,10 +76,13 @@ export default class SignalTrace {
             this.tileSize,
             this.tileGap
         )
-        this.endpointRenderer = new SignalTraceEndpointRenderer(this)
 
+        /**
+         * the inventory is an object that manages the inventory state and drawing
+         * SignalTrace owns the inventory, and passes itself to the inventory so it can call back to SignalTrace when needed
+         */
         this.inventory = new SignalTraceInventory(this)
-
+        console.log(this)
         this.dragController = new SignalTraceDragController(this)
         /**
  * Whether the current pipe layout creates
@@ -247,11 +255,20 @@ export default class SignalTrace {
 
                 const tile = this.grid[row][col]
                 this.pipeRenderer.drawPipe(x, y, tile)
+                if (row === this.source.row && col === this.source.col) {
+                    this.drawNode(x, y, "#00ff99", "SRC")
+                }
+
+                if (row === this.target.row && col === this.target.col) {
+                    this.drawNode(x, y, "#ff8a3d", "ARC")
+                }
+
+                if (this.relay && row === this.relay.row && col === this.relay.col) {
+                    this.drawNode(x, y, "#46d9ff", "RLY")
+                }
 
             }
         }
-        this.endpointRenderer.drawEndpoint(this.source, "SRC")
-        this.endpointRenderer.drawEndpoint(this.target, "ARC")
 
         this.inventory.draw()
 
@@ -261,7 +278,7 @@ export default class SignalTrace {
 
 
     getTileAtCanvasPosition(canvasX, canvasY) {
-        const boardStartX = this.boardStartX
+        const boardStartX = this.boardStartX 
 
         const localX = canvasX - boardStartX
         const localY = canvasY - this.boardStartY
@@ -313,23 +330,13 @@ export default class SignalTrace {
 
         const tile = this.grid[row][col]
 
-        if (!tile) {
-            return false
-        }
+        if (!tile ||
+            tile.locked ||
+            tile.blocked ||
+            !tile.connections ||
+            tile.connections.length === 0
 
-        if (tile.locked) {
-            return false
-        }
-
-        if (tile.blocked) {
-            return false
-        }
-
-        if (!tile.connections) {
-            return false
-        }
-
-        if (tile.connections.length === 0) {
+        ) {
             return false
         }
 
@@ -577,17 +584,33 @@ export default class SignalTrace {
         return false
     }
 
-    isEndpointPosition(row, col) {
-        if (this.isSourcePosition(row, col)) {
-            return true
-        }
-
-        if (this.isTargetPosition(row, col)) {
-            return true
-        }
-
+    isRelayPosition(row, col) {
+    if (!this.relay) {
         return false
     }
+
+    if (row === this.relay.row && col === this.relay.col) {
+        return true
+    }
+
+    return false
+}
+
+    isEndpointPosition(row, col) {
+    if (this.isSourcePosition(row, col)) {
+        return true
+    }
+
+    if (this.isRelayPosition(row, col)) {
+        return true
+    }
+
+    if (this.isTargetPosition(row, col)) {
+        return true
+    }
+
+    return false
+}
 
 
 
@@ -787,67 +810,135 @@ export default class SignalTrace {
         return true
     }
 
-
-    checkSignalPath() {
-        const visited = new Set()
-        const stack = []
-
-        this.addSourceNeighborPipesToStack(stack)
-
-        while (stack.length > 0) {
-            const currentPosition = stack.pop()
-
-            const row = currentPosition.row
-            const col = currentPosition.col
-            const positionKey = `${row},${col}`
-
-            if (visited.has(positionKey)) {
-                continue
-            }
-
-            visited.add(positionKey)
-
-            const currentTile = this.grid[row][col]
-
-            if (!this.isPipeTile(currentTile)) {
-                continue
-            }
-
-            if (this.pipeConnectsToTarget(row, col, currentTile)) {
-                return true
-            }
-
-            for (const direction of currentTile.connections) {
-                const neighborPosition = this.getNeighborPosition(row, col, direction)
-
-                if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-
-                if (this.isSourcePosition(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-
-                if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-
-                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-                if (!this.tilesConnect(currentTile, neighborTile, direction)) {
-                    continue
-                }
-
-                const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
-
-                if (!visited.has(neighborKey)) {
-                    stack.push(neighborPosition)
-                }
-            }
+checkSignalPath() {
+    if (this.relay) {
+        if (!this.canReachEndpoint(this.source, this.relay)) {
+            return false
         }
 
+        if (!this.canReachEndpoint(this.relay, this.target)) {
+            return false
+        }
+
+        return true
+    }
+
+    return this.canReachEndpoint(this.source, this.target)
+}
+
+canReachEndpoint(startEndpoint, endEndpoint) {
+    const visited = new Set()
+    const stack = []
+
+    this.addEndpointNeighborPipesToStack(stack, startEndpoint)
+
+    while (stack.length > 0) {
+        const currentPosition = stack.pop()
+
+        const row = currentPosition.row
+        const col = currentPosition.col
+        const positionKey = `${row},${col}`
+
+        if (visited.has(positionKey)) {
+            continue
+        }
+
+        visited.add(positionKey)
+
+        const currentTile = this.grid[row][col]
+
+        if (!this.isPipeTile(currentTile)) {
+            continue
+        }
+
+        if (this.pipeConnectsToEndpoint(row, col, currentTile, endEndpoint)) {
+            return true
+        }
+
+        for (const direction of currentTile.connections) {
+            const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
+                continue
+            }
+
+            const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+            if (!this.tilesConnect(currentTile, neighborTile, direction)) {
+                continue
+            }
+
+            const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
+
+            if (!visited.has(neighborKey)) {
+                stack.push(neighborPosition)
+            }
+        }
+    }
+
+    return false
+}
+
+addEndpointNeighborPipesToStack(stack, endpoint) {
+    const directions = ["up", "down", "left", "right"]
+
+    for (const direction of directions) {
+        const neighborPosition = this.getNeighborPosition(
+            endpoint.row,
+            endpoint.col,
+            direction
+        )
+
+        if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+            continue
+        }
+
+        if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
+            continue
+        }
+
+        const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+        if (!this.isPipeTile(neighborTile)) {
+            continue
+        }
+
+        const directionBackToEndpoint = this.getOppositeDirection(direction)
+
+        if (!directionBackToEndpoint) {
+            continue
+        }
+
+        if (!neighborTile.connections.includes(directionBackToEndpoint)) {
+            continue
+        }
+
+        stack.push({
+            row: neighborPosition.row,
+            col: neighborPosition.col
+        })
+    }
+}
+
+pipeConnectsToEndpoint(row, col, tile, endpoint) {
+    if (!this.isPipeTile(tile)) {
         return false
     }
+
+    for (const direction of tile.connections) {
+        const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+        if (neighborPosition.row === endpoint.row && neighborPosition.col === endpoint.col) {
+            return true
+        }
+    }
+
+    return false
+}
 
     addSourceNeighborPipesToStack(stack) {
         const directions = ["up", "down", "left", "right"]
