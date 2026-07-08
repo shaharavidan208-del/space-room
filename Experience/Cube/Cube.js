@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
-import GUI from 'lil-gui'
 import Rotator from './Rotator.js'
 
 // ============================================================
@@ -67,7 +66,6 @@ export default class Cube {
         // const axesHelper = new THREE.AxesHelper(5)
         // scene.add(axesHelper)
         this.scene = scene
-        const gui = new GUI()
         // Flat references to all cubies and stickers — used for iteration in solve detection
         this.pieces = []  // 27 cubie meshes
         this.edges = []   // 54 sticker meshes

@@ -27,22 +27,27 @@ export default class SignalTraceLevelThree {
             row: 5,
             col: 3
         }
+
+        this.relay = {
+            row: 2,
+            col: 3
+        }
         this.inventory = [
             {
-            connections: ["left", "down"],
-                count: 1
-            },
-            {
             connections: ["up", "down"],
-                count: 8
+                count: 5
             },
             {
             connections: ["up", "left"],
+                count: 2
+            },
+             {
+            connections: ["down", "left"],
                 count: 1
             },
              {
             connections: ["up", "right"],
-                count: 1
+                count: 2
             },
             {
             connections: ["right", "left"],
@@ -50,6 +55,10 @@ export default class SignalTraceLevelThree {
             },
             {
             connections: ["down", "right"],
+                count: 1
+            },
+            {
+            connections: ["down", "left", "right"],
                 count: 1
             },
         ]
@@ -78,7 +87,7 @@ export default class SignalTraceLevelThree {
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
-                { connections: [] },
+                { connections: ["right"] },
                 { connections: [] },
                 { connections: [] }
             ],
@@ -102,7 +111,7 @@ export default class SignalTraceLevelThree {
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
-                { connections: ["left"] },
+                { connections: ["up"] },
                 { connections: [] },
                 { connections: [] }
             ]

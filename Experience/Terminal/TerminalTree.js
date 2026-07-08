@@ -102,7 +102,6 @@ const TerminalTree = {
         header: "COGNITIVE CALIBRATION UNIT",
         aiText: "The Rubik's Cube is interactive. Drag across a face to rotate a layer. Drag across empty space to rotate the whole cube on a controlled axis. Try not to panic when the colored squares move. That is generally considered the point.",
         choices: [
-            { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
             { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
             { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
         ]

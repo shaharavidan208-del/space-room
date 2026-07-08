@@ -1,73 +1,78 @@
-export default class SignalTraceLevelThree {
+export default class SignalTraceLevelSix {
     constructor() {
         /**
          * Level display info.
-         * SignalTrace can use this text when drawing the terminal UI.
          */
-        this.title = "LEVEL 02 // ARCHIVE HANDSHAKE"
-        this.description = "Restore a basic signal route from SRC to ARC."
+        this.title = "LEVEL 06 // RELAY LOCK"
+        this.description = "Route the signal through the relay and repair the locked circuit chain."
 
         /**
-         * Board size for this level.
+         * Board size.
          */
         this.rows = 6
         this.cols = 6
 
         /**
          * Fixed signal endpoints.
-         * SRC is the signal source.
-         * ARC is the archive target.
+         *
+         * SRC only exits to the right.
+         * RLY is touched from the left.
+         * ARC is entered from the left.
          */
         this.source = {
             row: 0,
             col: 0
         }
 
+        this.relay = {
+            row: 2,
+            col: 4
+        }
+
         this.target = {
             row: 5,
-            col: 3
+            col: 5
         }
+
+        /**
+         * Exact inventory for the missing route.
+         *
+         * Intended path:
+         * SRC → down/right into locked middle rail → RLY
+         * then from RLY → down through locked bend → bottom rail → ARC.
+         */
         this.inventory = [
             {
-            connections: ["left", "down"],
+                connections: ["left", "down"],
                 count: 1
             },
             {
-            connections: ["up", "down"],
-                count: 8
+                connections: ["up", "down"],
+                count: 2
             },
             {
-            connections: ["up", "left"],
-                count: 1
-            },
-             {
-            connections: ["up", "right"],
-                count: 1
+                connections: ["up", "right"],
+                count: 2
             },
             {
-            connections: ["right", "left"],
+                connections: ["down", "left", "right"],
                 count: 1
             },
             {
-            connections: ["down", "right"],
+                connections: ["down", "right"],
                 count: 1
             },
+            {
+                connections: ["left", "right"],
+                count: 1
+            }
         ]
-
     }
 
     createGrid() {
         return [
-             [
-                { connections: ["down"] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-            ],
             [
-                { connections: [] },
+                { connections: ["right"] },
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
@@ -85,26 +90,34 @@ export default class SignalTraceLevelThree {
             [
                 { connections: [] },
                 { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: []},
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
+                { connections: ["left", "right"], locked: true },
                 { connections: [] },
                 { connections: ["left"] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
                 { connections: [] },
                 { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: ["up", "left"], locked: true },
+                { connections: [] },
+                { connections: [] }
+            ],
+            [
+                { connections: [] },
+                { connections: [] },
+                { connections: [] },
+                { connections: ["left", "right"], locked: true },
+                { connections: [] },
+                { connections: ["left"] }
             ]
         ]
     }

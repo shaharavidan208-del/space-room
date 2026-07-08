@@ -3,6 +3,8 @@ import SignalTraceLevelOne from './SignalTraceLevelOne.js'
 import SignalTraceLevelTwo from './SignalTraceLevelTwo.js'
 import SignalTraceLevelThree from './SignalTraceLevelThree.js'
 import SignalTraceLevelFour from './SignalTraceLevelFour.js'
+import SignalTraceLevelFive from './SignalTraceLevelFive.js'
+import SignalTraceLevelSix from './SignalTraceLevelSix.js'
 import SignalTraceDragController from './SignalTraceDragController.js'
 import SignalTraceInventory from './SignalTraceInventory.js'
 export default class SignalTrace {
@@ -22,7 +24,7 @@ export default class SignalTrace {
         // After drawing to the canvas, we need to tell Three.js that the texture changed.
         this.texture = this.terminal.texture;
 
-        this.level = new SignalTraceLevelFour()
+        this.level = new SignalTraceLevelSix()
 
         /**
  * Grid properties.
@@ -76,6 +78,11 @@ export default class SignalTrace {
             this.tileSize,
             this.tileGap
         )
+
+        this.relay = {
+            row: this.level.relay.row,
+            col: this.level.relay.col,
+        }
 
         /**
          * the inventory is an object that manages the inventory state and drawing
@@ -884,9 +891,9 @@ canReachEndpoint(startEndpoint, endEndpoint) {
 }
 
 addEndpointNeighborPipesToStack(stack, endpoint) {
-    const directions = ["up", "down", "left", "right"]
+    const endpointConnections = this.getEndpointConnections(endpoint)
 
-    for (const direction of directions) {
+    for (const direction of endpointConnections) {
         const neighborPosition = this.getNeighborPosition(
             endpoint.row,
             endpoint.col,
@@ -929,10 +936,26 @@ pipeConnectsToEndpoint(row, col, tile, endpoint) {
         return false
     }
 
+    const endpointConnections = this.getEndpointConnections(endpoint)
+
     for (const direction of tile.connections) {
         const neighborPosition = this.getNeighborPosition(row, col, direction)
 
-        if (neighborPosition.row === endpoint.row && neighborPosition.col === endpoint.col) {
+        if (neighborPosition.row !== endpoint.row) {
+            continue
+        }
+
+        if (neighborPosition.col !== endpoint.col) {
+            continue
+        }
+
+        const directionFromEndpointToPipe = this.getOppositeDirection(direction)
+
+        if (!directionFromEndpointToPipe) {
+            continue
+        }
+
+        if (endpointConnections.includes(directionFromEndpointToPipe)) {
             return true
         }
     }
@@ -940,6 +963,19 @@ pipeConnectsToEndpoint(row, col, tile, endpoint) {
     return false
 }
 
+getEndpointConnections(endpoint) {
+    const endpointTile = this.grid[endpoint.row][endpoint.col]
+
+    if (endpointTile && endpointTile.connections && endpointTile.connections.length > 0) {
+        return endpointTile.connections
+    }
+
+    if (endpoint.direction) {
+        return [endpoint.direction]
+    }
+
+    return []
+}
     addSourceNeighborPipesToStack(stack) {
         const directions = ["up", "down", "left", "right"]
 
@@ -1025,17 +1061,6 @@ pipeConnectsToEndpoint(row, col, tile, endpoint) {
         return false
     }
 
-    isEndpointPosition(row, col) {
-        if (this.isSourcePosition(row, col)) {
-            return true
-        }
-
-        if (this.isTargetPosition(row, col)) {
-            return true
-        }
-
-        return false
-    }
 
 
 

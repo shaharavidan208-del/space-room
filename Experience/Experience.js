@@ -12,6 +12,7 @@ import CubeInput from './Cube/CubeInput.js'
 import gsap from 'gsap'
 import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { Timer } from "three";
 
 
 export default class Experience {
@@ -280,6 +281,190 @@ export default class Experience {
         // Only need to update the projection matrix ONCE after setting all camera bounds
         novaLightMain.shadow.camera.updateProjectionMatrix();
 
+        /**
+ * SHADOW DEBUG GUI
+ * Put this after:
+ * novaLightMain.shadow.camera.updateProjectionMatrix();
+ */
+
+const shadowDebug = {
+    helpersVisible: true,
+    shadowMapSize: 1024,
+    shadowType: 'PCFShadowMap'
+};
+
+const updateShadowHelpers = () => {
+    novaLightMain.target.updateMatrixWorld();
+    novaLightMain.updateMatrixWorld();
+
+    novaLightMain.shadow.camera.updateProjectionMatrix();
+    novaLightMain.shadow.camera.updateMatrixWorld();
+
+    mainLightHelper.update();
+    shadowCameraHelper.update();
+};
+
+const recreateShadowMap = () => {
+    novaLightMain.shadow.mapSize.set(
+        shadowDebug.shadowMapSize,
+        shadowDebug.shadowMapSize
+    );
+
+    novaLightMain.shadow.map = null;
+    novaLightMain.shadow.needsUpdate = true;
+};
+
+const setShadowType = () => {
+    if (shadowDebug.shadowType === 'BasicShadowMap') {
+        renderer.shadowMap.type = THREE.BasicShadowMap;
+    }
+
+    if (shadowDebug.shadowType === 'PCFShadowMap') {
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+    }
+
+    if (shadowDebug.shadowType === 'PCFSoftShadowMap') {
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
+    novaLightMain.shadow.map = null;
+    novaLightMain.shadow.needsUpdate = true;
+};
+
+// Helpers
+const mainLightHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
+const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
+
+this.scene.add(mainLightHelper);
+this.scene.add(shadowCameraHelper);
+
+mainLightHelper.visible = shadowDebug.helpersVisible;
+shadowCameraHelper.visible = shadowDebug.helpersVisible;
+
+// GUI
+const shadowFolder = this.gu.addFolder('Shadow Setup');
+
+shadowFolder
+    .add(novaLightMain, 'intensity', 0, 40, 0.1)
+    .name('Light Intensity')
+    .onChange(updateShadowHelpers);
+
+shadowFolder
+    .add(novaLightMain, 'castShadow')
+    .name('Cast Shadow')
+    .onChange(() => {
+        novaLightMain.shadow.needsUpdate = true;
+    });
+
+const lightPositionFolder = shadowFolder.addFolder('Light Position');
+
+lightPositionFolder
+    .add(novaLightMain.position, 'x', -50, 50, 0.1)
+    .name('Light X')
+    .onChange(updateShadowHelpers);
+
+lightPositionFolder
+    .add(novaLightMain.position, 'y', -50, 50, 0.1)
+    .name('Light Y')
+    .onChange(updateShadowHelpers);
+
+lightPositionFolder
+    .add(novaLightMain.position, 'z', -80, 20, 0.1)
+    .name('Light Z')
+    .onChange(updateShadowHelpers);
+
+const targetFolder = shadowFolder.addFolder('Light Target');
+
+targetFolder
+    .add(novaLightMain.target.position, 'x', -30, 30, 0.1)
+    .name('Target X')
+    .onChange(updateShadowHelpers);
+
+targetFolder
+    .add(novaLightMain.target.position, 'y', -10, 30, 0.1)
+    .name('Target Y')
+    .onChange(updateShadowHelpers);
+
+targetFolder
+    .add(novaLightMain.target.position, 'z', -40, 20, 0.1)
+    .name('Target Z')
+    .onChange(updateShadowHelpers);
+
+const shadowCameraFolder = shadowFolder.addFolder('Shadow Camera Box');
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'left', -60, 0, 0.1)
+    .name('Left')
+    .onChange(updateShadowHelpers);
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'right', 0, 60, 0.1)
+    .name('Right')
+    .onChange(updateShadowHelpers);
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'top', 0, 60, 0.1)
+    .name('Top')
+    .onChange(updateShadowHelpers);
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'bottom', -60, 0, 0.1)
+    .name('Bottom')
+    .onChange(updateShadowHelpers);
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'near', 0.1, 20, 0.1)
+    .name('Near')
+    .onChange(updateShadowHelpers);
+
+shadowCameraFolder
+    .add(novaLightMain.shadow.camera, 'far', 1, 150, 0.1)
+    .name('Far')
+    .onChange(updateShadowHelpers);
+
+const shadowQualityFolder = shadowFolder.addFolder('Shadow Quality');
+
+shadowQualityFolder
+    .add(shadowDebug, 'shadowMapSize', [512, 1024, 2048, 4096])
+    .name('Map Size')
+    .onChange(recreateShadowMap);
+
+shadowQualityFolder
+    .add(shadowDebug, 'shadowType', [
+        'BasicShadowMap',
+        'PCFShadowMap',
+        'PCFSoftShadowMap'
+    ])
+    .name('Shadow Type')
+    .onChange(setShadowType);
+
+shadowQualityFolder
+    .add(novaLightMain.shadow, 'bias', -0.01, 0.01, 0.00001)
+    .name('Bias')
+    .onChange(() => {
+        novaLightMain.shadow.needsUpdate = true;
+    });
+
+shadowQualityFolder
+    .add(novaLightMain.shadow, 'normalBias', 0, 0.2, 0.001)
+    .name('Normal Bias')
+    .onChange(() => {
+        novaLightMain.shadow.needsUpdate = true;
+    });
+
+shadowFolder
+    .add(shadowDebug, 'helpersVisible')
+    .name('Show Helpers')
+    .onChange((visible) => {
+        mainLightHelper.visible = visible;
+        shadowCameraHelper.visible = visible;
+    });
+
+shadowFolder.open();
+shadowCameraFolder.open();
+
+updateShadowHelpers();
+
         // this.scene.add(novaLightWideA);
         // this.scene.add(novaLightWideA.target);
         // this.scene.add(novaLightWideB);
@@ -321,7 +506,6 @@ export default class Experience {
 
         // Add the visible lines showing light direction and shadow bounds
         const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
-        const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
         // Force helpers to redraw when GUI sliders are moved
         // const updateMainHelpers = () => {
         //     mainHelper.update();
@@ -630,9 +814,9 @@ export default class Experience {
 
             return false;
         };
-        console.log(renderer.info)
         const monitorMeshes = []
         const ceilingMeshes = [];
+        const glbDebugMeshes = [];
 
         let monitorMesh
 
@@ -642,6 +826,7 @@ export default class Experience {
                 if (!obj.isMesh) {
                     return;
                 }
+                glbDebugMeshes.push(obj);
 
 
 
@@ -656,12 +841,12 @@ export default class Experience {
                     // Ensure it falls back to standard, cheap transparency
                     obj.material.transparent = true;
                     obj.material.needsUpdate = true;
-                    // IF YOU RE-ENABLE THIS I WILL FIND YOU 🤬 
                 }
                 if (obj.isMesh) {
 
                     if (obj.name.includes("Auto") || obj.name === "") {
                         monitorMeshes.push(obj)
+                        obj.castShadow = true
                     }
 
                     if (shouldAddHotspotOccluder(obj)) {
@@ -691,28 +876,20 @@ export default class Experience {
                         obj.material.side = THREE.DoubleSide;
                     }
 
-                    if (obj.name === "Mesh004" || obj.name === "Mesh004_2") { // floor 
-                        // this.floorMesh = obj
-                    }
-                    // 3. If it's just a normal PC part, nuke the grey and make it pitch black
-                    if (obj.name === "Cube002_1") {
-                        obj.material = new THREE.MeshStandardMaterial({
-                            color: 0x222222,
-                            roughness: 0.45,
-                            metalness: 0.85
-                        });
-                        obj.material.needsUpdate = true;
+                    if (obj.name.includes("Mesh0")) { // floor 
+                        obj.receiveShadow = true
                     }
 
 
                     if (obj.name === "Cube027" || obj.name === "Cube003" || obj.name.includes("Cylinder") || obj.name === "mouse" || obj.name === "Cube002" || obj.namee === "Circle001_3") {
-                        // Bed, controller, 
+                        // Bed, Chair, etc
+                        obj.castShadow = true
+                    }
+
+                    if (obj.name === "Top_Tb_Tex_0") {
                         obj.castShadow = true
                         obj.receiveShadow = true
                     }
-
-                    if (obj.name === "Top_Tb_Tex_0")
-                        obj.castShadow = true
 
                     if (obj.name === "Cube_Screen_0") {
                         monitorMeshes.push(obj)
@@ -810,6 +987,149 @@ export default class Experience {
 
         const raycaster = new THREE.Raycaster()
         const pointer = new THREE.Vector2()
+
+        const isVisibleInHierarchy = (object) => {
+    let current = object;
+
+    while (current) {
+        if (!current.visible) {
+            return false;
+        }
+
+        current = current.parent;
+    }
+
+    return true;
+};
+
+const getObjectPath = (object) => {
+    const names = [];
+    let current = object;
+
+    while (current && current !== this.scene) {
+        let label = current.name;
+
+        if (!label || label.trim() === "") {
+            label = `[${current.type}]`;
+        }
+
+        names.unshift(label);
+        current = current.parent;
+    }
+
+    return names.join(" > ");
+};
+
+const getMaterialDebugName = (material) => {
+    if (!material) {
+        return "No material";
+    }
+
+    if (Array.isArray(material)) {
+        const materialNames = [];
+
+        for (const singleMaterial of material) {
+            if (singleMaterial.name && singleMaterial.name.trim() !== "") {
+                materialNames.push(singleMaterial.name);
+            }
+            else {
+                materialNames.push(singleMaterial.type);
+            }
+        }
+
+        return materialNames.join(", ");
+    }
+
+    if (material.name && material.name.trim() !== "") {
+        return material.name;
+    }
+
+    return material.type;
+};
+
+const inspectGlbObjectFromPointer = (event) => {
+    // Hold Shift while clicking so this does not mess with normal interactions.
+    if (!event.shiftKey) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.stopImmediatePropagation) {
+        event.stopImmediatePropagation();
+    }
+
+    const rect = renderer.domElement.getBoundingClientRect();
+
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, this.camera);
+
+    const hits = raycaster.intersectObjects(glbDebugMeshes, true);
+
+    if (hits.length === 0) {
+        console.log("No GLB object hit.");
+        return;
+    }
+
+    let selectedHit = null;
+
+    for (const hit of hits) {
+        if (isVisibleInHierarchy(hit.object)) {
+            selectedHit = hit;
+            break;
+        }
+    }
+
+    if (!selectedHit) {
+        console.log("Only hidden GLB objects were hit.");
+        return;
+    }
+
+    const object = selectedHit.object;
+    const worldPosition = new THREE.Vector3();
+
+    object.getWorldPosition(worldPosition);
+
+    console.group("🎯 GLB Object Inspector");
+    console.log("Object name:", object.name);
+    console.log("Object type:", object.type);
+    console.log("Material:", getMaterialDebugName(object.material));
+    console.log("Parent:", object.parent ? object.parent.name : "No parent");
+    console.log("Full path:", getObjectPath(object));
+    console.log("Distance from camera:", selectedHit.distance);
+    console.log("Hit point:", selectedHit.point);
+    console.log("Object world position:", worldPosition);
+    console.log("Object:", object);
+
+    if (selectedHit.uv) {
+        console.log("UV:", selectedHit.uv);
+    }
+
+    console.groupEnd();
+
+    const maxHitsToShow = Math.min(hits.length, 10);
+    const hitTable = [];
+
+    for (let i = 0; i < maxHitsToShow; i++) {
+        const hit = hits[i];
+
+        hitTable.push({
+            index: i,
+            name: hit.object.name,
+            material: getMaterialDebugName(hit.object.material),
+            distance: hit.distance,
+            visible: isVisibleInHierarchy(hit.object),
+            path: getObjectPath(hit.object)
+        });
+    }
+
+    console.table(hitTable);
+};
+
+renderer.domElement.addEventListener("pointerdown", inspectGlbObjectFromPointer, true);
 
         const getSignalTrace = () => {
             if (this.currPointName !== "Terminal") {
@@ -1009,7 +1329,7 @@ renderer.domElement.addEventListener("pointercancel", (event) => {
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
         // ---------------------------------------------------------
-        const clock = new THREE.Clock()
+        const timer = new THREE.Timer()
         const cubeWorldPos = new THREE.Vector3();
 
         // [ MEMORY PRE-ALLOCATION ]
@@ -1030,22 +1350,23 @@ renderer.domElement.addEventListener("pointercancel", (event) => {
             hotspotNeedUpdate = true
         });
 
-        const tick = () => {
+        const tick = (timestamp) => {
             controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
             renderer.render(this.scene, this.camera);
 
-
-            const elapsedTime = clock.getElapsedTime();
+            timer.update(timestamp)
+            const elapsedTime = timer.getElapsed();
+            const delta = timer.getDelta()
             // stats.begin();
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true
                 // 1. Lerp position and look target
-                this.camera.position.lerp(cameraTarget, 0.08);
-                controls.target.lerp(lookTarget, 0.08);
+                this.camera.position.lerp(cameraTarget , delta * 6); 
+                controls.target.lerp(lookTarget, delta * 6); 
 
                 // 2. Lerp the FOV
-                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 0.08);
+                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov,  delta * 6);
                 this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
 
                 // Check if we've arrived (close enough)
