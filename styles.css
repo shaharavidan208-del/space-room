@@ -269,3 +269,43 @@ canvas {
         rgba(0, 255, 255, 0.0)
     );
 }
+
+.social-links {
+    position: fixed;
+    right: 28px;
+    bottom: 24px;
+    z-index: 50;
+
+    display: flex;
+    gap: 12px;
+}
+
+.social-link {
+    width: 52px;
+    height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+
+    background: rgba(5, 5, 5, 0.58);
+    text-decoration: none;
+
+    backdrop-filter: blur(6px);
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.social-link:hover {
+    transform: translateY(-2px);
+}
+
+.social-icon {
+    width: 42px;
+    height: 42px;
+    display: block;
+}

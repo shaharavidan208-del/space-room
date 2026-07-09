@@ -24,7 +24,7 @@ export default class SignalTrace {
         // After drawing to the canvas, we need to tell Three.js that the texture changed.
         this.texture = this.terminal.texture;
 
-        this.level = new SignalTraceLevelSix()
+        this.level = new SignalTraceLevelFive()
 
         /**
  * Grid properties.

@@ -66,6 +66,7 @@ export default class Experience {
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
         this.scene.add(overlay)
         this.gu = new GUI()
+        this.gu.hide()
         this.terminal = new TerminalCanvas(this);
         /**
         * Lights
