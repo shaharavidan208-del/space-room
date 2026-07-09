@@ -120,7 +120,16 @@ export default class Experience {
                 // Wait a little
                 window.setTimeout(() => {
                     // Animate overlay
-                    gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0, delay: 1 })
+                    gsap.to(overlayMaterial.uniforms.uAlpha, {
+                        duration: 3,
+                        value: 0,
+                        delay: 1,
+                        onComplete: () => {
+                            this.scene.remove(overlay);
+                            overlayGeometry.dispose();
+                            overlayMaterial.dispose();
+                        }
+                    });
 
                     // Update loadingBarElement
                     loadingBarElement.classList.add('ended')
@@ -146,14 +155,16 @@ export default class Experience {
         // Renderer
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // FPS counter 
         const stats = new Stats();
-        // document.body.appendChild(stats.dom);
+        document.body.appendChild(stats.dom);
+
+        
 
 
         /**
@@ -281,189 +292,9 @@ export default class Experience {
         // Only need to update the projection matrix ONCE after setting all camera bounds
         novaLightMain.shadow.camera.updateProjectionMatrix();
 
-        /**
- * SHADOW DEBUG GUI
- * Put this after:
- * novaLightMain.shadow.camera.updateProjectionMatrix();
- */
 
-const shadowDebug = {
-    helpersVisible: true,
-    shadowMapSize: 1024,
-    shadowType: 'PCFShadowMap'
-};
 
-const updateShadowHelpers = () => {
-    novaLightMain.target.updateMatrixWorld();
-    novaLightMain.updateMatrixWorld();
 
-    novaLightMain.shadow.camera.updateProjectionMatrix();
-    novaLightMain.shadow.camera.updateMatrixWorld();
-
-    mainLightHelper.update();
-    shadowCameraHelper.update();
-};
-
-const recreateShadowMap = () => {
-    novaLightMain.shadow.mapSize.set(
-        shadowDebug.shadowMapSize,
-        shadowDebug.shadowMapSize
-    );
-
-    novaLightMain.shadow.map = null;
-    novaLightMain.shadow.needsUpdate = true;
-};
-
-const setShadowType = () => {
-    if (shadowDebug.shadowType === 'BasicShadowMap') {
-        renderer.shadowMap.type = THREE.BasicShadowMap;
-    }
-
-    if (shadowDebug.shadowType === 'PCFShadowMap') {
-        renderer.shadowMap.type = THREE.PCFShadowMap;
-    }
-
-    if (shadowDebug.shadowType === 'PCFSoftShadowMap') {
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    }
-
-    novaLightMain.shadow.map = null;
-    novaLightMain.shadow.needsUpdate = true;
-};
-
-// Helpers
-const mainLightHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
-const shadowCameraHelper = new THREE.CameraHelper(novaLightMain.shadow.camera);
-
-this.scene.add(mainLightHelper);
-this.scene.add(shadowCameraHelper);
-
-mainLightHelper.visible = shadowDebug.helpersVisible;
-shadowCameraHelper.visible = shadowDebug.helpersVisible;
-
-// GUI
-const shadowFolder = this.gu.addFolder('Shadow Setup');
-
-shadowFolder
-    .add(novaLightMain, 'intensity', 0, 40, 0.1)
-    .name('Light Intensity')
-    .onChange(updateShadowHelpers);
-
-shadowFolder
-    .add(novaLightMain, 'castShadow')
-    .name('Cast Shadow')
-    .onChange(() => {
-        novaLightMain.shadow.needsUpdate = true;
-    });
-
-const lightPositionFolder = shadowFolder.addFolder('Light Position');
-
-lightPositionFolder
-    .add(novaLightMain.position, 'x', -50, 50, 0.1)
-    .name('Light X')
-    .onChange(updateShadowHelpers);
-
-lightPositionFolder
-    .add(novaLightMain.position, 'y', -50, 50, 0.1)
-    .name('Light Y')
-    .onChange(updateShadowHelpers);
-
-lightPositionFolder
-    .add(novaLightMain.position, 'z', -80, 20, 0.1)
-    .name('Light Z')
-    .onChange(updateShadowHelpers);
-
-const targetFolder = shadowFolder.addFolder('Light Target');
-
-targetFolder
-    .add(novaLightMain.target.position, 'x', -30, 30, 0.1)
-    .name('Target X')
-    .onChange(updateShadowHelpers);
-
-targetFolder
-    .add(novaLightMain.target.position, 'y', -10, 30, 0.1)
-    .name('Target Y')
-    .onChange(updateShadowHelpers);
-
-targetFolder
-    .add(novaLightMain.target.position, 'z', -40, 20, 0.1)
-    .name('Target Z')
-    .onChange(updateShadowHelpers);
-
-const shadowCameraFolder = shadowFolder.addFolder('Shadow Camera Box');
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'left', -60, 0, 0.1)
-    .name('Left')
-    .onChange(updateShadowHelpers);
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'right', 0, 60, 0.1)
-    .name('Right')
-    .onChange(updateShadowHelpers);
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'top', 0, 60, 0.1)
-    .name('Top')
-    .onChange(updateShadowHelpers);
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'bottom', -60, 0, 0.1)
-    .name('Bottom')
-    .onChange(updateShadowHelpers);
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'near', 0.1, 20, 0.1)
-    .name('Near')
-    .onChange(updateShadowHelpers);
-
-shadowCameraFolder
-    .add(novaLightMain.shadow.camera, 'far', 1, 150, 0.1)
-    .name('Far')
-    .onChange(updateShadowHelpers);
-
-const shadowQualityFolder = shadowFolder.addFolder('Shadow Quality');
-
-shadowQualityFolder
-    .add(shadowDebug, 'shadowMapSize', [512, 1024, 2048, 4096])
-    .name('Map Size')
-    .onChange(recreateShadowMap);
-
-shadowQualityFolder
-    .add(shadowDebug, 'shadowType', [
-        'BasicShadowMap',
-        'PCFShadowMap',
-        'PCFSoftShadowMap'
-    ])
-    .name('Shadow Type')
-    .onChange(setShadowType);
-
-shadowQualityFolder
-    .add(novaLightMain.shadow, 'bias', -0.01, 0.01, 0.00001)
-    .name('Bias')
-    .onChange(() => {
-        novaLightMain.shadow.needsUpdate = true;
-    });
-
-shadowQualityFolder
-    .add(novaLightMain.shadow, 'normalBias', 0, 0.2, 0.001)
-    .name('Normal Bias')
-    .onChange(() => {
-        novaLightMain.shadow.needsUpdate = true;
-    });
-
-shadowFolder
-    .add(shadowDebug, 'helpersVisible')
-    .name('Show Helpers')
-    .onChange((visible) => {
-        mainLightHelper.visible = visible;
-        shadowCameraHelper.visible = visible;
-    });
-
-shadowFolder.open();
-shadowCameraFolder.open();
-
-updateShadowHelpers();
 
         // this.scene.add(novaLightWideA);
         // this.scene.add(novaLightWideA.target);
@@ -681,6 +512,28 @@ updateShadowHelpers();
             });
         }
 
+
+        const setRendererPixelRatio = (ratio) => {
+    renderer.setPixelRatio(ratio);
+
+    const canvasWidth = renderer.domElement.clientWidth;
+    const canvasHeight = renderer.domElement.clientHeight;
+
+    renderer.setSize(canvasWidth, canvasHeight, false);
+
+    if (this.supernova) {
+        const currentRatio = renderer.getPixelRatio();
+
+        this.supernova.uniforms.iResolution.value.set(
+            canvasWidth * currentRatio,
+            canvasHeight * currentRatio
+        );
+    }
+
+    this.canvasRect = renderer.domElement.getBoundingClientRect();
+
+    console.log("Renderer pixel ratio:", renderer.getPixelRatio());
+};
         /**
          * focus mode on cube
          */
@@ -723,6 +576,7 @@ updateShadowHelpers();
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
+                setRendererPixelRatio(Math.min(window.devicePixelRatio, 1.1));
                 lookTarget.copy(activePoint.position.clone());
 
                 // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
@@ -741,6 +595,7 @@ updateShadowHelpers();
         };
 
         const exitFocusMode = () => {
+            setRendererPixelRatio(1);
             showItems(true, ceilingMeshes) // unhide ceiling
             showItems(true, monitorMeshes)
             cubeControlsHint.classList.remove('visible');
@@ -899,7 +754,7 @@ updateShadowHelpers();
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
                         });
-                        
+
                         // If the edges start tiling/repeating when you move it, lock them:
                         // 4. Apply and update
                         obj.material.map = this.terminal.texture;
@@ -989,147 +844,145 @@ updateShadowHelpers();
         const pointer = new THREE.Vector2()
 
         const isVisibleInHierarchy = (object) => {
-    let current = object;
+            let current = object;
 
-    while (current) {
-        if (!current.visible) {
-            return false;
-        }
+            while (current) {
+                if (!current.visible) {
+                    return false;
+                }
 
-        current = current.parent;
-    }
-
-    return true;
-};
-
-const getObjectPath = (object) => {
-    const names = [];
-    let current = object;
-
-    while (current && current !== this.scene) {
-        let label = current.name;
-
-        if (!label || label.trim() === "") {
-            label = `[${current.type}]`;
-        }
-
-        names.unshift(label);
-        current = current.parent;
-    }
-
-    return names.join(" > ");
-};
-
-const getMaterialDebugName = (material) => {
-    if (!material) {
-        return "No material";
-    }
-
-    if (Array.isArray(material)) {
-        const materialNames = [];
-
-        for (const singleMaterial of material) {
-            if (singleMaterial.name && singleMaterial.name.trim() !== "") {
-                materialNames.push(singleMaterial.name);
+                current = current.parent;
             }
-            else {
-                materialNames.push(singleMaterial.type);
+
+            return true;
+        };
+
+        const getObjectPath = (object) => {
+            const names = [];
+            let current = object;
+
+            while (current && current !== this.scene) {
+                let label = current.name;
+
+                if (!label || label.trim() === "") {
+                    label = `[${current.type}]`;
+                }
+
+                names.unshift(label);
+                current = current.parent;
             }
-        }
 
-        return materialNames.join(", ");
-    }
+            return names.join(" > ");
+        };
 
-    if (material.name && material.name.trim() !== "") {
-        return material.name;
-    }
+        const getMaterialDebugName = (material) => {
+            if (!material) {
+                return "No material";
+            }
 
-    return material.type;
-};
+            if (Array.isArray(material)) {
+                const materialNames = [];
 
-const inspectGlbObjectFromPointer = (event) => {
-    // Hold Shift while clicking so this does not mess with normal interactions.
-    if (!event.shiftKey) {
-        return;
-    }
+                for (const singleMaterial of material) {
+                    if (singleMaterial.name && singleMaterial.name.trim() !== "") {
+                        materialNames.push(singleMaterial.name);
+                    }
+                    else {
+                        materialNames.push(singleMaterial.type);
+                    }
+                }
 
-    event.preventDefault();
-    event.stopPropagation();
+                return materialNames.join(", ");
+            }
 
-    if (event.stopImmediatePropagation) {
-        event.stopImmediatePropagation();
-    }
+            if (material.name && material.name.trim() !== "") {
+                return material.name;
+            }
 
-    const rect = renderer.domElement.getBoundingClientRect();
+            return material.type;
+        };
 
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        const inspectGlbObjectFromPointer = (event) => {
+            // Hold Shift while clicking so this does not mess with normal interactions.
+            if (!event.shiftKey) {
+                return;
+            }
 
-    raycaster.setFromCamera(pointer, this.camera);
+            event.preventDefault();
+            event.stopPropagation();
 
-    const hits = raycaster.intersectObjects(glbDebugMeshes, true);
+            if (event.stopImmediatePropagation) {
+                event.stopImmediatePropagation();
+            }
 
-    if (hits.length === 0) {
-        console.log("No GLB object hit.");
-        return;
-    }
+            const rect = renderer.domElement.getBoundingClientRect();
 
-    let selectedHit = null;
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    for (const hit of hits) {
-        if (isVisibleInHierarchy(hit.object)) {
-            selectedHit = hit;
-            break;
-        }
-    }
+            raycaster.setFromCamera(pointer, this.camera);
 
-    if (!selectedHit) {
-        console.log("Only hidden GLB objects were hit.");
-        return;
-    }
+            const hits = raycaster.intersectObjects(glbDebugMeshes, true);
 
-    const object = selectedHit.object;
-    const worldPosition = new THREE.Vector3();
+            if (hits.length === 0) {
+                console.log("No GLB object hit.");
+                return;
+            }
 
-    object.getWorldPosition(worldPosition);
+            let selectedHit = null;
 
-    console.group("🎯 GLB Object Inspector");
-    console.log("Object name:", object.name);
-    console.log("Object type:", object.type);
-    console.log("Material:", getMaterialDebugName(object.material));
-    console.log("Parent:", object.parent ? object.parent.name : "No parent");
-    console.log("Full path:", getObjectPath(object));
-    console.log("Distance from camera:", selectedHit.distance);
-    console.log("Hit point:", selectedHit.point);
-    console.log("Object world position:", worldPosition);
-    console.log("Object:", object);
+            for (const hit of hits) {
+                if (isVisibleInHierarchy(hit.object)) {
+                    selectedHit = hit;
+                    break;
+                }
+            }
 
-    if (selectedHit.uv) {
-        console.log("UV:", selectedHit.uv);
-    }
+            if (!selectedHit) {
+                console.log("Only hidden GLB objects were hit.");
+                return;
+            }
 
-    console.groupEnd();
+            const object = selectedHit.object;
+            const worldPosition = new THREE.Vector3();
 
-    const maxHitsToShow = Math.min(hits.length, 10);
-    const hitTable = [];
+            object.getWorldPosition(worldPosition);
 
-    for (let i = 0; i < maxHitsToShow; i++) {
-        const hit = hits[i];
+            console.group("🎯 GLB Object Inspector");
+            console.log("Object name:", object.name);
+            console.log("Object type:", object.type);
+            console.log("Material:", getMaterialDebugName(object.material));
+            console.log("Parent:", object.parent ? object.parent.name : "No parent");
+            console.log("Full path:", getObjectPath(object));
+            console.log("Distance from camera:", selectedHit.distance);
+            console.log("Hit point:", selectedHit.point);
+            console.log("Object world position:", worldPosition);
+            console.log("Object:", object);
 
-        hitTable.push({
-            index: i,
-            name: hit.object.name,
-            material: getMaterialDebugName(hit.object.material),
-            distance: hit.distance,
-            visible: isVisibleInHierarchy(hit.object),
-            path: getObjectPath(hit.object)
-        });
-    }
+            if (selectedHit.uv) {
+                console.log("UV:", selectedHit.uv);
+            }
 
-    console.table(hitTable);
-};
+            console.groupEnd();
 
-renderer.domElement.addEventListener("pointerdown", inspectGlbObjectFromPointer, true);
+            const maxHitsToShow = Math.min(hits.length, 10);
+            const hitTable = [];
+
+            for (let i = 0; i < maxHitsToShow; i++) {
+                const hit = hits[i];
+
+                hitTable.push({
+                    index: i,
+                    name: hit.object.name,
+                    material: getMaterialDebugName(hit.object.material),
+                    distance: hit.distance,
+                    visible: isVisibleInHierarchy(hit.object),
+                    path: getObjectPath(hit.object)
+                });
+            }
+
+            console.table(hitTable);
+        };
 
         const getSignalTrace = () => {
             if (this.currPointName !== "Terminal") {
@@ -1196,53 +1049,53 @@ renderer.domElement.addEventListener("pointerdown", inspectGlbObjectFromPointer,
          * @returns the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
          */
         const handleMonitorPointerEvent = (event, type) => {
-    const signalTrace = getSignalTrace()
+            const signalTrace = getSignalTrace()
 
-    if (!signalTrace) {
-        return
-    }
+            if (!signalTrace) {
+                return
+            }
 
-    const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+            const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
 
-    if (!canvasPosition) {
-        if (type === "up") {
+            if (!canvasPosition) {
+                if (type === "up") {
+                    signalTrace.handlePointerCancel()
+                }
+
+                return
+            }
+
+            if (type === "down") {
+                renderer.domElement.setPointerCapture(event.pointerId) // set pointer capture is critical for touch events, otherwise the pointerup event won't fire if the user drags outside the canvas
+                signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
+            }
+            else if (type === "move") {
+                signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
+            }
+            else if (type === "up") {
+                signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
+
+                if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+                    renderer.domElement.releasePointerCapture(event.pointerId)
+                }
+            }
+        }
+
+        renderer.domElement.addEventListener("pointercancel", (event) => {
+            const signalTrace = getSignalTrace()
+
+            if (!signalTrace) {
+                return
+            }
+
             signalTrace.handlePointerCancel()
-        }
 
-        return
-    }
+            if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+                renderer.domElement.releasePointerCapture(event.pointerId)
+            }
+        })
 
-    if (type === "down") {
-        renderer.domElement.setPointerCapture(event.pointerId) // set pointer capture is critical for touch events, otherwise the pointerup event won't fire if the user drags outside the canvas
-        signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
-    }
-    else if (type === "move") {
-        signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
-    }
-    else if (type === "up") {
-        signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
 
-        if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-            renderer.domElement.releasePointerCapture(event.pointerId)
-        }
-    }
-}
-
-renderer.domElement.addEventListener("pointercancel", (event) => {
-    const signalTrace = getSignalTrace()
-
-    if (!signalTrace) {
-        return
-    }
-
-    signalTrace.handlePointerCancel()
-
-    if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-        renderer.domElement.releasePointerCapture(event.pointerId)
-    }
-})
-       
-        
 
         renderer.domElement.addEventListener("pointerdown", (event) => handleMonitorPointerEvent(event, "down"))
         renderer.domElement.addEventListener("pointermove", (event) => handleMonitorPointerEvent(event, "move"))
@@ -1258,7 +1111,7 @@ renderer.domElement.addEventListener("pointercancel", (event) => {
         // This physically shrinks the canvas on standard 16:9 or 16:10 monitors, 
         // acting as a massive fill-rate optimization by saving the GPU from 
         // rendering the empty space at the top and bottom of the screen.
-        const TARGET_ASPECT = 21 / 9;
+        const TARGET_ASPECT = 20 / 9;
 
         let hotspotNeedUpdate = false
         window.addEventListener('resize', () => {
@@ -1357,16 +1210,16 @@ renderer.domElement.addEventListener("pointercancel", (event) => {
             timer.update(timestamp)
             const elapsedTime = timer.getElapsed();
             const delta = timer.getDelta()
-            // stats.begin();
+            stats.begin();
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true
                 // 1. Lerp position and look target
-                this.camera.position.lerp(cameraTarget , delta * 6); 
-                controls.target.lerp(lookTarget, delta * 6); 
+                this.camera.position.lerp(cameraTarget, delta * 12);
+                controls.target.lerp(lookTarget, delta * 12);
 
                 // 2. Lerp the FOV
-                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov,  delta * 6);
+                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, delta * 12);
                 this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
 
                 // Check if we've arrived (close enough)
@@ -1450,10 +1303,9 @@ renderer.domElement.addEventListener("pointercancel", (event) => {
             // mainLightHelper.update();
             // shadowCameraHelper.update();
             trackballControls.target.set(target.x, target.y, target.z)
-            controls.update();
             trackballControls.update()
             // Go through each points 
-            // stats.end();
+            stats.end();
             requestAnimationFrame(tick);
         };
         tick()

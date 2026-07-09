@@ -12,8 +12,27 @@ export default class SignalTraceDragController {
          */
         this.dragCanvasX = 0
         this.dragCanvasY = 0
+        this.drawFramePending = false
     }
 
+
+    requestDragRedraw() {
+    if (this.drawFramePending) {
+        return
+    }
+
+    this.drawFramePending = true
+
+    requestAnimationFrame(() => {
+        this.drawFramePending = false
+
+        if (!this.isDragging()) {
+            return
+        }
+
+        this.signalTrace.drawBootScreen()
+    })
+}
     isDragging() {
         if (this.heldTile) {
             return true
@@ -93,15 +112,15 @@ export default class SignalTraceDragController {
     }
 
     handlePointerMove(canvasX, canvasY) {
-        if (!this.isDragging()) {
-            return
-        }
-
-        this.dragCanvasX = canvasX
-        this.dragCanvasY = canvasY
-
-        this.signalTrace.drawBootScreen()
+    if (!this.isDragging()) {
+        return
     }
+
+    this.dragCanvasX = canvasX
+    this.dragCanvasY = canvasY
+
+    this.requestDragRedraw()
+}
 
     handlePointerUp(canvasX, canvasY) {
         if (!this.isDragging()) {

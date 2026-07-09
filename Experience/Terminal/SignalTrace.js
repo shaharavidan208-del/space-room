@@ -89,7 +89,6 @@ export default class SignalTrace {
          * SignalTrace owns the inventory, and passes itself to the inventory so it can call back to SignalTrace when needed
          */
         this.inventory = new SignalTraceInventory(this)
-        console.log(this)
         this.dragController = new SignalTraceDragController(this)
         /**
  * Whether the current pipe layout creates
@@ -103,7 +102,6 @@ export default class SignalTrace {
  * SignalTrace owns the active grid state after this point,
  */
         this.grid = this.level.createGrid()
-        console.log("grid propeties:" + this.grid)
 
         /**
          * Check the starting board state.
@@ -225,9 +223,6 @@ export default class SignalTrace {
          * Center the board horizontally on the terminal canvas.
          */
         this.boardStartX = (this.canvas.width - boardWidth) / 2 - 400 // change to this because now I'll have access to it anywhere in the class
-        console.log("boardStartX:" + this.boardStartX)
-        console.log("boardStartY:" + this.boardStartY)
-        console.log("Board Width:" + boardWidth)
         /**
          * Draw every tile in the grid.
          */
