@@ -20,18 +20,24 @@ export default class SignalTraceLevelThree {
          */
         this.source = {
             row: 0,
-            col: 0
+            col: 0,
+            direction: "down"
         }
 
         this.target = {
             row: 5,
-            col: 3
+            col: 3,
+            direction: "up"
         }
 
         this.relay = {
             row: 2,
-            col: 3
+            col: 3,
+            direction: "right"
         }
+
+
+
         this.inventory = [
             {
             connections: ["up", "down"],

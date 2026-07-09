@@ -440,66 +440,7 @@ export default class SignalTrace {
 
 
 
-
-    checkSignalPath() {
-        const visited = new Set()
-        const stack = []
-
-        this.addSourceNeighborPipesToStack(stack)
-
-        while (stack.length > 0) {
-            const currentPosition = stack.pop()
-
-            const row = currentPosition.row
-            const col = currentPosition.col
-            const positionKey = `${row},${col}`
-
-            if (visited.has(positionKey)) {
-                continue
-            }
-
-            visited.add(positionKey)
-
-            const currentTile = this.grid[row][col]
-
-            if (!this.isPipeTile(currentTile)) {
-                continue
-            }
-
-            if (this.pipeConnectsToTarget(row, col, currentTile)) {
-                return true
-            }
-
-            for (const direction of currentTile.connections) {
-                const neighborPosition = this.getNeighborPosition(row, col, direction)
-
-                if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-
-                if (this.isSourcePosition(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-
-                if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
-                    continue
-                }
-                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-                if (!this.tilesConnect(currentTile, neighborTile, direction)) {
-                    continue
-                }
-
-                const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
-
-                if (!visited.has(neighborKey)) {
-                    stack.push(neighborPosition)
-                }
-            }
-        }
-
-        return false
-    }
+    
 
     addSourceNeighborPipesToStack(stack) {
         const directions = ["up", "down", "left", "right"]
@@ -829,8 +770,26 @@ checkSignalPath() {
 }
 
 canReachEndpoint(startEndpoint, endEndpoint) {
-    const visited = new Set()
-    const stack = []
+    /**
+         * use a set to track visited tiles, so we don't get stuck in a loop
+         * A set is like an array, but it cannot store duplicate values. This is important because we don't want to visit the same tile twice, which would cause an infinite loop.
+         * Also, With an array, .includes() has to scan through the array until it finds the value.
+         * With a Set, .has() is built for quick lookup.
+         * We use a set and not an array because we want to be able to quickly check if a tile has already been visited.
+         * If we used an array, we would have to loop through the array to check if a tile has already been visited, which would be slower.
+         */
+        const visited = new Set() 
+        /**
+         * use a stack to track tiles to visit, so we can do a depth-first search
+         * DFS means:
+         * Start somewhere, follow one path as deep as possible, and only backtrack when you hit a dead end.
+         * A stack is last in, first out. We add tiles to the stack as we find them, and 
+         * then we pop them off the stack to visit them. This way, we always visit the most recently found tile first, 
+         */
+        const stack = []
+        // so Stack = places we still need to inspect
+        // Visited = places we've already inspected
+        // DFS = keep pulling from the stack and crawling through connected pipes until we either reach the endpoint or run out of options.
 
     this.addEndpointNeighborPipesToStack(stack, startEndpoint)
 
@@ -884,10 +843,14 @@ canReachEndpoint(startEndpoint, endEndpoint) {
 
     return false
 }
-
+/**
+ * Adds neighboring pipe tiles to the stack for a given endpoint.
+ * @param {*array} stack the stack of tiles to visit. this is an array of objects with row and col properties
+ * @param {*object} endpoint the endpoint to check (for example, relay, source, ). this is an object with row, col, and direction properties
+ */
 addEndpointNeighborPipesToStack(stack, endpoint) {
-    const endpointConnections = this.getEndpointConnections(endpoint)
-
+    const endpointConnections = this.getEndpointConnections(endpoint) // get the endpoint connections
+    console.log("endpointConnections", endpointConnections)
     for (const direction of endpointConnections) {
         const neighborPosition = this.getNeighborPosition(
             endpoint.row,
