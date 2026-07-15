@@ -42,23 +42,12 @@ export default class SignalTraceInventory {
          * This is copied from the level inventory instead of directly referencing it,
          * so changing counts during gameplay does not mutate the level definition.
          */
-        this.items = this.createItemsFromLevel()
+        this.items = this.cloneInventoryItems(this.signalTrace.level.inventory)
+        console.log(this)
     }
 
-    /**
-     * Creates the starting inventory for the current level.
-     *
-     * If the level defines its own inventory, clone it.
-     * Otherwise, return a small fallback inventory so the system can still work
-     * during testing even if a level forgot to define inventory data.
-     *
-     * @returns {Array<{connections: Array<string>, count: number}>}
-     */
-    createItemsFromLevel() {
-        if (this.signalTrace.level.inventory) {
-            return this.cloneInventoryItems(this.signalTrace.level.inventory)
-        }
-    }
+
+
 
     /**
      * Creates a deep copy of the level inventory items.
@@ -113,16 +102,16 @@ export default class SignalTraceInventory {
      */
     drawPanelBackground() {
         const ctx = this.ctx
-        const panelHeight = (this.signalTrace.tileSize + this.signalTrace.tileGap) * this.signalTrace.rows
+        this.panelHeight = (this.signalTrace.tileSize + this.signalTrace.tileGap) * this.signalTrace.rows
 
         ctx.save()
 
         ctx.fillStyle = "rgba(0, 255, 65, 0.025)"
-        ctx.fillRect(this.panelX - 30, this.panelY - 80, this.panelWidth, panelHeight)
+        ctx.fillRect(this.panelX - 30, this.panelY - 80, this.panelWidth, this.panelHeight)
 
         ctx.strokeStyle = "rgba(0, 255, 65, 0.16)"
         ctx.lineWidth = 4
-        ctx.strokeRect(this.panelX - 30, this.panelY - 80, this.panelWidth, panelHeight)
+        ctx.strokeRect(this.panelX - 30, this.panelY - 80, this.panelWidth, this.panelHeight)
 
         ctx.restore()
     }
@@ -208,9 +197,46 @@ export default class SignalTraceInventory {
 
 
     /**
-     * Converts a canvas mouse/pointer position into an inventory slot index.
-     * This is the inventory equivalent of board tile hit detection.
-     * It checks whether the pointer is inside any inventory slot rectangle.
+  * Calculates the top-left canvas position of an inventory slot.
+  *
+  * The inventory is arranged vertically with four slots per column.
+  * After every four slots, the next slot begins a new column.
+  *
+  * @param {number} index
+  * The index of the inventory slot.
+  *
+  * @returns {{x: number, y: number}}
+  * The top-left X and Y coordinates where the slot should be drawn
+  * on the terminal canvas.
+  */
+    getSlotPosition(index) {
+        const slotsPerColumn = 4
+
+        // Determine which inventory column contains this slot.
+        // Indices 0-3 are in column 0, indices 4-7 are in column 1, and so on.
+        const column = Math.floor(index / slotsPerColumn)
+
+        // Determine the slot's row inside its column.
+        // The row resets back to 0 whenever a new column begins.
+        const row = index % slotsPerColumn
+
+        // Horizontal distance between the beginning of one column
+        // and the beginning of the next column.
+        const columnGap = this.slotSize + this.slotGap + 40
+
+        // Convert the slot's row and column into canvas coordinates.
+        return {
+            x: this.panelX + column * columnGap,
+            y: this.panelY + row * (this.slotSize + this.slotGap)
+        }
+    }
+
+    /**
+     * Finds which inventory slot is underneath a canvas pointer position.
+     *
+     * This performs inventory hit detection by checking whether the pointer
+     * is inside the rectangular area of each inventory slot.
+     *
      * @param {number} canvasX
      * Pointer X position in terminal canvas coordinates.
      *
@@ -218,40 +244,37 @@ export default class SignalTraceInventory {
      * Pointer Y position in terminal canvas coordinates.
      *
      * @returns {{index: number} | null}
-     * The clicked inventory slot, or null if no slot was hit.
+     * An object containing the index of the slot underneath the pointer,
+     * or null when the pointer is not inside any inventory slot.
      */
-    getSlotPosition(index) {
-        const slotsPerColumn = 4
-
-        const column = Math.floor(index / slotsPerColumn) // when the index is 4, we make a new column
-        const row = index % slotsPerColumn
-
-        const columnGap = this.slotSize + this.slotGap + 40
-
-        return {
-            x: this.panelX + column * columnGap,
-            y: this.panelY + row * (this.slotSize + this.slotGap)
-        }
-    }
-
     getSlotAtCanvasPosition(canvasX, canvasY) {
-    for (let i = 0; i < this.items.length; i++) {
-        const position = this.getSlotPosition(i)
+        // Check every inventory slot until one contains the pointer.
+        for (let i = 0; i < this.items.length; i++) {
+            // Get the top-left canvas position of this slot.
+            const position = this.getSlotPosition(i)
 
-        const left = position.x
-        const right = position.x + this.slotSize
-        const top = position.y
-        const bottom = position.y + this.slotSize
+            // Calculate the complete rectangular boundary of the slot.
+            const left = position.x
+            const right = position.x + this.slotSize
+            const top = position.y
+            const bottom = position.y + this.slotSize
 
-        if (canvasX >= left && canvasX <= right && canvasY >= top && canvasY <= bottom) {
-            return {
-                index: i
+            // Check whether the pointer is inside this slot's rectangle.
+            if (
+                canvasX >= left &&
+                canvasX <= right &&
+                canvasY >= top &&
+                canvasY <= bottom
+            ) {
+                return {
+                    index: i
+                }
             }
         }
-    }
 
-    return null
-}
+        // The pointer was not inside any inventory slot.
+        return null
+    }
 
     /**
      * Checks whether an inventory slot can be picked up.

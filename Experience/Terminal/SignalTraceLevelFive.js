@@ -41,31 +41,39 @@ export default class SignalTraceLevelThree {
         this.inventory = [
             {
             connections: ["up", "down"],
-                count: 5
+                count: 5,
+                index: 0
             },
             {
             connections: ["up", "left"],
-                count: 2
+                count: 2,
+                index: 1
             },
              {
             connections: ["down", "left"],
-                count: 1
+                count: 1,
+                index: 2,
+
             },
              {
             connections: ["up", "right"],
-                count: 2
+                count: 2,
+                index: 3
             },
             {
             connections: ["right", "left"],
-                count: 1
+                count: 1,
+                index: 4
             },
             {
             connections: ["down", "right"],
-                count: 1
+                count: 1,
+                index: 5
             },
             {
             connections: ["down", "left", "right"],
-                count: 1
+                count: 1,
+                index: 6
             },
         ]
 

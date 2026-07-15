@@ -562,7 +562,7 @@ export default class Experience {
                 controls.enablePan = false
                 cubeControlsHint.classList.add('visible');
                 lookTarget.copy(activePoint.position.clone());
-                targetFov = 13; // Isometric squeeze
+                targetFov = 15; // Isometric squeeze
 
                 const currentWindowAspect = window.innerWidth / window.innerHeight;
                 const BASE_ASPECT = 16 / 9; // default aspect ratio for the isometric distance calculation

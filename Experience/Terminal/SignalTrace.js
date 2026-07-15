@@ -15,7 +15,7 @@ export default class SignalTrace {
         // SignalTrace will draw onto the same canvas that is already used as the monitor texture.
         this.canvas = this.terminal.canvas;
 
-
+        console.log(this)
         // Borrow the 2D drawing context.
         // This is what lets us draw text, rectangles, grid lines, pipes, etc.
         this.ctx = this.terminal.ctx;
@@ -281,7 +281,6 @@ export default class SignalTrace {
 
     getTileAtCanvasPosition(canvasX, canvasY) {
         const boardStartX = this.boardStartX 
-
         const localX = canvasX - boardStartX
         const localY = canvasY - this.boardStartY
 
@@ -318,7 +317,7 @@ export default class SignalTrace {
 
         return {
             row: row,
-            col: col
+            col: col,
         }
     }
 
@@ -339,40 +338,6 @@ export default class SignalTrace {
             tile.connections.length === 0
 
         ) {
-            return false
-        }
-
-        return true
-    }
-
-    canDropTile(row, col) {
-        if (!this.isInsideBoard(row, col)) {
-            return false
-        }
-
-        if (this.isEndpointPosition(row, col)) {
-            return false
-        }
-
-        const tile = this.grid[row][col]
-
-        if (!tile) {
-            return false
-        }
-
-        if (tile.locked) {
-            return false
-        }
-
-        if (tile.blocked) {
-            return false
-        }
-
-        if (!tile.connections) {
-            return true
-        }
-
-        if (tile.connections.length > 0) {
             return false
         }
 
