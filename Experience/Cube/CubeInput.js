@@ -6,14 +6,6 @@ export default class CubeInput {
         this.isDragging = true
         this.dragMode = "cube"
         this.axisLocked = false
-        if (this.isLMB) {
-            this.cube.zArrowHelperFront.visible = true
-            this.cube.zArrowHelperBack.visible = true
-        }
-        else {
-            this.cube.xArrowHelperFront.visible = true
-            this.cube.xArrowHelperBack.visible = true
-        }
     }
 
     onCubeDown() {
@@ -24,28 +16,8 @@ export default class CubeInput {
         this.isRMB = false
         this.isLMB = false
         // Snap whole-cube rotations to the nearest 90 degrees (Pi/2)
-        if (this.dragMode === 'cube') {
-            this.cube.rotator.isAnimating = true
-            const rot = this.cube.cubeGroup.rotation
-            // Calculate the perfect grid targets for ALL THREE axes
-            const targetX = Math.round(rot.x / (Math.PI / 2)) * (Math.PI / 2);
-            const targetY = Math.round(rot.y / (Math.PI / 2)) * (Math.PI / 2);
-            const targetZ = Math.round(rot.z / (Math.PI / 2)) * (Math.PI / 2);
-            gsap.to(this.cube.cubeGroup.rotation, { // The very first thing you hand to gsap.to() is the specific object you want it to manipulate.
-                x: targetX,
-                y: targetY,
-                z: targetZ,
-                duration: 0.28, // 280 ms
-                ease: "power2.out", // ease out curve built by GSAP
-                onComplete: () => {
-                    rot.x = Math.round(rot.x / (Math.PI / 2)) * (Math.PI / 2)
-                    rot.y = Math.round(rot.y / (Math.PI / 2)) * (Math.PI / 2)
-                    rot.z = Math.round(rot.z / (Math.PI / 2)) * (Math.PI / 2)
-                    this.cube.rotator.isAnimating = false
-                }
-            })
-        }
-        else if (this.dragMode === 'layer' && this.axisLocked) {
+
+        if (this.dragMode === 'layer' && this.axisLocked) {
             this.cube.rotator.endRotation()
         }
 
@@ -74,6 +46,10 @@ export default class CubeInput {
         const axes = ['x', 'y', 'z'];
         this.raycaster = new THREE.Raycaster() // Projects a 3D ray starting at the camera and passing through that 2D pixel into the 3D scene.
         this.mouse = new THREE.Vector2()
+        const cameraRight = new THREE.Vector3()
+        const cameraUp = new THREE.Vector3()
+        const cameraForward = new THREE.Vector3()
+        const cameraQuaternion = new THREE.Quaternion()
 
         // --- Drag State Trackers ---
         this.isDragging = false
@@ -168,14 +144,12 @@ export default class CubeInput {
 
             const stickerHits = this.raycaster.intersectObjects(this.cube.stickerArr);
             this.axisLocked = false;
-
-            if (stickerHits.length > 0) {
+            if (stickerHits.length > 0 && !this.isRMB) {
                 // We clicked a sticker — initialize layer rotation
                 this.hitCubie = stickerHits[0].object.parent;
                 // Clone normal to avoid aliasing, then translate it from Local to World space
                 this.hitStickerNormal = stickerHits[0].face.normal.clone()
-                    .transformDirection(stickerHits[0].object.matrixWorld)
-                    .round(); // round to nearest integer to avoid floating point errors. we do this because we want to know which face of the cube was clicked, not the exact world direction.
+                    .transformDirection(stickerHits[0].object.matrixWorld) // round to nearest integer to avoid floating point errors. we do this because we want to know which face of the cube was clicked, not the exact world direction.
 
                 /* Snap the virtual graph paper onto the sticker:
                    - Normal: Tilts the infinite sheet so it faces this exact direction.
@@ -205,6 +179,10 @@ export default class CubeInput {
                 this.dragMode = "cube"
                 this.onEmptyDown();
                 return;
+            }
+            else {
+                this.onDragEnd()
+                return
             }
         });
 
@@ -238,48 +216,31 @@ export default class CubeInput {
             // ------------------------------------------
             // TRACK 1: WHOLE CUBE ROTATION
             // ------------------------------------------
+            // ------------------------------------------
+            // TRACK 1: FREE WHOLE CUBE ROTATION
+            // ------------------------------------------
             if (this.dragMode === "cube") {
-                // GATE 1: Lock the primary drag axis
-                if (!this.axisLocked && (Math.abs(totalDx) > 8 || Math.abs(totalDy) > 8)) {
-                    this.dxLarger = Math.abs(totalDx) > Math.abs(totalDy)
-
-                    if (this.dxLarger) {
-                        this.rotationAxis = 'y'
-                    }
-                    else {
-                        if (this.isRMB) {
-                            this.rotationAxis = 'z'
-                        }
-                        else if (this.isLMB) {
-                            this.rotationAxis = 'x'
-                        }
-                        else {
-                            if (this.mouse.x >= 0) {
-                                this.rotationAxis = 'x'
-                            }
-                            else {
-                                this.rotationAxis = 'z'
-                            }
-                        }
-                    }
-
-                    this.axisLocked = true
+                if (this.isLMB) {
+                    return; // Left mouse button is reserved for layer rotation, so we ignore it here.
                 }
+                this.experience.camera.getWorldQuaternion(cameraQuaternion)
 
-                // GATE 2: Spin the entire cube group
-                if (this.axisLocked) {
-                    if (this.rotationAxis === 'y') {
-                        this.flipAxis = yVector
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dx * this.sensitivity)
-                    }
-                    else if (this.rotationAxis === 'x') {
-                        this.flipAxis = xVector
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity)
-                    }
-                    else {
-                        this.flipAxis = zVector
-                        this.cube.cubeGroup.rotateOnWorldAxis(this.flipAxis, this.dy * this.sensitivity)
-                    }
+                cameraRight.set(1, 0, 0).applyQuaternion(cameraQuaternion).normalize()
+                cameraUp.set(0, 1, 0).applyQuaternion(cameraQuaternion).normalize()
+                cameraForward.set(0, 0, -1).applyQuaternion(cameraQuaternion).normalize()
+
+                if (this.isRMB || this.isTouchPointer) {
+                    // Horizontal drag = spin left/right around camera up
+                    this.cube.cubeGroup.rotateOnWorldAxis(
+                        cameraUp,
+                        this.dx * this.sensitivity
+                    )
+
+                    // Vertical drag = tilt around camera right
+                    this.cube.cubeGroup.rotateOnWorldAxis(
+                        cameraRight,
+                        this.dy * this.sensitivity
+                    )
                 }
             }
 
@@ -310,6 +271,8 @@ export default class CubeInput {
 
                 // Calculate the exact X, Y, and Z distances the mouse moved in Local Space
                 this.dragDelta = this.currentDragLocal.clone().sub(this.startDragLocal)
+                console.log("drag delta: ", this.dragDelta)
+                console.log("local normal: ", this.hitLocalNormal)
                 const dragDistance = this.dragDelta.length();
 
                 /* The Cross Product: 
@@ -318,6 +281,7 @@ export default class CubeInput {
                    3. Result: A Vector3 pointing perpendicular to both, containing the exact 
                       drag distance inside one of its axes (x, y, or z). */
                 const rotationVector = this.hitLocalNormal.clone().cross(this.dragDelta);
+                console.log("rotation vector: ", rotationVector)
                 // Phase 1: Determine Rotation Intent (Which layer are we spinning?)
                 if (!this.axisLocked && dragDistance > 0.03) {
                     this.dragMode = "layer"
@@ -327,6 +291,7 @@ export default class CubeInput {
                     this.rotationAxis = axes.reduce((champion, challenger) => {
                         return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger;
                     });
+                    console.log("rotation axis: ", this.rotationAxis)
 
                     this.direction = Math.sign(rotationVector[this.rotationAxis]); // using the rotation axis that we determined, check if the direction is positive or negative
                     this.layerIndex = Math.round(this.hitCubie.position[this.rotationAxis] / this.cube.pieceSize)
@@ -349,7 +314,7 @@ export default class CubeInput {
 
                     // 2. DIRECTION: Use 3D cross product exclusively for logic sign (1 or -1)
                     const frameSign = Math.sign(frameRotationVector[this.rotationAxis]); // Math.sign() returns 1 for positive numbers, -1 for negative numbers, and 0 for zero. This gives us the direction of rotation based on the cross product.
-
+                    console.log("frame sign: ", frameSign)
                     // 3. SYNTHESIS: Speed driven by 2D, Direction driven by 3D
                     const rotationAmount = screenDistance * frameSign * 0.010;
 
@@ -386,10 +351,6 @@ export default class CubeInput {
         // EVENT: POINTER UP & CANCEL
         // ==========================================
         renderer.domElement.addEventListener('pointerup', (input) => {
-            this.cube.zArrowHelperFront.visible = false
-            this.cube.zArrowHelperBack.visible = false
-            this.cube.xArrowHelperFront.visible = false
-            this.cube.xArrowHelperBack.visible = false
             if (this.isPointerActive === false) {
                 return;
             }
@@ -406,10 +367,6 @@ export default class CubeInput {
         })
 
         renderer.domElement.addEventListener('pointercancel', (input) => {
-            this.cube.zArrowHelperFront.visible = false
-            this.cube.zArrowHelperBack.visible = false
-            this.cube.xArrowHelperFront.visible = false
-            this.cube.xArrowHelperBack.visible = false
             if (this.isPointerActive === false) {
                 return;
             }

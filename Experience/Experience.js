@@ -165,7 +165,7 @@ export default class Experience {
         const stats = new Stats();
         document.body.appendChild(stats.dom);
 
-        
+
 
 
         /**
@@ -515,26 +515,26 @@ export default class Experience {
 
 
         const setRendererPixelRatio = (ratio) => {
-    renderer.setPixelRatio(ratio);
+            renderer.setPixelRatio(ratio);
 
-    const canvasWidth = renderer.domElement.clientWidth;
-    const canvasHeight = renderer.domElement.clientHeight;
+            const canvasWidth = renderer.domElement.clientWidth;
+            const canvasHeight = renderer.domElement.clientHeight;
 
-    renderer.setSize(canvasWidth, canvasHeight, false);
+            renderer.setSize(canvasWidth, canvasHeight, false);
 
-    if (this.supernova) {
-        const currentRatio = renderer.getPixelRatio();
+            if (this.supernova) {
+                const currentRatio = renderer.getPixelRatio();
 
-        this.supernova.uniforms.iResolution.value.set(
-            canvasWidth * currentRatio,
-            canvasHeight * currentRatio
-        );
-    }
+                this.supernova.uniforms.iResolution.value.set(
+                    canvasWidth * currentRatio,
+                    canvasHeight * currentRatio
+                );
+            }
 
-    this.canvasRect = renderer.domElement.getBoundingClientRect();
+            this.canvasRect = renderer.domElement.getBoundingClientRect();
 
-    console.log("Renderer pixel ratio:", renderer.getPixelRatio());
-};
+            console.log("Renderer pixel ratio:", renderer.getPixelRatio());
+        };
         /**
          * focus mode on cube
          */
@@ -555,6 +555,11 @@ export default class Experience {
             if (activePoint.name === 'RubiksCube') {
                 showItems(false, ceilingMeshes) // hide ceiling only in Cube mode
                 showItems(false, monitorMeshes)
+                controls.enabled = true
+
+                controls.enableZoom = true
+                controls.enableRotate = false
+                controls.enablePan = false
                 cubeControlsHint.classList.add('visible');
                 lookTarget.copy(activePoint.position.clone());
                 targetFov = 13; // Isometric squeeze
@@ -600,8 +605,6 @@ export default class Experience {
             showItems(true, ceilingMeshes) // unhide ceiling
             showItems(true, monitorMeshes)
             cubeControlsHint.classList.remove('visible');
-            this.isFocused = true; // Prevents spam clicking during animation
-            trackballControls.enabled = true
             isTransitioning = true;
 
             // Bring all UI hotspots back
@@ -617,13 +620,9 @@ export default class Experience {
 
         };
 
-
-        let enteringFocusTransition = false
-        let exitingFocusTransition = false
         // Escape key exits
         window.addEventListener('keydown', (input) => {
             if (input.key === 'Escape' && this.isFocused) {
-                exitingFocusTransition = true
                 exitFocusMode();
                 this.isFocused = false
                 this.currPointName = ""
@@ -1235,7 +1234,10 @@ export default class Experience {
                     if (!this.isFocused) {
                         controls.update();
                         trackballControls.update();
-                        controls.enabled = true;
+                        trackballControls.enabled = true
+                        controls.enabled = true
+                        controls.enableRotate = true
+                        controls.enablePan = true
                     }
                 }
             }
