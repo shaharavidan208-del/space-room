@@ -317,12 +317,12 @@ export default class SignalTraceInventory {
      * @returns {{connections: Array<string>}}
      * A fresh tile object that can be placed into SignalTrace.grid.
      */
-    createTileFromSlot(index) {
+    createPipeFromSlot(index) {
         const item = this.items[index]
-
-        return {
-            connections: [...item.pipe.connections]
-        }
+        console.log(item , "item in createtile from slot")
+        const pipeCopy = new Pipe(item.pipe.type, item.pipe.connections)
+        console.log(pipeCopy)
+        return pipeCopy
     }
 
 

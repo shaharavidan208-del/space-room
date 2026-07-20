@@ -215,6 +215,15 @@ export default class SignalTrace {
     }
 
 
+    returnTilePosition(row, col) {
+        const x = this.boardStartX + col * (this.tileSize + this.tileGap) // determine the x position for the next tile
+        const y = this.boardStartY + row * (this.tileSize + this.tileGap) // same logic as with x 
+        return {
+            x: x,
+            y: y
+        }
+    }
+
     /**
      * Redraw the full Signal Trace screen
      * This is called after a pulse finishes, so the tile returns to normal.
@@ -268,6 +277,7 @@ export default class SignalTrace {
                  */
                 if (tile.pipe) {
                     if (tile.pipe.connections) {
+                        console.log("tile in placehloder: " , tile)
                         this.pipeRenderer.drawPipe(x, y, tile.pipe.connections)
                     }
                 }
@@ -295,8 +305,10 @@ export default class SignalTrace {
 
 
     getTileAtCanvasPosition(canvasX, canvasY) {
-        const boardStartX = this.boardStartX
-        const localX = canvasX - boardStartX
+        /**
+         * Get the pointer exact position relative to the board
+         */
+        const localX = canvasX - this.boardStartX
         const localY = canvasY - this.boardStartY
 
         if (localX < 0) {
@@ -307,7 +319,7 @@ export default class SignalTrace {
             return null
         }
 
-        const tileStep = this.tileSize + this.tileGap
+        const tileStep = this.tileSize + this.tileGap // calculate the distance between each tile
 
         const col = Math.floor(localX / tileStep)
         const row = Math.floor(localY / tileStep)
@@ -329,31 +341,33 @@ export default class SignalTrace {
         if (insideTileY > this.tileSize) {
             return null
         }
-
-        return {
-            row: row,
-            col: col,
-        }
+        const tile = this.grid[row][col]
+        return tile
     }
 
-    canPickUpTile(row, col) {
+    getTile(row, col) {
+
+    }
+
+    canPickUpPipe(row, col) {
         if (!this.isInsideBoard(row, col)) {
             return false
         }
         if (this.isEndpointPosition(row, col)) {
             return false
         }
-
         const tile = this.grid[row][col]
 
-        if (!tile ||
-            tile.locked ||
-            tile.blocked ||
-            !tile.connections ||
-            tile.connections.length === 0
+        if (tile.pipe) {
+            if (!tile ||
+                tile.locked ||
+                tile.blocked ||
+                !tile.pipe.connections ||
+                tile.pipe.connections.length === 0
 
-        ) {
-            return false
+            ) {
+                return false
+            }
         }
 
         return true
