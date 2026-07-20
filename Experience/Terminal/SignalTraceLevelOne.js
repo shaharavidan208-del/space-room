@@ -22,6 +22,11 @@ export default class SignalTraceLevelOne {
         this.target = { row: 2, col: 4 }
     }
 
+
+    /**
+     * Create the initial grid layout for this level.
+     * @returns {Array<Array<{connections: Array<string>}>>} 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
+     */
     createGrid() {
         /**
          * Level 1 starting layout.
@@ -33,13 +38,15 @@ export default class SignalTraceLevelOne {
          * The path tiles are intentionally rotated incorrectly,
          * so the level starts with SIGNAL LINK: BROKEN.
          */
-        return [
+        return [ // return a 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
             [
-                { connections: [] },
+                // this is the first row of the grid
+                { connections: [] }, // connections: [] means no pipes in this tile
                 { connections: [] },
                 { connections: [] },
                 { connections: [] },
                 { connections: [] }
+                // 5 columns for the first row, all empty tiles with no connections
             ],
             [
                 { connections: [] },

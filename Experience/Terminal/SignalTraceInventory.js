@@ -1,5 +1,8 @@
+import Pipe from './Pipe.js'
 export default class SignalTraceInventory {
     constructor(signalTrace) {
+
+
         /**
          * Store a reference to the main SignalTrace instance.
          *
@@ -11,6 +14,37 @@ export default class SignalTraceInventory {
          * - tile sizing values
          */
         this.signalTrace = signalTrace
+
+        this.items = [
+            {
+                pipe: new Pipe("vertical", ["up", "down"]),
+                count: this.signalTrace.level.pipeCount.vertical
+            },
+            {
+                pipe: new Pipe("cornerUpLeft", ["up", "left"]),
+                count: this.signalTrace.level.pipeCount.cornerUpLeft
+            },
+            {
+                pipe: new Pipe("cornerDownLeft", ["down", "left"]),
+                count: this.signalTrace.level.pipeCount.cornerDownLeft
+            },
+            {
+                pipe: new Pipe("cornerUpRight", ["up", "right"]),
+                count: this.signalTrace.level.pipeCount.cornerUpRight
+            },
+            {
+                pipe: new Pipe("horizontal", ["left", "right"]),
+                count: this.signalTrace.level.pipeCount.horizontal
+            },
+            {
+                pipe: new Pipe("cornerDownRight", ["down", "right"]),
+                count: this.signalTrace.level.pipeCount.cornerDownRight
+            },
+            {
+                pipe: new Pipe("splitDown", ["down", "left", "right"]),
+                count: this.signalTrace.level.pipeCount.splitDown
+            }
+        ]
         this.ctx = signalTrace.ctx
 
         /**
@@ -42,38 +76,8 @@ export default class SignalTraceInventory {
          * This is copied from the level inventory instead of directly referencing it,
          * so changing counts during gameplay does not mutate the level definition.
          */
-        this.items = this.cloneInventoryItems(this.signalTrace.level.inventory)
-        console.log(this)
     }
 
-
-
-
-    /**
-     * Creates a deep copy of the level inventory items.
-     *
-     * This is important because inventory counts change during gameplay.
-     * If we used the level's original item objects directly, placing pipes
-     * would permanently mutate the level definition object.
-     *
-     * @param {Array<{connections: Array<string>, count: number}>} items
-     * The inventory items from the level definition.
-     *
-     * @returns {Array<{connections: Array<string>, count: number}>}
-     * A cloned inventory array with copied connection arrays.
-     */
-    cloneInventoryItems(items) {
-        const clonedItems = []
-
-        for (const item of items) {
-            clonedItems.push({
-                connections: [...item.connections],
-                count: item.count
-            })
-        }
-
-        return clonedItems
-    }
 
     /**
      * Draws the full inventory panel.
@@ -173,17 +177,7 @@ export default class SignalTraceInventory {
         ctx.lineWidth = 5
         ctx.strokeRect(x, y, this.slotSize, this.slotSize)
 
-        /**
-         * Create a temporary tile-like object for the pipe renderer.
-         *
-         * The pipe renderer does not care whether a pipe came from the board,
-         * inventory, or drag preview. It only needs a connections array.
-         */
-        const previewTile = {
-            connections: item.connections
-        }
-
-        this.signalTrace.pipeRenderer.drawPipe(x, y, previewTile)
+        this.signalTrace.pipeRenderer.drawPipe(x, y, item.pipe.connections)
 
         /**
          * Draw remaining module count.
@@ -312,7 +306,7 @@ export default class SignalTraceInventory {
         return true
     }
 
-    /**
+     /**
      * Creates a new board tile object from an inventory slot.
      *
      * This does not decrease the inventory count.
@@ -327,9 +321,11 @@ export default class SignalTraceInventory {
         const item = this.items[index]
 
         return {
-            connections: [...item.connections]
+            connections: [...item.pipe.connections]
         }
     }
+
+
 
     /**
      * Decreases the count of an inventory slot by 1.
@@ -342,7 +338,6 @@ export default class SignalTraceInventory {
      */
     changeSlotCount(index, change) {
         this.items[index].count += change
-        console.log(this.items)
 
     }
 }

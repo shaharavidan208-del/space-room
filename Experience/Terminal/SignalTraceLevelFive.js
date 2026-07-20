@@ -1,4 +1,5 @@
-export default class SignalTraceLevelThree {
+import Pipe from './Pipe.js'
+export default class SignalTraceLevelFive {
     constructor() {
         /**
          * Level display info.
@@ -36,99 +37,62 @@ export default class SignalTraceLevelThree {
             direction: "right"
         }
 
+        this.tile =
+        {
+            row: 0,
+            col: 0,
+            pipe: null,
+            locked: false,
+            blocked: false
+        }
+
+        this.pipeCount = {
+            vertical: 5,
+            cornerUpLeft: 2,
+            cornerDownLeft: 1,
+            cornerUpRight: 2,
+            horizontal: 1,
+            cornerDownRight: 1,
+            splitDown: 1
+        }
 
 
-        this.inventory = [
-            {
-            connections: ["up", "down"],
-                count: 5,
-                index: 0
-            },
-            {
-            connections: ["up", "left"],
-                count: 2,
-                index: 1
-            },
-             {
-            connections: ["down", "left"],
-                count: 1,
-                index: 2,
+        
+        this.sourcePipe = new Pipe(null, [this.source.direction])
+        this.targetPipe = new Pipe(null, [this.target.direction])
+        this.relayPipe = new Pipe(null, [this.relay.direction])
 
-            },
-             {
-            connections: ["up", "right"],
-                count: 2,
-                index: 3
-            },
-            {
-            connections: ["right", "left"],
-                count: 1,
-                index: 4
-            },
-            {
-            connections: ["down", "right"],
-                count: 1,
-                index: 5
-            },
-            {
-            connections: ["down", "left", "right"],
-                count: 1,
-                index: 6
-            },
-        ]
 
     }
 
+
+    /**
+     * Create grid does not create arbitrary tile/pipe objects anymore
+     * It creates only the tiles
+     * Each tile has three propeties
+     * pipe: the pipe object occupying the tile, otherwise null
+     * locked: is it locked? (boolean)
+     * row:
+     * col:
+     * @returns 
+     */
     createGrid() {
-        return [
-             [
-                { connections: ["down"] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: ["right"] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: []},
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: ["up"] },
-                { connections: [] },
-                { connections: [] }
-            ]
-        ]
+        const grid = []
+        for (let i = 0; i < this.rows; i++) {
+            const gridRow = []
+            for (let j = 0; j < this.cols; j++) {
+                const newTile = {
+                    ...this.tile,
+                    row: i,
+                    col: j,
+                }
+                gridRow.push(newTile)
+            }
+            grid.push(gridRow)
+        }
+        grid[this.source.row][this.source.col].pipe = this.sourcePipe
+        grid[this.target.row][this.target.col].pipe = this.targetPipe
+        grid[this.relay.row][this.relay.col].pipe = this.relayPipe
+        return grid
     }
 }

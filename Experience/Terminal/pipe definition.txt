@@ -1,0 +1,23 @@
+1. The grid always contains Tile objects.
+
+2. A Tile represents one permanent board position.
+
+3. A Tile is never replaced when a pipe moves.
+   Only tile.pipe changes.
+
+4. An empty Tile has:
+   pipe: null
+
+5. A Pipe is an individual movable object.
+
+6. heldPipe is always:
+   Pipe | null
+   It is never a Tile.
+
+7. An InventoryItem represents a pipe type and count.
+   It is not an individual Pipe.
+
+8. A slot index identifies an InventoryItem.
+   It does not identify a Pipe.
+
+9. Every Pipe permanently knows which pipe type it belongs to.

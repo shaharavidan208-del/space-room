@@ -179,8 +179,6 @@ export default class SignalTraceDragController {
         this.heldPipe = this.signalTrace.inventory.createTileFromSlot(
             this.inventoryPosition.index
         )
-        this.signalTrace.grid[tilePosition.row][tilePosition.col].inventoryPosition = this.inventoryPosition.index
-        console.log(this.signalTrace.grid[tilePosition.row][tilePosition.col].inventoryPosition)
 
         // Remember where the tile came from in case the drag is cancelled.
         this.originType = "inventory"
@@ -257,15 +255,12 @@ export default class SignalTraceDragController {
             // Replace the destination grid tile with the held pipe.
             this.signalTrace.grid[tilePosition.row][tilePosition.col] = this.heldPipe
             this.boardPipes.push(this.heldPipe)
-            console.log("held Pipe: ", this.heldPipe)
             this.clearHeldTile()
             // Recalculate the path after adding the pipe to the board.
             this.signalTrace.updateSignalState()
             this.signalTrace.drawBootScreen()
         }
         else if (this.canDropTileAtInventory(canvasX, canvasY)) {
-            console.log(this.heldPipeInventoryIndex)
-            this.signalTrace.inventory.changeSlotCount(this.heldPipe.inventoryPosition, 1)
         }
 
         else {
@@ -304,9 +299,9 @@ export default class SignalTraceDragController {
     }
 
     canDropTileAtInventory(canvasX, canvasY) {
-        console.log("held tile propeties: ", this.heldPipe)
         if (this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY) !== null) {
             const destinationTile = this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY)
+            console.log(destinationTile)
             this.clearHeldTile()
             return true
         }
@@ -420,7 +415,7 @@ export default class SignalTraceDragController {
 
         // Draw the pipe itself at the updated pointer coordinates.
         ctx.globalAlpha = 0.92
-        signalTrace.pipeRenderer.drawPipe(x, y, this.heldPipe)
+        signalTrace.pipeRenderer.drawPipe(x, y, this.heldPipe.connections)
 
         // Restore the canvas settings used before drawing the held pipe.
         ctx.restore()

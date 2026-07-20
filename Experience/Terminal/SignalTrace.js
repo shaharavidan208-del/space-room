@@ -15,7 +15,6 @@ export default class SignalTrace {
         // SignalTrace will draw onto the same canvas that is already used as the monitor texture.
         this.canvas = this.terminal.canvas;
 
-        console.log(this)
         // Borrow the 2D drawing context.
         // This is what lets us draw text, rectangles, grid lines, pipes, etc.
         this.ctx = this.terminal.ctx;
@@ -44,6 +43,13 @@ export default class SignalTrace {
         this.controlsFontSize = 28
         this.nodeLabelFontSize = 32
 
+
+        this.tile = {
+            pipe: null,
+            locked: false,
+            blocked: false
+        }
+
         /**
          * Copy the level endpoints into SignalTrace.
          * SignalTrace uses these for drawing and path checking.
@@ -64,13 +70,13 @@ export default class SignalTrace {
             direction: this.level.target.direction
         }
 
-        
+
 
         if (!this.target.direction) {
             this.target.direction = "left"
         }
 
-    
+
 
 
         this.pipeRenderer = new SignalTracePipeRenderer(
@@ -88,21 +94,23 @@ export default class SignalTrace {
          * the inventory is an object that manages the inventory state and drawing
          * SignalTrace owns the inventory, and passes itself to the inventory so it can call back to SignalTrace when needed
          */
-        this.inventory = new SignalTraceInventory(this)
         this.dragController = new SignalTraceDragController(this)
         /**
- * Whether the current pipe layout creates
- * a valid signal path from SRC to ARC.
- */
+        * Whether the current pipe layout creates
+        * a valid signal path from SRC to ARC.
+        */
+        console.log("SignalTrace object ", this)
+        console.log("Level object ", this.level)
+        console.log("Drag controller object ", this.dragController)
         this.signalConnected;
 
         /**
- * Create the current level grid.
- * 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
- * SignalTrace owns the active grid state after this point,
- */
+        * Create the current level grid.
+        * 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
+        * SignalTrace owns the active grid state after this point,
+        */
         this.grid = this.level.createGrid()
-
+        this.inventory = new SignalTraceInventory(this)
         /**
          * Check the starting board state.
          * This lets the status text be correct immediately when Signal Trace opens.
@@ -145,8 +153,8 @@ export default class SignalTrace {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height) // fill the rect with the current fillStyle
 
         /**
- * Title styling
- */
+    * Title styling
+    */
         this.ctx.fillStyle = "#00FF41"
         this.ctx.font = `${this.titleFontSize}px monospace`
         this.ctx.textAlign = "left"
@@ -190,8 +198,8 @@ export default class SignalTrace {
         }
 
         /**
- * Draw the status line.
- */
+    * Draw the status line.
+    */
         this.ctx.fillStyle = statusColor
         this.ctx.font = `${this.statusFontSize}px monospace`
         this.ctx.textAlign = "left"
@@ -250,13 +258,19 @@ export default class SignalTrace {
                 this.ctx.strokeRect(x, y, this.tileSize, this.tileSize) // this draws the actual rectangle
 
                 /**
- * Draw the pipe inside this tile.
- * The tile data comes from this.grid using the current row/col.
- * This must happen after the tile background, otherwise the background covers it.
- */
-
+                * Draw the pipe inside this tile.
+                * The tile data comes from this.grid using the current row/col.
+                * This must happen after the tile background, otherwise the background covers it.
+                */
                 const tile = this.grid[row][col]
-                this.pipeRenderer.drawPipe(x, y, tile)
+                /**
+                 * drawPipe recieves a tile object and draws the pipe within that boundary
+                 */
+                if (tile.pipe) {
+                    if (tile.pipe.connections) {
+                        this.pipeRenderer.drawPipe(x, y, tile.pipe.connections)
+                    }
+                }
                 if (row === this.source.row && col === this.source.col) {
                     this.drawNode(x, y, "#00ff99", "SRC")
                 }
@@ -274,13 +288,14 @@ export default class SignalTrace {
 
         this.inventory.draw()
 
+
         this.dragController.drawHeldPipe()
     }
 
 
 
     getTileAtCanvasPosition(canvasX, canvasY) {
-        const boardStartX = this.boardStartX 
+        const boardStartX = this.boardStartX
         const localX = canvasX - boardStartX
         const localY = canvasY - this.boardStartY
 
@@ -393,8 +408,8 @@ export default class SignalTrace {
         // It removes the shadow settings so the next things you draw don’t accidentally glow too.
 
         /**
- * Draw the node label.
- */
+    * Draw the node label.
+    */
         this.ctx.fillStyle = "#d8ffdc"
         this.ctx.font = `${this.nodeLabelFontSize}px monospace`
         this.ctx.textAlign = "center"
@@ -405,7 +420,7 @@ export default class SignalTrace {
 
 
 
-    
+
 
     addSourceNeighborPipesToStack(stack) {
         const directions = ["up", "down", "left", "right"]
@@ -493,32 +508,32 @@ export default class SignalTrace {
     }
 
     isRelayPosition(row, col) {
-    if (!this.relay) {
+        if (!this.relay) {
+            return false
+        }
+
+        if (row === this.relay.row && col === this.relay.col) {
+            return true
+        }
+
         return false
     }
 
-    if (row === this.relay.row && col === this.relay.col) {
-        return true
-    }
-
-    return false
-}
-
     isEndpointPosition(row, col) {
-    if (this.isSourcePosition(row, col)) {
-        return true
-    }
+        if (this.isSourcePosition(row, col)) {
+            return true
+        }
 
-    if (this.isRelayPosition(row, col)) {
-        return true
-    }
+        if (this.isRelayPosition(row, col)) {
+            return true
+        }
 
-    if (this.isTargetPosition(row, col)) {
-        return true
-    }
+        if (this.isTargetPosition(row, col)) {
+            return true
+        }
 
-    return false
-}
+        return false
+    }
 
 
 
@@ -718,32 +733,32 @@ export default class SignalTrace {
         return true
     }
 
-checkSignalPath() {
-    if (this.relay) {
-        if (!this.canReachEndpoint(this.source, this.relay)) {
-            return false
+    checkSignalPath() {
+        if (this.relay) {
+            if (!this.canReachEndpoint(this.source, this.relay)) {
+                return false
+            }
+
+            if (!this.canReachEndpoint(this.relay, this.target)) {
+                return false
+            }
+
+            return true
         }
 
-        if (!this.canReachEndpoint(this.relay, this.target)) {
-            return false
-        }
-
-        return true
+        return this.canReachEndpoint(this.source, this.target)
     }
 
-    return this.canReachEndpoint(this.source, this.target)
-}
-
-canReachEndpoint(startEndpoint, endEndpoint) {
-    /**
-         * use a set to track visited tiles, so we don't get stuck in a loop
-         * A set is like an array, but it cannot store duplicate values. This is important because we don't want to visit the same tile twice, which would cause an infinite loop.
-         * Also, With an array, .includes() has to scan through the array until it finds the value.
-         * With a Set, .has() is built for quick lookup.
-         * We use a set and not an array because we want to be able to quickly check if a tile has already been visited.
-         * If we used an array, we would have to loop through the array to check if a tile has already been visited, which would be slower.
-         */
-        const visited = new Set() 
+    canReachEndpoint(startEndpoint, endEndpoint) {
+        /**
+             * use a set to track visited tiles, so we don't get stuck in a loop
+             * A set is like an array, but it cannot store duplicate values. This is important because we don't want to visit the same tile twice, which would cause an infinite loop.
+             * Also, With an array, .includes() has to scan through the array until it finds the value.
+             * With a Set, .has() is built for quick lookup.
+             * We use a set and not an array because we want to be able to quickly check if a tile has already been visited.
+             * If we used an array, we would have to loop through the array to check if a tile has already been visited, which would be slower.
+             */
+        const visited = new Set()
         /**
          * use a stack to track tiles to visit, so we can do a depth-first search
          * DFS means:
@@ -756,33 +771,71 @@ canReachEndpoint(startEndpoint, endEndpoint) {
         // Visited = places we've already inspected
         // DFS = keep pulling from the stack and crawling through connected pipes until we either reach the endpoint or run out of options.
 
-    this.addEndpointNeighborPipesToStack(stack, startEndpoint)
+        this.addEndpointNeighborPipesToStack(stack, startEndpoint)
 
-    while (stack.length > 0) {
-        const currentPosition = stack.pop()
+        while (stack.length > 0) {
+            const currentPosition = stack.pop()
 
-        const row = currentPosition.row
-        const col = currentPosition.col
-        const positionKey = `${row},${col}`
+            const row = currentPosition.row
+            const col = currentPosition.col
+            const positionKey = `${row},${col}`
 
-        if (visited.has(positionKey)) {
-            continue
+            if (visited.has(positionKey)) {
+                continue
+            }
+
+            visited.add(positionKey)
+
+            const currentTile = this.grid[row][col]
+
+            if (!this.isPipeTile(currentTile)) {
+                continue
+            }
+
+            if (this.pipeConnectsToEndpoint(row, col, currentTile, endEndpoint)) {
+                return true
+            }
+
+            for (const direction of currentTile.connections) {
+                const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+                if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+
+                if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
+                    continue
+                }
+
+                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
+
+                if (!this.tilesConnect(currentTile, neighborTile, direction)) {
+                    continue
+                }
+
+                const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
+
+                if (!visited.has(neighborKey)) {
+                    stack.push(neighborPosition)
+                }
+            }
         }
 
-        visited.add(positionKey)
-
-        const currentTile = this.grid[row][col]
-
-        if (!this.isPipeTile(currentTile)) {
-            continue
-        }
-
-        if (this.pipeConnectsToEndpoint(row, col, currentTile, endEndpoint)) {
-            return true
-        }
-
-        for (const direction of currentTile.connections) {
-            const neighborPosition = this.getNeighborPosition(row, col, direction)
+        return false
+    }
+    /**
+     * Adds neighboring pipe tiles to the stack for a given endpoint.
+     * @param {*array} stack the stack of tiles to visit. this is an array of objects with row and col properties
+     * @param {*object} endpoint the endpoint to check (for example, relay, source, ). this is an object with row, col, and direction properties
+     */
+    addEndpointNeighborPipesToStack(stack, endpoint) {
+        const endpointConnections = this.getEndpointConnections(endpoint) // get the endpoint connections
+        for (const direction of endpointConnections) {
+            const neighborPosition = this.getNeighborPosition(
+                endpoint.row,
+                endpoint.col,
+                direction
+            )
 
             if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
                 continue
@@ -794,111 +847,72 @@ canReachEndpoint(startEndpoint, endEndpoint) {
 
             const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
 
-            if (!this.tilesConnect(currentTile, neighborTile, direction)) {
+            if (!this.isPipeTile(neighborTile)) {
                 continue
             }
 
-            const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
+            const directionBackToEndpoint = this.getOppositeDirection(direction)
 
-            if (!visited.has(neighborKey)) {
-                stack.push(neighborPosition)
+            if (!directionBackToEndpoint) {
+                continue
+            }
+
+            if (!neighborTile.connections.includes(directionBackToEndpoint)) {
+                continue
+            }
+
+            stack.push({
+                row: neighborPosition.row,
+                col: neighborPosition.col
+            })
+        }
+    }
+
+    pipeConnectsToEndpoint(row, col, tile, endpoint) {
+        if (!this.isPipeTile(tile)) {
+            return false
+        }
+
+        const endpointConnections = this.getEndpointConnections(endpoint)
+
+        for (const direction of tile.connections) {
+            const neighborPosition = this.getNeighborPosition(row, col, direction)
+
+            if (neighborPosition.row !== endpoint.row) {
+                continue
+            }
+
+            if (neighborPosition.col !== endpoint.col) {
+                continue
+            }
+
+            const directionFromEndpointToPipe = this.getOppositeDirection(direction)
+
+            if (!directionFromEndpointToPipe) {
+                continue
+            }
+
+            if (endpointConnections.includes(directionFromEndpointToPipe)) {
+                return true
             }
         }
-    }
 
-    return false
-}
-/**
- * Adds neighboring pipe tiles to the stack for a given endpoint.
- * @param {*array} stack the stack of tiles to visit. this is an array of objects with row and col properties
- * @param {*object} endpoint the endpoint to check (for example, relay, source, ). this is an object with row, col, and direction properties
- */
-addEndpointNeighborPipesToStack(stack, endpoint) {
-    const endpointConnections = this.getEndpointConnections(endpoint) // get the endpoint connections
-    console.log("endpointConnections", endpointConnections)
-    for (const direction of endpointConnections) {
-        const neighborPosition = this.getNeighborPosition(
-            endpoint.row,
-            endpoint.col,
-            direction
-        )
-
-        if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-            continue
-        }
-
-        if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
-            continue
-        }
-
-        const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-        if (!this.isPipeTile(neighborTile)) {
-            continue
-        }
-
-        const directionBackToEndpoint = this.getOppositeDirection(direction)
-
-        if (!directionBackToEndpoint) {
-            continue
-        }
-
-        if (!neighborTile.connections.includes(directionBackToEndpoint)) {
-            continue
-        }
-
-        stack.push({
-            row: neighborPosition.row,
-            col: neighborPosition.col
-        })
-    }
-}
-
-pipeConnectsToEndpoint(row, col, tile, endpoint) {
-    if (!this.isPipeTile(tile)) {
         return false
     }
 
-    const endpointConnections = this.getEndpointConnections(endpoint)
+    getEndpointConnections(endpoint) {
+        const endpointTile = this.grid[endpoint.row][endpoint.col]
 
-    for (const direction of tile.connections) {
-        const neighborPosition = this.getNeighborPosition(row, col, direction)
-
-        if (neighborPosition.row !== endpoint.row) {
-            continue
+        if (endpointTile && endpointTile.connections && endpointTile.connections.length > 0) {
+            return endpointTile.connections
         }
 
-        if (neighborPosition.col !== endpoint.col) {
-            continue
+        if (endpoint.direction) {
+            return [endpoint.direction]
         }
 
-        const directionFromEndpointToPipe = this.getOppositeDirection(direction)
-
-        if (!directionFromEndpointToPipe) {
-            continue
-        }
-
-        if (endpointConnections.includes(directionFromEndpointToPipe)) {
-            return true
-        }
+        return []
     }
-
-    return false
-}
-
-getEndpointConnections(endpoint) {
-    const endpointTile = this.grid[endpoint.row][endpoint.col]
-
-    if (endpointTile && endpointTile.connections && endpointTile.connections.length > 0) {
-        return endpointTile.connections
-    }
-
-    if (endpoint.direction) {
-        return [endpoint.direction]
-    }
-
-    return []
-}
     addSourceNeighborPipesToStack(stack) {
         const directions = ["up", "down", "left", "right"]
 

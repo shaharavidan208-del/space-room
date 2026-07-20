@@ -33,19 +33,14 @@ export default class SignalTracePipeRenderer {
  *
  * @param {number} x - Top-left X position of the tile on the canvas.
  * @param {number} y - Top-left Y position of the tile on the canvas.
- * @param {Object} tile - Tile definition.
- * @param {string[]} tile.connections - The directions this pipe connects to.
+ * @param {Object} pipeConnections - Tile definition.
  * @returns {void}
  */
-    drawPipe(x, y, tile) {
-        if (!tile) {
+    drawPipe(x, y, pipeConnections) {
+        if (!pipeConnections) {
             return
         }
-
-        if (!tile.connections || tile.connections.length === 0) {
-            return
-        }
-        const connections = tile.connections
+        const connections = pipeConnections
 
         // calculate the center of the tile
         const centerX = x + this.tileSize / 2
