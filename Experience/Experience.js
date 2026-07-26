@@ -13,7 +13,7 @@ import gsap from 'gsap'
 import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { Timer } from "three";
-
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 
 export default class Experience {
     constructor(canvas) {
@@ -66,7 +66,7 @@ export default class Experience {
         const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
         this.scene.add(overlay)
         this.gu = new GUI()
-        this.gu.hide()
+
         this.terminal = new TerminalCanvas(this);
         /**
         * Lights
@@ -108,7 +108,115 @@ export default class Experience {
 
 
 
+        /**
+         * Bed back fill light
+         *
+         * RectAreaLight does not use a target object like DirectionalLight.
+         * We store our own Vector3 target and call lookAt() whenever it changes.
+         */
 
+        const bedBackLight = new THREE.RectAreaLight(
+            0xda581c, // Slightly cool fill color
+            2,        // Intensity
+            4,        // Width
+            2.5       // Height
+        )
+
+        bedBackLight.name = 'BedBackFillLight'
+
+        bedBackLight.position.set(
+            3.4,
+            -0.6,
+            6.6
+        )
+
+        const bedBackLightTarget = new THREE.Vector3(
+            1.9,  // Moved your desired target coordinates here
+            0.9,
+            1.9
+        )
+
+        bedBackLight.lookAt(bedBackLightTarget)
+
+        this.scene.add(bedBackLight)
+
+        /**
+         * Re-aim the light after changing either its position
+         * or the target position through the GUI.
+         */
+        const updateBedBackLightDirection = () => {
+            bedBackLight.lookAt(bedBackLightTarget)
+        }
+
+        updateBedBackLightDirection()
+
+        const bedBackLightDebug = {
+            color: `#${bedBackLight.color.getHexString()}`
+        }
+
+        const bedBackLightFolder =
+            this.gu.addFolder('Bed Back Light')
+
+        bedBackLightFolder
+            .addColor(bedBackLightDebug, 'color')
+            .name('Color')
+            .onChange((value) => {
+                bedBackLight.color.set(value)
+            })
+
+        bedBackLightFolder
+            .add(bedBackLight, 'intensity', 0, 20, 0.1)
+            .name('Intensity')
+
+        bedBackLightFolder
+            .add(bedBackLight, 'width', 0.1, 10, 0.1)
+            .name('Width')
+
+        bedBackLightFolder
+            .add(bedBackLight, 'height', 0.1, 10, 0.1)
+            .name('Height')
+
+        bedBackLightFolder
+            .add(bedBackLight, 'visible')
+            .name('Visible')
+
+        const bedBackLightPositionFolder =
+            bedBackLightFolder.addFolder('Position')
+
+        bedBackLightPositionFolder
+            .add(bedBackLight.position, 'x', -20, 20, 0.1)
+            .name('X')
+            .onChange(updateBedBackLightDirection)
+
+        bedBackLightPositionFolder
+            .add(bedBackLight.position, 'y', -10, 10, 0.1)
+            .name('Y')
+            .onChange(updateBedBackLightDirection)
+
+        bedBackLightPositionFolder
+            .add(bedBackLight.position, 'z', -20, 20, 0.1)
+            .name('Z')
+            .onChange(updateBedBackLightDirection)
+
+        const bedBackLightTargetFolder =
+            bedBackLightFolder.addFolder('Target')
+
+        bedBackLightTargetFolder
+            .add(bedBackLightTarget, 'x', -20, 20, 0.1)
+            .name('X')
+            .onChange(updateBedBackLightDirection)
+
+        bedBackLightTargetFolder
+            .add(bedBackLightTarget, 'y', -10, 10, 0.1)
+            .name('Y')
+            .onChange(updateBedBackLightDirection)
+
+        bedBackLightTargetFolder
+            .add(bedBackLightTarget, 'z', -20, 20, 0.1)
+            .name('Z')
+            .onChange(updateBedBackLightDirection)
+
+        bedBackLightFolder.open()
 
 
         //         /**
@@ -153,6 +261,12 @@ export default class Experience {
 
         this.cube = new Cube(this.scene)
 
+    
+
+
+
+
+
         // Renderer
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -164,7 +278,6 @@ export default class Experience {
         // FPS counter 
         const stats = new Stats();
         document.body.appendChild(stats.dom);
-
 
 
 
@@ -239,8 +352,8 @@ export default class Experience {
 
         const novaLightMain = new THREE.DirectionalLight(0xda581c, 25);
 
-        novaLightMain.position.set(4.8, 11.8, -26.7);
-        novaLightMain.target.position.set(5, 5, -20);
+        novaLightMain.position.set(-3.2, 8.6, -14.9);
+        novaLightMain.target.position.set(-3.2, -3.2, -9.7);
 
         this.scene.add(novaLightMain);
         this.scene.add(novaLightMain.target);
@@ -257,8 +370,6 @@ export default class Experience {
         // mainLightFolder
         //     .add(novaLightMain, 'intensity', 0, 40, 0.1)
         //     .name('Intensity');
-        novaLightMain.position.set(4.8, 23, -26.7); // Pushed back outside
-        novaLightMain.target.position.set(5, 5, -5);  // Aimed forward INTO the room
         novaLightMain.castShadow = true;
 
         this.scene.add(novaLightMain);
@@ -297,48 +408,74 @@ export default class Experience {
 
 
 
-        // this.scene.add(novaLightWideA);
-        // this.scene.add(novaLightWideA.target);
-        // this.scene.add(novaLightWideB);
-        // this.scene.add(novaLightWideB.target);
-
         // ==========================================
         // SUPERNOVA LIGHTING GUI & HELPERS
         // ==========================================
-        // const lightFolder = this.gu.addFolder('Supernova Lights');
+        //         const lightFolder = this.gu.addFolder('Supernova Lights');
 
-        // // 1. MAIN LIGHT (The Shadow Caster)
-        // const mainFolder = lightFolder.addFolder('Main Light (Shadow Caster)');
-        // mainFolder.add(novaLightMain, 'intensity', 0, 40, 0.1).name('Intensity');
-        // mainFolder.add(novaLightMain.position, 'x', -50, 50, 0.1).name('Pos X');
-        // mainFolder.add(novaLightMain.position, 'y', -50, 50, 0.1).name('Pos Y');
-        // mainFolder.add(novaLightMain.position, 'z', -50, 50, 0.1).name('Pos Z');
+        //         // // 1. MAIN LIGHT (The Shadow Caster)
+        //         const mainFolder = lightFolder.addFolder('Main Light (Shadow Caster)');
+        //         const novaLightMainDebug = {
+        //     color: `#${novaLightMain.color.getHexString()}`
+        // }
 
-        // const mainTargetFolder = mainFolder.addFolder('Target (Look At)');
-        // mainTargetFolder.add(novaLightMain.target.position, 'x', -50, 50, 0.1).name('Target X');
-        // mainTargetFolder.add(novaLightMain.target.position, 'y', -50, 50, 0.1).name('Target Y');
-        // mainTargetFolder.add(novaLightMain.target.position, 'z', -50, 50, 0.1).name('Target Z');
+        // const novaLightMainFolder = this.gu.addFolder('Nova Light Main')
 
-        // 2. WIDE A (Fill Light)
-        // const wideAFolder = lightFolder.addFolder('Wide A (Fill)');
-        // wideAFolder.add(novaLightWideA, 'intensity', 0, 40, 0.1).name('Intensity');
-        // wideAFolder.add(novaLightWideA.position, 'x', -50, 50, 0.1).name('Pos X');
-        // wideAFolder.add(novaLightWideA.position, 'y', -50, 50, 0.1).name('Pos Y');
-        // wideAFolder.add(novaLightWideA.position, 'z', -50, 50, 0.1).name('Pos Z');
+        // // Color
+        // novaLightMainFolder
+        //     .addColor(novaLightMainDebug, 'color')
+        //     .name('Color')
+        //     .onChange((value) => {
+        //         novaLightMain.color.set(value)
+        //     })
 
-        // // 3. WIDE B (Rim Light)
-        // const wideBFolder = lightFolder.addFolder('Wide B (Rim)');
-        // wideBFolder.add(novaLightWideB, 'intensity', 0, 40, 0.1).name('Intensity');
-        // wideBFolder.add(novaLightWideB.position, 'x', -50, 50, 0.1).name('Pos X');
-        // wideBFolder.add(novaLightWideB.position, 'y', -50, 50, 0.1).name('Pos Y');
-        // wideBFolder.add(novaLightWideB.position, 'z', -50, 50, 0.1).name('Pos Z');
+        // // Intensity
+        // novaLightMainFolder
+        //     .add(novaLightMain, 'intensity', 0, 50, 0.1)
+        //     .name('Intensity')
+
+        // // Light position
+        // const novaPositionFolder =
+        //     novaLightMainFolder.addFolder('Position')
+
+        // novaPositionFolder
+        //     .add(novaLightMain.position, 'x', -50, 50, 0.1)
+        //     .name('X')
+
+        // novaPositionFolder
+        //     .add(novaLightMain.position, 'y', -50, 50, 0.1)
+        //     .name('Y')
+
+        // novaPositionFolder
+        //     .add(novaLightMain.position, 'z', -50, 50, 0.1)
+        //     .name('Z')
+
+        // // DirectionalLight aims toward its target object.
+        // const novaTargetFolder =
+        //     novaLightMainFolder.addFolder('Target')
+
+        // novaTargetFolder
+        //     .add(novaLightMain.target.position, 'x', -50, 50, 0.1)
+        //     .name('X')
+
+        // novaTargetFolder
+        //     .add(novaLightMain.target.position, 'y', -50, 50, 0.1)
+        //     .name('Y')
+
+        // novaTargetFolder
+        //     .add(novaLightMain.target.position, 'z', -50, 50, 0.1)
+        //     .name('Z')
+
+        // novaLightMainFolder.open()
+
+
 
 
         // HELPERS & UPDATERS
 
         // Add the visible lines showing light direction and shadow bounds
-        const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
-        // Force helpers to redraw when GUI sliders are moved
+        // const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
+        // // Force helpers to redraw when GUI sliders are moved
         // const updateMainHelpers = () => {
         //     mainHelper.update();
         //     novaLightMain.shadow.camera.updateProjectionMatrix();
@@ -468,6 +605,7 @@ export default class Experience {
 
 
         const cam = this.gu.addFolder('Camera')
+        this.gu.hide()
         // (min, max, increments), change supernova position 
         // cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
         // cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
@@ -676,7 +814,7 @@ export default class Experience {
         let monitorMesh
 
 
-        const model = gltfLoader.load('/models/newSetup6.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup5.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -741,10 +879,15 @@ export default class Experience {
                         obj.castShadow = true
                     }
 
+
+
                     if (obj.name === "Top_Tb_Tex_0") {
                         obj.castShadow = true
                         obj.receiveShadow = true
                     }
+
+                    if (obj.name === "ProceduralHologramPad")
+                        obj.position.copy(this.cubeGroup.position)
 
                     if (obj.name === "Cube_Screen_0") {
                         monitorMeshes.push(obj)
@@ -1104,6 +1247,8 @@ export default class Experience {
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 
+
+
         // ---------------------------------------------------------
         // VIEWPORT & ASPECT RATIO MANAGER
         // ---------------------------------------------------------
@@ -1113,6 +1258,88 @@ export default class Experience {
         // rendering the empty space at the top and bottom of the screen.
         const TARGET_ASPECT = 20 / 9;
 
+        /**
+ * Export the procedural hologram platform.
+ *
+ * Press Shift + H to download it as a GLB.
+ */
+        window.addEventListener('keydown', async (event) => {
+            if (event.code !== 'KeyH' || !event.shiftKey) {
+                return
+            }
+
+            const exporter = new GLTFExporter()
+
+            /**
+             * Clone it so exporting does not move or modify
+             * the version currently inside the station.
+             */
+            const hologramToExport =
+                this.cubeHologram.clone(true)
+
+            /**
+             * Center it in Blender.
+             *
+             * Keep its current scale so Blender receives the size
+             * you established through the GUI.
+             */
+            hologramToExport.position.set(0, 0, 0)
+            hologramToExport.rotation.set(0, 0, 0)
+
+            hologramToExport.updateMatrixWorld(true)
+
+            /**
+             * Wrap it in a temporary scene for the exporter.
+             */
+            const exportScene = new THREE.Scene()
+
+            exportScene.name = 'HologramExportScene'
+            exportScene.add(hologramToExport)
+
+            try {
+                const glb = await exporter.parseAsync(
+                    exportScene,
+                    {
+                        binary: true,
+                        onlyVisible: true,
+                    }
+                )
+
+                const blob = new Blob(
+                    [glb],
+                    {
+                        type: 'model/gltf-binary',
+                    }
+                )
+
+                const downloadUrl =
+                    URL.createObjectURL(blob)
+
+                const downloadLink =
+                    document.createElement('a')
+
+                downloadLink.href = downloadUrl
+                downloadLink.download =
+                    'cube-hologram-platform.glb'
+
+                document.body.appendChild(downloadLink)
+
+                downloadLink.click()
+                downloadLink.remove()
+
+                URL.revokeObjectURL(downloadUrl)
+
+                console.log(
+                    'Cube hologram exported successfully.'
+                )
+            }
+            catch (error) {
+                console.error(
+                    'Failed to export cube hologram:',
+                    error
+                )
+            }
+        })
         let hotspotNeedUpdate = false
         window.addEventListener('resize', () => {
             hotspotNeedUpdate = true
