@@ -101,7 +101,8 @@ export default class CubeInput {
                 return;
             }
 
-
+            if(this.isRMB)
+                this.dragMode = "cube"
 
             // From this point onward, this pointer is accepted.
             // Now it is safe to reset interaction state.
@@ -174,7 +175,7 @@ export default class CubeInput {
                 this.onCubeDown();
                 return;
 
-            } else if (this.dragMode !== "layer" && stickerHits.length === 0) {
+            } else if (this.dragMode !== "layer") {
                 // Clicked empty space — initialize whole cube rotation
                 this.dragMode = "cube"
                 this.onEmptyDown();

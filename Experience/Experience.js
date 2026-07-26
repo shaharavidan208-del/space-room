@@ -219,51 +219,392 @@ export default class Experience {
         bedBackLightFolder.open()
 
 
-        //         /**
-        //  * Loaders
-        //  */
-        const loadingBarElement = document.querySelector('.loading-bar')
-        const loadingManager = new THREE.LoadingManager(
-            // Loaded
-            () => {
-                // Wait a little
-                window.setTimeout(() => {
-                    // Animate overlay
-                    gsap.to(overlayMaterial.uniforms.uAlpha, {
-                        duration: 3,
-                        value: 0,
-                        delay: 1,
-                        onComplete: () => {
-                            this.scene.remove(overlay);
-                            overlayGeometry.dispose();
-                            overlayMaterial.dispose();
-                        }
-                    });
+        /**
+ * Loading screen
+ */
 
-                    // Update loadingBarElement
-                    loadingBarElement.classList.add('ended')
-                    loadingBarElement.style.transform = ''
-                }, 500)
-                window.setTimeout(() => {
-                    sceneReady = true
-                }, 3000)
+        // ---------------------------------------------------------
+        // DOM ELEMENTS
+        // ---------------------------------------------------------
+        const loadingScreen =
+            document.querySelector('.loading-screen')
+
+        const loadingTitleElement =
+            document.querySelector('#loading-title')
+
+        const loadingPercentElement =
+            document.querySelector('#loading-percent')
+
+        const loadingBarFillElement =
+            document.querySelector('#loading-bar-fill')
+
+        const enterButton =
+            document.querySelector('#enter-button')
+
+
+        // ---------------------------------------------------------
+        // LOADING TITLE
+        // ---------------------------------------------------------
+        const loadingTitleText =
+            'WELCOME TO MY PORTFOLIO'
+
+        const loadingLetters = []
+            
+        /**
+         * Creates one span for every character in the title.
+         *
+         * Real letters are stored inside loadingLetters so their
+         * visibility can be controlled by the loading progress.
+         *
+         * Spaces are added to the DOM, but are not counted as
+         * animated letters.
+         */
+        const createLoadingTitle = () => {
+            const titleCharacters = [...loadingTitleText]
+
+            const titleCenter =
+                (titleCharacters.length - 1) / 2
+
+            titleCharacters.forEach((character, index) => {
+                const characterElement =
+                    document.createElement('span')
+
+                /**
+                 * Preserve spaces without treating them as
+                 * loadable animated characters.
+                 */
+                if (character === ' ') {
+                    characterElement.classList.add(
+                        'loading-space'
+                    )
+
+                    loadingTitleElement.appendChild(
+                        characterElement
+                    )
+
+                    return
+                }
+
+                characterElement.classList.add(
+                    'loading-letter'
+                )
+
+                characterElement.textContent = character
+
+                /**
+                 * Characters on the left start farther left.
+                 * Characters on the right start farther right.
+                 *
+                 * They all travel toward their own final positions
+                 * inside the centered title.
+                 */
+                const distanceFromCenter =
+                    index - titleCenter
+
+                const startX =
+                    distanceFromCenter * 18
+
+                /**
+                 * Alternate between arriving from above and below
+                 * so every letter does not perform the same motion.
+                 */
+                let startY = -60
+                let startRotation = -5
+
+                if (index % 2 !== 0) {
+                    startY = 60
+                    startRotation = 5
+                }
+
+                characterElement.style.setProperty(
+                    '--start-x',
+                    `${startX}px`
+                )
+
+                characterElement.style.setProperty(
+                    '--start-y',
+                    `${startY}px`
+                )
+
+                characterElement.style.setProperty(
+                    '--start-rotation',
+                    `${startRotation}deg`
+                )
+
+                loadingTitleElement.appendChild(
+                    characterElement
+                )
+
+                loadingLetters.push(characterElement)
+            })
+        }
+
+        createLoadingTitle()
+
+        // ---------------------------------------------------------
+        // LOADING STATE
+        // ---------------------------------------------------------
+
+        /**
+         * Real progress reported by THREE.LoadingManager.
+         */
+        let targetLoadingProgress = 0
+
+        /**
+         * Smoothed progress displayed to the user.
+         */
+        let displayedLoadingProgress = 0
+
+        /**
+         * Becomes true when LoadingManager reports that every
+         * registered asset has finished loading.
+         */
+        let loadingFinished = false
+
+        /**
+         * Prevents the button reveal from being scheduled
+         * multiple times by the animation loop.
+         */
+        let enterButtonRevealScheduled = false
+
+        /**
+         * Prevents the entry transition from running twice.
+         */
+        let enteringStation = false
+
+        /**
+ * How quickly the visual loading progress moves.
+ *
+ * 0.25 means a completely uninterrupted journey
+ * from 0 to 1 takes roughly four seconds.
+ */
+const LOADING_PROGRESS_SPEED = 0.25
+
+/**
+ * Prevent a long frame or asset-parsing freeze from
+ * causing the visual progress to jump forward.
+ */
+const MAX_LOADING_ANIMATION_DELTA = 0.05
+
+        /**
+         * Reveals title letters according to displayed progress.
+         *
+         * The first letter appears at 0%.
+         * The final letter appears only at exactly 100%.
+         *
+         * @param {number} progress Value between 0 and 1.
+         */
+        const updateLoadingLetters = (progress) => {
+            if (loadingLetters.length === 0) {
+                return
+            }
+
+            const finalLetterIndex =
+                loadingLetters.length - 1
+
+            let visibleLetterCount = 1
+
+            if (finalLetterIndex > 0) {
+                visibleLetterCount =
+                    1 +
+                    Math.floor(
+                        progress * finalLetterIndex
+                    )
+            }
+
+            loadingLetters.forEach((letter, index) => {
+                if (index < visibleLetterCount) {
+                    letter.classList.add('loaded')
+                }
+            })
+        }
+
+        /**
+         * Start the animation with the W visible.
+         */
+        updateLoadingLetters(0)
+
+        /**
+         * Smoothly moves the displayed loading progress toward
+         * the real progress reported by LoadingManager.
+         *
+         * @param {number} delta Time since the previous frame.
+         */
+        const updateLoadingScreen = (delta) => {
+            /**
+             * Clamp the lerp strength so a large delta cannot
+             * make the progress overshoot its target.
+             */
+            /**
+ * Use a clamped delta so asset parsing or a temporary
+ * frame freeze cannot teleport the loading animation.
+ */
+            const loadingAnimationDelta =
+                Math.min(
+                    delta,
+                    MAX_LOADING_ANIMATION_DELTA
+                )
+
+            /**
+             * Move toward the real progress at a fixed speed.
+             *
+             * This creates consistent spacing between letters rather
+             * than moving faster when the target is farther away.
+             */
+            if (
+                displayedLoadingProgress <
+                targetLoadingProgress
+            ) {
+                displayedLoadingProgress +=
+                    loadingAnimationDelta *
+                    LOADING_PROGRESS_SPEED
+
+                /**
+                 * Never visually progress beyond the amount that has
+                 * actually loaded.
+                 */
+                if (
+                    displayedLoadingProgress >
+                    targetLoadingProgress
+                ) {
+                    displayedLoadingProgress =
+                        targetLoadingProgress
+                }
+            }
+
+            const loadingPercentage =
+                Math.floor(
+                    displayedLoadingProgress * 100
+                )
+
+            loadingPercentElement.textContent =
+                `${String(loadingPercentage).padStart(3, '0')}%`
+
+            loadingBarFillElement.style.transform =
+                `scaleX(${displayedLoadingProgress})`
+
+            updateLoadingLetters(
+                displayedLoadingProgress
+            )
+
+            /**
+             * Wait for the final letter's 700ms CSS transition
+             * before revealing the entry button.
+             */
+            if (
+                loadingFinished &&
+                displayedLoadingProgress === 1 &&
+                !enterButtonRevealScheduled
+            ) {
+                enterButtonRevealScheduled = true
+
+                gsap.delayedCall(0.7, () => {
+                    enterButton.disabled = false
+                    enterButton.classList.add('visible')
+                })
+            }
+        }
+
+        /**
+         * Three.js loading manager
+         */
+        const loadingManager = new THREE.LoadingManager(
+            /**
+             * All registered assets finished loading.
+             */
+            () => {
+                targetLoadingProgress = 1
+                loadingFinished = true
             },
 
-            // Progress
+            /**
+             * One registered asset finished loading.
+             */
             (itemUrl, itemsLoaded, itemsTotal) => {
-                // Calculate the progress and update the loadingBarElement
-                const progressRatio = itemsLoaded / itemsTotal
-                loadingBarElement.style.transform = `scaleX(${progressRatio})`
+                targetLoadingProgress =
+                    itemsLoaded / itemsTotal
+            },
+
+            /**
+             * A registered asset failed to load.
+             */
+            (itemUrl) => {
+                console.error(
+                    `Failed to load asset: ${itemUrl}`
+                )
             }
         )
+        /**
+         * Enter the station only after the user presses the button.
+         */
+        enterButton.addEventListener('click', () => {
+            if (
+                enterButton.disabled ||
+                enteringStation
+            ) {
+                return
+            }
+
+            enteringStation = true
+            enterButton.disabled = true
+
+            /**
+             * Fade out the HTML loading interface.
+             */
+            gsap.to(loadingScreen, {
+                opacity: 0,
+                duration: 1.5,
+                ease: 'power2.inOut'
+            })
+
+            /**
+             * Fade the WebGL black overlay at the same time,
+             * gradually revealing the station beneath it.
+             */
+            gsap.to(
+                overlayMaterial.uniforms.uAlpha,
+                {
+                    value: 0,
+                    duration: 1.5,
+                    ease: 'power2.inOut',
+
+                    onComplete: () => {
+                        loadingScreen.remove()
+
+                        this.scene.remove(overlay)
+
+                        overlayGeometry.dispose()
+                        overlayMaterial.dispose()
+
+                        /**
+                         * Hotspots and scene interaction can now begin.
+                         */
+                        sceneReady = true
+                    }
+                }
+            )
+        })
         const loader = new HDRLoader(loadingManager)
         const gltfLoader = new GLTFLoader(loadingManager);
 
         this.cube = new Cube(this.scene)
 
-    
 
 
+console.log({
+    forcedColors:
+        window.matchMedia('(forced-colors: active)').matches,
+
+    background:
+        getComputedStyle(
+            document.querySelector('.loading-screen')
+        ).backgroundImage,
+
+    letterColor:
+        getComputedStyle(
+            document.querySelector('.loading-letter')
+        ).color
+})
 
 
 
@@ -814,7 +1155,7 @@ export default class Experience {
         let monitorMesh
 
 
-        const model = gltfLoader.load('/models/newSetup5.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup7.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -1437,7 +1778,10 @@ export default class Experience {
             timer.update(timestamp)
             const elapsedTime = timer.getElapsed();
             const delta = timer.getDelta()
-            stats.begin();
+
+            updateLoadingScreen(delta)
+
+            stats.begin()
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true

@@ -1,3 +1,5 @@
+import Pipe from './Pipe.js'
+
 export default class SignalTraceLevelSix {
     constructor() {
         /**
@@ -13,112 +15,125 @@ export default class SignalTraceLevelSix {
         this.cols = 6
 
         /**
-         * Fixed signal endpoints.
-         *
-         * SRC only exits to the right.
-         * RLY is touched from the left.
-         * ARC is entered from the left.
+         * Fixed signal nodes.
          */
         this.source = {
             row: 0,
-            col: 0
+            col: 0,
+            direction: "right"
         }
 
         this.relay = {
             row: 2,
-            col: 4
+            col: 4,
+            direction: "left"
         }
 
         this.target = {
             row: 5,
-            col: 5
+            col: 5,
+            direction: "left"
         }
 
         /**
-         * Exact inventory for the missing route.
-         *
-         * Intended path:
-         * SRC → down/right into locked middle rail → RLY
-         * then from RLY → down through locked bend → bottom rail → ARC.
+         * Available inventory pipe counts.
          */
-        this.inventory = [
-            {
-                connections: ["left", "down"],
-                count: 1
-            },
-            {
-                connections: ["up", "down"],
-                count: 2
-            },
-            {
-                connections: ["up", "right"],
-                count: 2
-            },
-            {
-                connections: ["down", "left", "right"],
-                count: 1
-            },
-            {
-                connections: ["down", "right"],
-                count: 1
-            },
-            {
-                connections: ["left", "right"],
-                count: 1
-            }
-        ]
+        this.pipeCount = {
+            vertical: 2,
+            cornerUpLeft: 0,
+            cornerDownLeft: 1,
+            cornerUpRight: 2,
+            horizontal: 1,
+            cornerDownRight: 1,
+            splitDown: 1
+        }
+
+        /**
+         * Node pipes.
+         */
+        this.sourcePipe = new Pipe(
+            null,
+            [this.source.direction]
+        )
+
+        this.relayPipe = new Pipe(
+            null,
+            [this.relay.direction]
+        )
+
+        this.targetPipe = new Pipe(
+            null,
+            [this.target.direction]
+        )
+
+        /**
+         * Locked board pipes.
+         */
+        this.lockedMiddlePipe = new Pipe(
+            "horizontal",
+            ["left", "right"]
+        )
+
+        this.lockedCornerPipe = new Pipe(
+            "cornerUpLeft",
+            ["up", "left"]
+        )
+
+        this.lockedBottomPipe = new Pipe(
+            "horizontal",
+            ["left", "right"]
+        )
     }
 
     createGrid() {
-        return [
-            [
-                { connections: ["right"] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: ["left", "right"], locked: true },
-                { connections: [] },
-                { connections: ["left"] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: ["up", "left"], locked: true },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: ["left", "right"], locked: true },
-                { connections: [] },
-                { connections: ["left"] }
-            ]
-        ]
+        const grid = []
+
+        /**
+         * Create the empty Tile grid.
+         */
+        for (let row = 0; row < this.rows; row++) {
+            const gridRow = []
+
+            for (let col = 0; col < this.cols; col++) {
+                const tile = {
+                    row: row,
+                    col: col,
+                    pipe: null,
+                    locked: false,
+                    blocked: false
+                }
+
+                gridRow.push(tile)
+            }
+
+            grid.push(gridRow)
+        }
+
+        /**
+         * Attach the fixed node pipes.
+         */
+        grid[this.source.row][this.source.col].pipe =
+            this.sourcePipe
+
+        grid[this.relay.row][this.relay.col].pipe =
+            this.relayPipe
+
+        grid[this.target.row][this.target.col].pipe =
+            this.targetPipe
+
+        /**
+         * Attach the locked pipes while preserving
+         * the original Level Six layout.
+         */
+        grid[2][2].pipe = this.lockedMiddlePipe
+        grid[2][2].locked = true
+
+        grid[4][3].pipe = this.lockedCornerPipe
+        grid[4][3].locked = true
+
+        grid[5][3].pipe = this.lockedBottomPipe
+        grid[5][3].locked = true
+
+        return grid
     }
 }

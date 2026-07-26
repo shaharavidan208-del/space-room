@@ -23,7 +23,7 @@ export default class SignalTrace {
         // After drawing to the canvas, we need to tell Three.js that the texture changed.
         this.texture = this.terminal.texture;
 
-        this.level = new SignalTraceLevelFive()
+        this.level = new SignalTraceLevelSix()
 
         /**
  * Grid properties.
@@ -111,6 +111,7 @@ export default class SignalTrace {
         */
         this.grid = this.level.createGrid()
         this.inventory = new SignalTraceInventory(this)
+        this.signalConnected = this.checkSignalPath()
         /**
          * Check the starting board state.
          * This lets the status text be correct immediately when Signal Trace opens.
@@ -277,7 +278,7 @@ export default class SignalTrace {
                  */
                 if (tile.pipe) {
                     if (tile.pipe.connections) {
-                        console.log("tile in placehloder: " , tile)
+                        console.log("tile in placehloder: ", tile)
                         this.pipeRenderer.drawPipe(x, y, tile.pipe.connections)
                     }
                 }
@@ -477,21 +478,6 @@ export default class SignalTrace {
         }
     }
 
-    isPipeTile(tile) {
-        if (!tile) {
-            return false
-        }
-
-        if (!tile.connections) {
-            return false
-        }
-
-        if (tile.connections.length === 0) {
-            return false
-        }
-
-        return true
-    }
 
     pipeConnectsToTarget(row, col, tile) {
         if (!this.isPipeTile(tile)) {
@@ -689,103 +675,123 @@ export default class SignalTrace {
     }
 
     /**
-     * Check whether two tiles are connected in the specified direction.
-     * @param {*Object} currentTile the tile to check
-     * @param {*Object} neighborTile the neighboring tile to check
-     * @param {*String} direction the direction to check
-     * @returns {boolean} true if the tiles are connected, false otherwise
-     */
-    tilesConnect(currentTile, neighborTile, direction) {
-        /**
-         * Check whether the current tile and neighbor tile
-         * actually connect to each other.
-         *
-         * Example:
-         * current exits right.
-         * neighbor must have left.
-         */
-
-        if (!currentTile) {
+ * Checks whether two neighboring pipes connect to each other.
+ *
+ * The current pipe must open toward the neighbor, and the neighboring
+ * pipe must open back toward the current pipe.
+ *
+ * @param {Pipe} currentPipe
+ * The pipe we are currently visiting.
+ *
+ * @param {Pipe} neighborPipe
+ * The neighboring pipe.
+ *
+ * @param {string} direction
+ * The direction from the current pipe toward the neighbor.
+ *
+ * @returns {boolean}
+ * True when both pipes connect to each other.
+ */
+    pipesConnect(currentPipe, neighborPipe, direction) {
+        if (!currentPipe) {
             return false
         }
 
-        if (!neighborTile) {
+        if (!neighborPipe) {
             return false
         }
 
-        if (!currentTile.connections) {
+        if (!currentPipe.connections) {
             return false
         }
 
-        if (!neighborTile.connections) {
+        if (!neighborPipe.connections) {
             return false
         }
 
-        /**
-         * The current tile must have the direction we are trying to travel through.
-         */
-        if (!currentTile.connections.includes(direction)) {
+        if (!currentPipe.connections.includes(direction)) {
             return false
         }
 
         const oppositeDirection = this.getOppositeDirection(direction)
 
-        /**
-         * If the direction is invalid, the tiles cannot connect.
-         */
         if (!oppositeDirection) {
             return false
         }
 
-        /**
-         * The neighbor must connect back from the opposite side.
-         */
-        if (!neighborTile.connections.includes(oppositeDirection)) {
+        if (!neighborPipe.connections.includes(oppositeDirection)) {
             return false
         }
 
         return true
     }
 
+    /**
+ * Checks whether the current level's required signal route is complete.
+ *
+ * Levels with a relay require:
+ * 1. Source to relay
+ * 2. Relay to target
+ *
+ * Levels without a relay require:
+ * 1. Source to target
+ *
+ * @returns {boolean}
+ * True when all required paths exist.
+ */
     checkSignalPath() {
         if (this.relay) {
-            if (!this.canReachEndpoint(this.source, this.relay)) {
+            const sourceReachesRelay = this.canReachEndpoint(
+                this.source,
+                this.relay
+            )
+
+            if (!sourceReachesRelay) {
                 return false
             }
 
-            if (!this.canReachEndpoint(this.relay, this.target)) {
+            const relayReachesTarget = this.canReachEndpoint(
+                this.relay,
+                this.target
+            )
+
+            if (!relayReachesTarget) {
                 return false
             }
 
             return true
         }
 
-        return this.canReachEndpoint(this.source, this.target)
+        return this.canReachEndpoint(
+            this.source,
+            this.target
+        )
     }
 
+    /**
+ * Checks whether a connected pipe path exists between two endpoints.
+ *
+ * The search begins on the starting endpoint's tile and follows
+ * bidirectionally connected pipes until it reaches the ending endpoint.
+ *
+ * @param {Object} startEndpoint
+ * Object containing the starting row and column.
+ *
+ * @param {Object} endEndpoint
+ * Object containing the destination row and column.
+ *
+ * @returns {boolean}
+ * True when the ending endpoint can be reached.
+ */
     canReachEndpoint(startEndpoint, endEndpoint) {
-        /**
-             * use a set to track visited tiles, so we don't get stuck in a loop
-             * A set is like an array, but it cannot store duplicate values. This is important because we don't want to visit the same tile twice, which would cause an infinite loop.
-             * Also, With an array, .includes() has to scan through the array until it finds the value.
-             * With a Set, .has() is built for quick lookup.
-             * We use a set and not an array because we want to be able to quickly check if a tile has already been visited.
-             * If we used an array, we would have to loop through the array to check if a tile has already been visited, which would be slower.
-             */
         const visited = new Set()
-        /**
-         * use a stack to track tiles to visit, so we can do a depth-first search
-         * DFS means:
-         * Start somewhere, follow one path as deep as possible, and only backtrack when you hit a dead end.
-         * A stack is last in, first out. We add tiles to the stack as we find them, and 
-         * then we pop them off the stack to visit them. This way, we always visit the most recently found tile first, 
-         */
-        const stack = []
-        // so Stack = places we still need to inspect
-        // Visited = places we've already inspected
-        // DFS = keep pulling from the stack and crawling through connected pipes until we either reach the endpoint or run out of options.
 
-        this.addEndpointNeighborPipesToStack(stack, startEndpoint)
+        const stack = [
+            {
+                row: startEndpoint.row,
+                col: startEndpoint.col
+            }
+        ]
 
         while (stack.length > 0) {
             const currentPosition = stack.pop()
@@ -794,215 +800,107 @@ export default class SignalTrace {
             const col = currentPosition.col
             const positionKey = `${row},${col}`
 
+            /**
+             * Do not inspect the same board position twice.
+             */
             if (visited.has(positionKey)) {
                 continue
             }
 
             visited.add(positionKey)
 
+            /**
+             * Reaching the ending endpoint means a complete connected
+             * route was found.
+             */
+            if (
+                row === endEndpoint.row &&
+                col === endEndpoint.col
+            ) {
+                return true
+            }
+
             const currentTile = this.grid[row][col]
 
-            if (!this.isPipeTile(currentTile)) {
+            /**
+             * The signal cannot travel through a Tile without a Pipe.
+             */
+            if (!currentTile) {
                 continue
             }
 
-            if (this.pipeConnectsToEndpoint(row, col, currentTile, endEndpoint)) {
-                return true
+            if (!currentTile.pipe) {
+                continue
             }
 
-            for (const direction of currentTile.connections) {
-                const neighborPosition = this.getNeighborPosition(row, col, direction)
+            const currentPipe = currentTile.pipe
 
-                if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
+            /**
+             * Inspect every direction in which the current Pipe opens.
+             */
+            for (const direction of currentPipe.connections) {
+                const neighborPosition = this.getNeighborPosition(
+                    row,
+                    col,
+                    direction
+                )
+
+                if (
+                    !this.isInsideBoard(
+                        neighborPosition.row,
+                        neighborPosition.col
+                    )
+                ) {
                     continue
                 }
 
-                if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
+                const neighborTile =
+                    this.grid[neighborPosition.row][neighborPosition.col]
+
+                if (!neighborTile) {
                     continue
                 }
 
-                const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-                if (!this.tilesConnect(currentTile, neighborTile, direction)) {
+                if (!neighborTile.pipe) {
                     continue
                 }
 
-                const neighborKey = `${neighborPosition.row},${neighborPosition.col}`
+                const neighborPipe = neighborTile.pipe
 
-                if (!visited.has(neighborKey)) {
-                    stack.push(neighborPosition)
+                /**
+                 * Both Pipes must open toward each other.
+                 */
+                if (
+                    !this.pipesConnect(
+                        currentPipe,
+                        neighborPipe,
+                        direction
+                    )
+                ) {
+                    continue
                 }
-            }
-        }
 
-        return false
-    }
-    /**
-     * Adds neighboring pipe tiles to the stack for a given endpoint.
-     * @param {*array} stack the stack of tiles to visit. this is an array of objects with row and col properties
-     * @param {*object} endpoint the endpoint to check (for example, relay, source, ). this is an object with row, col, and direction properties
-     */
-    addEndpointNeighborPipesToStack(stack, endpoint) {
-        const endpointConnections = this.getEndpointConnections(endpoint) // get the endpoint connections
-        for (const direction of endpointConnections) {
-            const neighborPosition = this.getNeighborPosition(
-                endpoint.row,
-                endpoint.col,
-                direction
-            )
+                const neighborKey =
+                    `${neighborPosition.row},${neighborPosition.col}`
 
-            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-                continue
-            }
+                if (visited.has(neighborKey)) {
+                    continue
+                }
 
-            if (this.isEndpointPosition(neighborPosition.row, neighborPosition.col)) {
-                continue
-            }
-
-            const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-            if (!this.isPipeTile(neighborTile)) {
-                continue
-            }
-
-            const directionBackToEndpoint = this.getOppositeDirection(direction)
-
-            if (!directionBackToEndpoint) {
-                continue
-            }
-
-            if (!neighborTile.connections.includes(directionBackToEndpoint)) {
-                continue
-            }
-
-            stack.push({
-                row: neighborPosition.row,
-                col: neighborPosition.col
-            })
-        }
-    }
-
-    pipeConnectsToEndpoint(row, col, tile, endpoint) {
-        if (!this.isPipeTile(tile)) {
-            return false
-        }
-
-        const endpointConnections = this.getEndpointConnections(endpoint)
-
-        for (const direction of tile.connections) {
-            const neighborPosition = this.getNeighborPosition(row, col, direction)
-
-            if (neighborPosition.row !== endpoint.row) {
-                continue
-            }
-
-            if (neighborPosition.col !== endpoint.col) {
-                continue
-            }
-
-            const directionFromEndpointToPipe = this.getOppositeDirection(direction)
-
-            if (!directionFromEndpointToPipe) {
-                continue
-            }
-
-            if (endpointConnections.includes(directionFromEndpointToPipe)) {
-                return true
+                stack.push({
+                    row: neighborPosition.row,
+                    col: neighborPosition.col
+                })
             }
         }
 
         return false
     }
 
-    getEndpointConnections(endpoint) {
-        const endpointTile = this.grid[endpoint.row][endpoint.col]
 
-        if (endpointTile && endpointTile.connections && endpointTile.connections.length > 0) {
-            return endpointTile.connections
-        }
 
-        if (endpoint.direction) {
-            return [endpoint.direction]
-        }
 
-        return []
-    }
-    addSourceNeighborPipesToStack(stack) {
-        const directions = ["up", "down", "left", "right"]
 
-        for (const direction of directions) {
-            const neighborPosition = this.getNeighborPosition(
-                this.source.row,
-                this.source.col,
-                direction
-            )
-
-            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-                continue
-            }
-
-            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
-                continue
-            }
-
-            const neighborTile = this.grid[neighborPosition.row][neighborPosition.col]
-
-            if (!this.isPipeTile(neighborTile)) {
-                continue
-            }
-
-            const directionBackToSource = this.getOppositeDirection(direction)
-
-            if (!directionBackToSource) {
-                continue
-            }
-
-            if (!neighborTile.connections.includes(directionBackToSource)) {
-                continue
-            }
-
-            stack.push({
-                row: neighborPosition.row,
-                col: neighborPosition.col
-            })
-        }
-    }
-
-    isPipeTile(tile) {
-        if (!tile) {
-            return false
-        }
-
-        if (!tile.connections) {
-            return false
-        }
-
-        if (tile.connections.length === 0) {
-            return false
-        }
-
-        return true
-    }
-
-    pipeConnectsToTarget(row, col, tile) {
-        if (!this.isPipeTile(tile)) {
-            return false
-        }
-
-        for (const direction of tile.connections) {
-            const neighborPosition = this.getNeighborPosition(row, col, direction)
-
-            if (!this.isInsideBoard(neighborPosition.row, neighborPosition.col)) {
-                continue
-            }
-
-            if (this.isTargetPosition(neighborPosition.row, neighborPosition.col)) {
-                return true
-            }
-        }
-
-        return false
-    }
 
     isSourcePosition(row, col) {
         if (row === this.source.row && col === this.source.col) {

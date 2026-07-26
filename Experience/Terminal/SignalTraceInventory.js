@@ -17,32 +17,32 @@ export default class SignalTraceInventory {
 
         this.items = [
             {
-                pipe: new Pipe("vertical", ["up", "down"]),
-                count: this.signalTrace.level.pipeCount.vertical
+                pipe: new Pipe("vertical", ["up", "down"], 0),
+                count: this.signalTrace.level.pipeCount.vertical,
             },
             {
-                pipe: new Pipe("cornerUpLeft", ["up", "left"]),
-                count: this.signalTrace.level.pipeCount.cornerUpLeft
+                pipe: new Pipe("cornerUpLeft", ["up", "left"], 1),
+                count: this.signalTrace.level.pipeCount.cornerUpLeft,
             },
             {
-                pipe: new Pipe("cornerDownLeft", ["down", "left"]),
-                count: this.signalTrace.level.pipeCount.cornerDownLeft
+                pipe: new Pipe("cornerDownLeft", ["down", "left"], 2),
+                count: this.signalTrace.level.pipeCount.cornerDownLeft,
             },
             {
-                pipe: new Pipe("cornerUpRight", ["up", "right"]),
-                count: this.signalTrace.level.pipeCount.cornerUpRight
+                pipe: new Pipe("cornerUpRight", ["up", "right"], 3),
+                count: this.signalTrace.level.pipeCount.cornerUpRight,
             },
             {
-                pipe: new Pipe("horizontal", ["left", "right"]),
-                count: this.signalTrace.level.pipeCount.horizontal
+                pipe: new Pipe("horizontal", ["left", "right"], 4),
+                count: this.signalTrace.level.pipeCount.horizontal,
             },
             {
-                pipe: new Pipe("cornerDownRight", ["down", "right"]),
-                count: this.signalTrace.level.pipeCount.cornerDownRight
+                pipe: new Pipe("cornerDownRight", ["down", "right"], 5),
+                count: this.signalTrace.level.pipeCount.cornerDownRight,
             },
             {
-                pipe: new Pipe("splitDown", ["down", "left", "right"]),
-                count: this.signalTrace.level.pipeCount.splitDown
+                pipe: new Pipe("splitDown", ["down", "left", "right"], 6),
+                count: this.signalTrace.level.pipeCount.splitDown,
             }
         ]
         this.ctx = signalTrace.ctx
@@ -319,9 +319,7 @@ export default class SignalTraceInventory {
      */
     createPipeFromSlot(index) {
         const item = this.items[index]
-        console.log(item , "item in createtile from slot")
         const pipeCopy = new Pipe(item.pipe.type, item.pipe.connections)
-        console.log(pipeCopy)
         return pipeCopy
     }
 
@@ -337,7 +335,7 @@ export default class SignalTraceInventory {
      * The index of the slot to decrease.
      */
     changeSlotCount(index, change) {
+        console.log("index and change: ", index, change)
         this.items[index].count += change
-
     }
 }

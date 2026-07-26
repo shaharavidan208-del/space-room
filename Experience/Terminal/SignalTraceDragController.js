@@ -12,7 +12,7 @@ export default class SignalTraceDragController {
         this.boardPipes = []
 
         // The pipe tile currently following the pointer.
-        this.pipe = null
+        this.heldPipe = null
 
         // Stores where the held tile originally came from: "board" or "inventory".
         this.originType = null
@@ -66,11 +66,10 @@ export default class SignalTraceDragController {
     /**
      * Checks whether a pipe tile is currently being dragged.
      *
-     * @returns {boolean} True when a tile is being held; otherwise, false.
+     * @returns {boolean} True when a pipe is being held; otherwise, false.
      */
     isDragging() {
-        console.log("item in isDragging: " , this.pipe)
-        return this.pipe
+        return this.heldPipe
     }
 
 
@@ -109,17 +108,19 @@ export default class SignalTraceDragController {
      * @returns {boolean} True when a board tile was picked up; otherwise, false.
      */
     tryPickUpBoardTile(canvasX, canvasY) {
-        // Convert the pointer position into a board row and column.
-          this.tile = this.signalTrace.getTileAtCanvasPosition(canvasX, canvasY)
+        // Convert the pointer position into a tile object
+        this.tile = this.signalTrace.getTileAtCanvasPosition(canvasX, canvasY)
         // The pointer is not currently over the board.
         if (!this.tile) {
             return false
         }
 
+
         // Sources, endpoints, or other protected tiles cannot be picked up.
-        if (!this.signalTrace.canPickUpTile(this.tile.row, this.tile.col)) {
+        if (!this.signalTrace.canPickUpPipe(this.tile.row, this.tile.col)) {
             return false
         }
+        this.heldPipe = this.tile.pipe
         // Store the tile and remember its original board position
         this.originType = "board"
         this.sourcePosition = {
@@ -128,18 +129,16 @@ export default class SignalTraceDragController {
         }
         this.sourceInventoryIndex = null
 
-        // Begin drawing the held tile at the current pointer position.
+        this.tile.pipe = null
+
+        // Begin drawing the held pipe at the current pointer position.
         this.dragCanvasX = canvasX
         this.dragCanvasY = canvasY
-
-        // Replace the original board tile with an empty tile while it is held.
-        this.signalTrace.grid[tile.row][tile.col] = {
-            connections: []
-        }
 
         // Recalculate the signal because removing the pipe may break a path.
         this.signalTrace.updateSignalState()
 
+        console.log("tile in board position: ", this.tile)
         // Immediately redraw so the removed tile appears under the pointer.
         this.signalTrace.drawBootScreen()
 
@@ -164,6 +163,7 @@ export default class SignalTraceDragController {
         )
 
 
+
         // The pointer is not currently over an inventory slot.
         if (!this.inventoryPosition) {
             return false
@@ -174,14 +174,14 @@ export default class SignalTraceDragController {
             return false
         }
 
-        this.pipe = this.signalTrace.inventory.createPipeFromSlot(
+        this.heldPipe = this.signalTrace.inventory.createPipeFromSlot(
             this.inventoryPosition.index
         )
 
-        // Remember where the tile came from in case the drag is cancelled.
         this.originType = "inventory"
         this.sourcePosition = null
         this.sourceInventoryIndex = this.inventoryPosition.index
+
 
         // Temporarily remove one pipe from the inventory.
         this.signalTrace.inventory.changeSlotCount(
@@ -189,7 +189,7 @@ export default class SignalTraceDragController {
             -1
         )
 
-        // Begin drawing the held tile at the current pointer position.
+        // Begin drawing the held pipe at the current pointer position.
         this.dragCanvasX = canvasX
         this.dragCanvasY = canvasY
 
@@ -244,28 +244,24 @@ export default class SignalTraceDragController {
             canvasX,
             canvasY
         )
-        console.log("tile in pointer up " , tile)
         // Place the pipe when the pointer is over a valid empty board tile.
         if (
             tile &&
             this.canDropPipe(tile)
         ) {
             // Replace the destination grid tile with the held pipe.
-            this.boardPipes.push(this.pipe)
+            this.boardPipes.push(this.heldPipe)
             // Recalculate the path after adding the pipe to the board.
+            tile.pipe = this.heldPipe
             this.signalTrace.updateSignalState()
-            const tilePosition = this.signalTrace.returnTilePosition(tile.row, tile.col)
-            tilePosition.pipe = this.pipe
-            this.signalTrace.grid[this.tile.row, this.tile.col].pipe = this.pipe
-            console.log(this.pipe, "this.pipe in pointerup")
-            console.log("0,5 in pointerup" , this.signalTrace.grid[tile.row, tile.col])
+            this.clearHeldPipe()
             this.signalTrace.drawBootScreen()
-            this.pipe = null
             return
         }
-        else if (this.canDropTileAtInventory(canvasX, canvasY)) {
-        }
 
+        else if (this.originType === "board" && this.dropTileAtInventory(canvasX, canvasY)) {
+            return
+        }
         else {
             // Invalid drops return the pipe to its original location.
             this.cancelDrag()
@@ -279,8 +275,7 @@ export default class SignalTraceDragController {
 
         if (this.signalTrace.isEndpointPosition(tile.row, tile.col)) {
             return false
-        }   
-        console.log()
+        }
         if (!tile) {
             return false
         }
@@ -292,7 +287,6 @@ export default class SignalTraceDragController {
         if (tile.blocked) {
             return false
         }
-        console.log(tile)
         if (tile.pipe && tile.pipe.connections.length > 0) {
             return false
         }
@@ -300,12 +294,24 @@ export default class SignalTraceDragController {
         return true
     }
 
-    canDropTileAtInventory(canvasX, canvasY) {
+    /**
+     * returns true if we can drop tile at inventory and updates the inventory item count
+     * Otherwise returns false
+     */
+    dropTileAtInventory(canvasX, canvasY) {
+        console.log("Entered canDropTileAtInventory")
         if (this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY) !== null) {
-            const destinationTile = this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY)
-            console.log(destinationTile)
-            this.clearHeldTile()
-            return true
+            const index = this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY).index
+            const inventoryPipe = this.signalTrace.inventory.createPipeFromSlot(index)
+            if (this.heldPipe.type === inventoryPipe.type) {
+                this.signalTrace.inventory.changeSlotCount(index, 1)
+                this.clearHeldPipe()
+                this.signalTrace.updateSignalState()
+                this.tile.pipe = null
+                this.signalTrace.drawBootScreen()
+                return true
+            }
+
         }
         return false
     }
@@ -324,32 +330,22 @@ export default class SignalTraceDragController {
 
         // Return the pipe before clearing its stored origin information.
         this.restoreHeldTile()
-        this.clearHeldTile()
+        this.clearHeldPipe()
 
         // Recalculate and redraw after restoring the original state.
         this.signalTrace.updateSignalState()
         this.signalTrace.drawBootScreen()
     }
 
-    /**
-     * Restores the held tile to its original board position or inventory slot.
-     *
-     * Board tiles are placed back into their original grid position. Inventory
-     * tiles are restored by adding one back to their original slot count.
-     *
-     * @returns {void}
-     */
+
+
     restoreHeldTile() {
-        // Restore a tile that originally came from the board.
+        // Restore a pipe that originally came from the board.
         if (this.originType === "board") {
             if (!this.sourcePosition) {
                 return
             }
-
-            this.signalTrace.grid[this.sourcePosition.row][
-                this.sourcePosition.col
-            ] = this.pipe
-
+            this.tile.pipe = this.heldPipe
             return
         }
 
@@ -371,10 +367,10 @@ export default class SignalTraceDragController {
      *
      * @returns {void}
      */
-    clearHeldTile() {
+    clearHeldPipe() {
         // Remove the tile currently attached to the pointer.
-        this.pipe = null
-        
+        this.heldPipe = null
+
         // Reset all origin information for the completed drag.
         this.originType = null
         this.sourcePosition = null
@@ -402,6 +398,6 @@ export default class SignalTraceDragController {
         const y = this.dragCanvasY - signalTrace.tileSize / 2
 
 
-        signalTrace.pipeRenderer.drawPipe(x, y, this.pipe.connections)
+        signalTrace.pipeRenderer.drawPipe(x, y, this.heldPipe.connections)
     }
 }
