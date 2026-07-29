@@ -14,6 +14,7 @@ import TerminalCanvas from './Terminal/TerminalCanvas.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { Timer } from "three";
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 
 export default class Experience {
     constructor(canvas) {
@@ -31,20 +32,6 @@ export default class Experience {
         windowBounceLight.lookAt(0, 5, 0);
 
 
-        const FLOOR_DETAIL_LAYER = 1;
-
-        const floorDetailLight = new THREE.RectAreaLight(0xb8dfff, 0.75, 9, 5);
-
-        // Place it above the middle/front floor area
-        floorDetailLight.position.set(0, 2.4, -1.2);
-
-        // Aim it down at the floor
-        floorDetailLight.lookAt(0, 0, -1.2);
-
-        // Make it affect only meshes you opt into
-        floorDetailLight.layers.set(FLOOR_DETAIL_LAYER);
-
-        this.scene.add(floorDetailLight);
         const overlayGeometry = new THREE.PlaneGeometry(2, 2)
         const overlayMaterial = new THREE.ShaderMaterial({
             transparent: true,
@@ -249,7 +236,7 @@ export default class Experience {
             'WELCOME TO MY PORTFOLIO'
 
         const loadingLetters = []
-            
+
         /**
          * Creates one span for every character in the title.
          *
@@ -378,13 +365,13 @@ export default class Experience {
  * 0.25 means a completely uninterrupted journey
  * from 0 to 1 takes roughly four seconds.
  */
-const LOADING_PROGRESS_SPEED = 0.25
+        const LOADING_PROGRESS_SPEED = 0.25
 
-/**
- * Prevent a long frame or asset-parsing freeze from
- * causing the visual progress to jump forward.
- */
-const MAX_LOADING_ANIMATION_DELTA = 0.05
+        /**
+         * Prevent a long frame or asset-parsing freeze from
+         * causing the visual progress to jump forward.
+         */
+        const MAX_LOADING_ANIMATION_DELTA = 0.05
 
         /**
          * Reveals title letters according to displayed progress.
@@ -585,36 +572,40 @@ const MAX_LOADING_ANIMATION_DELTA = 0.05
             )
         })
         const loader = new HDRLoader(loadingManager)
-        const gltfLoader = new GLTFLoader(loadingManager);
 
         this.cube = new Cube(this.scene)
 
 
 
-console.log({
-    forcedColors:
-        window.matchMedia('(forced-colors: active)').matches,
+        console.log({
+            forcedColors:
+                window.matchMedia('(forced-colors: active)').matches,
 
-    background:
-        getComputedStyle(
-            document.querySelector('.loading-screen')
-        ).backgroundImage,
+            background:
+                getComputedStyle(
+                    document.querySelector('.loading-screen')
+                ).backgroundImage,
 
-    letterColor:
-        getComputedStyle(
-            document.querySelector('.loading-letter')
-        ).color
-})
+            letterColor:
+                getComputedStyle(
+                    document.querySelector('.loading-letter')
+                ).color
+        })
 
 
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        renderer.toneMapping =
+            THREE.ACESFilmicToneMapping
+
+        renderer.toneMappingExposure = 0.95
 
         // FPS counter 
         const stats = new Stats();
@@ -693,8 +684,8 @@ console.log({
 
         const novaLightMain = new THREE.DirectionalLight(0xda581c, 25);
 
-        novaLightMain.position.set(-3.2, 8.6, -14.9);
-        novaLightMain.target.position.set(-3.2, -3.2, -9.7);
+        novaLightMain.position.set(0, 8.6, -14.9);
+        novaLightMain.target.position.set(0, -3.2, -9.7);
 
         this.scene.add(novaLightMain);
         this.scene.add(novaLightMain.target);
@@ -731,13 +722,13 @@ console.log({
         novaLightMain.shadow.mapSize.width = 1024;
         novaLightMain.shadow.mapSize.height = 1024;
 
-        novaLightMain.shadow.camera.left = -20;
-        novaLightMain.shadow.camera.right = 20;
-        novaLightMain.shadow.camera.top = 20;
-        novaLightMain.shadow.camera.bottom = -20;
+        novaLightMain.shadow.camera.left = -12
+        novaLightMain.shadow.camera.right = 12
+        novaLightMain.shadow.camera.top = 10
+        novaLightMain.shadow.camera.bottom = -10
 
         novaLightMain.shadow.camera.near = 0.5;
-        novaLightMain.shadow.camera.far = 80;
+        novaLightMain.shadow.camera.far = 100;
 
         novaLightMain.shadow.normalBias = 0.03;
         novaLightMain.shadow.bias = -0.0005;
@@ -829,8 +820,11 @@ console.log({
         // ==========================================
         // DESK LIGHTS (Untouched)
         // ==========================================
-        const deskLight = new THREE.PointLight(0x00ffff, 5, 5);
-        const deskLight2 = new THREE.PointLight(0x00ffff, 5, 5);
+        const deskLight =
+            new THREE.PointLight(0x35d5e5, 5, 5)
+
+        const deskLight2 =
+            new THREE.PointLight(0x35d5e5, 5, 5)
         deskLight.decay = 2;
         deskLight2.decay = 2;
         deskLight.position.set(0, 2.5, 0); // up in the ceiling
@@ -895,7 +889,7 @@ console.log({
         /**
         * Environment map
         */
-        const environmentMap = loader.load('/environmentMaps/volcanic_planet._4k.hdr', (texture) => {
+        const environmentMap = loader.load('/environmentMaps/volcanic_planet_compressed.hdr', (texture) => {
             environmentMap.mapping = THREE.EquirectangularReflectionMapping
 
             // This renders the skybox behind the window
@@ -1061,7 +1055,6 @@ console.log({
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
-                setRendererPixelRatio(Math.min(window.devicePixelRatio, 1.1));
                 lookTarget.copy(activePoint.position.clone());
 
                 // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
@@ -1080,7 +1073,6 @@ console.log({
         };
 
         const exitFocusMode = () => {
-            setRendererPixelRatio(1);
             showItems(true, ceilingMeshes) // unhide ceiling
             showItems(true, monitorMeshes)
             cubeControlsHint.classList.remove('visible');
@@ -1135,7 +1127,7 @@ console.log({
             "Occluder_Ceiling",
             "Wall_mesh",
             "Wall_mesh2",
-            "Circle001_3",
+            "Circle013_1",
             "Occluder_Wall"
 
         ]);
@@ -1154,8 +1146,14 @@ console.log({
 
         let monitorMesh
 
+        const dracoLoader = new DRACOLoader(loadingManager)
 
-        const model = gltfLoader.load('/models/newSetup7.glb', (gltf) => {
+        dracoLoader.setDecoderPath('/draco/')
+
+        const gltfLoader = new GLTFLoader(loadingManager)
+
+        gltfLoader.setDRACOLoader(dracoLoader)
+        const model = gltfLoader.load('/models/newSetup11_9.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -1167,26 +1165,19 @@ console.log({
 
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
                 if (obj.material && obj.material.transmission > 0) {
-
-
                     // Force transmission to 0 to cancel the background render pass
                     obj.material.transmission = 0;
-
                     // Ensure it falls back to standard, cheap transparency
                     obj.material.transparent = true;
                     obj.material.needsUpdate = true;
                 }
                 if (obj.isMesh) {
 
-                    if (obj.name.includes("Auto") || obj.name === "") {
-                        monitorMeshes.push(obj)
-                        obj.castShadow = true
-                    }
 
                     if (shouldAddHotspotOccluder(obj)) {
                         objectsArr.push(obj);
                     }
-                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001")) {
+                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001") || obj.name.includes("Mesh045") || obj.name.includes("Mesh047")) {
                         ceilingMeshes.push(obj); // it will catch all the ceiling meshes and hide them when the cube is focused on, but not when the terminal is focused on
                     }
                     console.log("Mesh:", obj.name, "| Material:", obj.material.name);
@@ -1203,7 +1194,7 @@ console.log({
                     }
 
 
-                    if (obj.name === "Mesh011_3") { // windows
+                    if (obj.name === "Mesh043_2") { // windows
                         obj.material.transparent = true;
                         obj.material.opacity = 0.08;
                         obj.material.depthWrite = false;
@@ -1215,8 +1206,9 @@ console.log({
                     }
 
 
-                    if (obj.name === "Cube027" || obj.name === "Cube003" || obj.name.includes("Cylinder") || obj.name === "mouse" || obj.name === "Cube002" || obj.namee === "Circle001_3") {
-                        // Bed, Chair, etc
+
+
+                    if (obj.name.includes("Circle") || obj.name.includes("Mesh_5700") || obj.name.includes("Plane002")) {
                         obj.castShadow = true
                     }
 
@@ -1227,8 +1219,6 @@ console.log({
                         obj.receiveShadow = true
                     }
 
-                    if (obj.name === "ProceduralHologramPad")
-                        obj.position.copy(this.cubeGroup.position)
 
                     if (obj.name === "Cube_Screen_0") {
                         monitorMeshes.push(obj)
@@ -1250,12 +1240,18 @@ console.log({
                 }
 
             })
+            instanceRepeatedMeshes(gltf.scene, [
+                'Mesh057_1',
+                'Mesh057_2',
+                'Mesh057_3',
+                'Mesh048',
+                'Mesh048_1'
+            ]);
             this.initHotspots();
             this.scene.add(gltf.scene)
         })
 
-        // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
-        const cubePosition = this.cube.cubeGroup.position
+
         // Press 'i' on your keyboard to print the Draw Call Ledger
         window.addEventListener('keydown', (e) => {
             if (e.key === 'i') {
@@ -1263,16 +1259,17 @@ console.log({
                 const drawCallLedger = {};
 
                 this.scene.traverse((child) => {
-                    // A draw call is only generated if the object is a mesh AND it is visible
                     if (child.isMesh && child.visible) {
                         meshCount++;
 
-                        // Group by the parent's name to see which system is generating them
-                        const parentName = child.parent ? (child.parent.name || child.parent.type) : 'Root';
+                        const parentName = child.parent
+                            ? (child.parent.name || child.parent.type)
+                            : 'Root';
 
                         if (!drawCallLedger[parentName]) {
                             drawCallLedger[parentName] = 0;
                         }
+
                         drawCallLedger[parentName]++;
                     }
                 });
@@ -1282,10 +1279,104 @@ console.log({
             }
         });
         /**
+ * Replaces repeated meshes with THREE.InstancedMesh objects.
+ *
+ * Each mesh name becomes its own instanced batch because each one
+ * has different geometry and/or material.
+ */
+        function instanceRepeatedMeshes(root, meshNames) {
+            root.updateMatrixWorld(true);
+
+            const inverseRootMatrix = new THREE.Matrix4()
+                .copy(root.matrixWorld)
+                .invert();
+
+            for (const meshName of meshNames) {
+                const matches = [];
+
+                root.traverse((child) => {
+                    if (!child.isMesh) {
+                        return;
+                    }
+
+                    if (child.name !== meshName) {
+                        return;
+                    }
+
+                    matches.push(child);
+                });
+
+                if (matches.length < 2) {
+                    continue;
+                }
+
+                const sourceMesh = matches[0];
+
+                const instancedMesh = new THREE.InstancedMesh(
+                    sourceMesh.geometry,
+                    sourceMesh.material,
+                    matches.length
+                );
+
+                instancedMesh.name = `${meshName}_Instanced`;
+
+                /*
+                 * This controls whether the bed contributes to the
+                 * directional light's shadow map.
+                 */
+                instancedMesh.castShadow = false
+                instancedMesh.receiveShadow =
+                    sourceMesh.receiveShadow
+
+
+                const instanceMatrix = new THREE.Matrix4();
+
+                for (
+                    let index = 0;
+                    index < matches.length;
+                    index++
+                ) {
+                    instanceMatrix
+                        .copy(inverseRootMatrix)
+                        .multiply(matches[index].matrixWorld);
+
+                    instancedMesh.setMatrixAt(
+                        index,
+                        instanceMatrix
+                    );
+                }
+
+                instancedMesh.instanceMatrix.needsUpdate = true;
+
+                /*
+                 * Important after changing instance matrices.
+                 * These bounds must include all 14 copies.
+                 */
+                instancedMesh.computeBoundingBox();
+                instancedMesh.computeBoundingSphere();
+
+                root.add(instancedMesh);
+
+                for (const mesh of matches) {
+                    mesh.removeFromParent();
+                }
+
+                console.log(
+                    `Instanced ${matches.length} copies of ${meshName}`,
+                    instancedMesh.boundingSphere
+                );
+            }
+
+            root.updateMatrixWorld(true);
+        }
+        /**
          * Points of interest
          */
 
-
+        const shadowCameraHelper =
+            new THREE.CameraHelper(
+                novaLightMain.shadow.camera
+            )
         this.initHotspots = () => {
             const glassBox = new THREE.Box3().setFromObject(monitorGlass);
             const trueGlassCenter = new THREE.Vector3();
@@ -1484,6 +1575,43 @@ console.log({
             return this.terminal.signalTrace
         }
 
+
+
+        /**
+         * Returns the names of one material or multiple materials.
+         */
+        function getMaterialNames(material) {
+            if (!material) {
+                return 'No material';
+            }
+
+            if (Array.isArray(material)) {
+                return material.map((currentMaterial) => {
+                    return currentMaterial.name;
+                });
+            }
+
+            return material.name;
+        }
+
+        /**
+         * Logs the clicked object's full parent hierarchy.
+         */
+        function logParentChain(object) {
+            const parentChain = [];
+            let currentObject = object;
+
+            while (currentObject) {
+                parentChain.push({
+                    name: currentObject.name || '(unnamed)',
+                    type: currentObject.type
+                });
+
+                currentObject = currentObject.parent;
+            }
+
+            console.log('Parent chain:', parentChain);
+        }
         /**
          * Given a pointer event, this function calculates the corresponding position on the terminal's canvas.
          * It uses raycasting to determine where the pointer intersects with the monitor glass and then maps that intersection to the terminal's canvas coordinates. 
@@ -1580,7 +1708,7 @@ console.log({
         })
 
 
-
+        renderer.domElement.addEventListener("pointerdown", (event) => inspectGlbObjectFromPointer(event, "down"))
         renderer.domElement.addEventListener("pointerdown", (event) => handleMonitorPointerEvent(event, "down"))
         renderer.domElement.addEventListener("pointermove", (event) => handleMonitorPointerEvent(event, "move"))
         renderer.domElement.addEventListener("pointerup", (event) => handleMonitorPointerEvent(event, "up"))

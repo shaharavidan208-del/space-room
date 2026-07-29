@@ -17,7 +17,7 @@ const STICKER_SCALE = 0.87;
 
 // Sticker thickness 
 const STICKER_DEPTH = 0.01;
-
+const STICKER_COUNT = 54;
 
 
 
@@ -47,143 +47,192 @@ const colorMap = {
 export default class Cube {
 
     constructor(scene) {
-        this.pieceSize = 0.12 // Size of a single cubie 
-        this.stickerGeometry = new THREE.PlaneGeometry(this.pieceSize * STICKER_SCALE, this.pieceSize * STICKER_SCALE);
-        this.stickerMaterials = {
-            'right': new THREE.MeshBasicMaterial({ color: 0xD50032 }),
-            'left': new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
-            'top': new THREE.MeshBasicMaterial({ color: 0xFFD500 }),
-            'bottom': new THREE.MeshBasicMaterial({ color: 0x0033A0 }),
-            'front': new THREE.MeshBasicMaterial({ color: 0xE45C00 }),
-            'back': new THREE.MeshBasicMaterial({ color: 0x6E1F7A })
-        };
-        this.rndAxisArr = ['x', 'y', 'z']
-        this.faceName = null
-        this.stickerArr = []
-        // Parent group for the entire cube. 
-        this.cubeGroup = new THREE.Group()
+    this.pieceSize = 0.12
 
-        // const axesHelper = new THREE.AxesHelper(5)
-        // scene.add(axesHelper)
-        this.scene = scene
-        // Flat references to all cubies and stickers — used for iteration in solve detection
-        this.pieces = []  // 27 cubie meshes
-        this.edges = []   // 54 sticker meshes
-        // groups stickers by which face they currently sit on
-        const sides = { 'x-': [], 'x+': [], 'y-': [], 'y+': [], 'z-': [], 'z+': [] };
-        // Shared cubie geometry
-        this.geometry = new RoundedBoxGeometry(
-            this.pieceSize,
-            this.pieceSize,
-            this.pieceSize,
-            4,                                 // segments — controls smoothness of rounded corners
-            PIECE_CORNER_RADIUS * this.pieceSize    // absolute radius (the constant is a ratio)
-        )
-        // Shared cubie material
-        this.material = new THREE.MeshLambertMaterial({ color: 'black' })
-        this.buildCubies()
-        // ============================================================
-        // GUI CONTROLS — for tuning placement during development
-        // ============================================================
-        // const cubeGroupFolder = gui.addFolder('Cube')
+    this.rndAxisArr = ['x', 'y', 'z']
+    this.faceName = null
 
-        // cubeGroupFolder.add(this.cubeGroup.position, 'x', -10, 10, 0.01).name('Position X')
-        // cubeGroupFolder.add(this.cubeGroup.position, 'y', -10, 10, 0.01).name('Position Y')
-        // cubeGroupFolder.add(this.cubeGroup.position, 'z', -10, 10, 0.01).name('Position Z')
+    this.scene = scene
 
-        // const scaleControl = { scale: 1 }
-        // cubeGroupFolder.add(scaleControl, 'scale', 0.1, 5, 0.01).name('Scale').onChange((val) => {
-        //     this.cubeGroup.scale.setScalar(val)
-        // })
+    // Parent for the complete Rubik's Cube.
+    this.cubeGroup = new THREE.Group()
 
-        // cubeGroupFolder.add(this.cubeGroup.rotation, 'x', -Math.PI, Math.PI, 0.01).name('Rotation X')
-        // cubeGroupFolder.add(this.cubeGroup.rotation, 'y', -Math.PI, Math.PI, 0.01).name('Rotation Y')
-        // cubeGroupFolder.add(this.cubeGroup.rotation, 'z', -Math.PI, Math.PI, 0.01).name('Rotation Z')
+    // Real cubie meshes.
+    this.pieces = []
 
-        // cubeGroupFolder.open()
-        // console.log(this.getLayer('x', 0))
-        const xFront = new THREE.Vector3(1, 0, 0);
-        const xBack = new THREE.Vector3(-1, 0, 0);
-        const zFront = new THREE.Vector3(0, 0, -1);
-        const zBack = new THREE.Vector3(0, 0, 1);
-        const origin = this.cubeGroup.position.clone();
-        const length = 0.65;
-        const color = 0xff0000; // red
+    // Logical sticker references used by solve detection.
+    // These now point to the invisible hit stickers.
+    this.edges = []
 
-        this.xArrowHelperFront = new THREE.ArrowHelper(
-            xFront,
-            origin,
-            length,
-            color
-        );
+    // Invisible sticker meshes used by CubeInput raycasting.
+    this.stickerArr = []
 
-        this.xArrowHelperBack = new THREE.ArrowHelper(
-            xBack,
-            origin,
-            length,
-            color
-        );
+    // Shared sticker geometry.
+    this.stickerGeometry = new THREE.PlaneGeometry(
+        this.pieceSize * STICKER_SCALE,
+        this.pieceSize * STICKER_SCALE
+    )
 
-        this.zArrowHelperFront = new THREE.ArrowHelper(
-            zFront,
-            origin,
-            length,
-            "blue"
-        );
+    /**
+     * These materials are only used by the invisible raycast stickers.
+     *
+     * Keeping the correct material orientation means the existing
+     * sticker raycasting continues behaving exactly as before.
+     */
+    this.stickerMaterials = {
+        right: new THREE.MeshBasicMaterial({
+            color: colorMap.right
+        }),
 
-        this.zArrowHelperBack = new THREE.ArrowHelper(
-            zBack,
-            origin,
-            length,
-            "blue"
-        );
+        left: new THREE.MeshBasicMaterial({
+            color: colorMap.left
+        }),
 
+        top: new THREE.MeshBasicMaterial({
+            color: colorMap.top
+        }),
 
+        bottom: new THREE.MeshBasicMaterial({
+            color: colorMap.bottom
+        }),
 
-        this.scene.add(this.xArrowHelperFront, this.zArrowHelperFront, this.xArrowHelperBack, this.zArrowHelperBack);
-        this.zArrowHelperFront.visible = false
-        this.zArrowHelperBack.visible = false
-        this.xArrowHelperFront.visible = false
-        this.xArrowHelperBack.visible = false
+        front: new THREE.MeshBasicMaterial({
+            color: colorMap.front
+        }),
+
+        back: new THREE.MeshBasicMaterial({
+            color: colorMap.back
+        })
     }
 
-    buildCubies() {
-        // Build the 3x3x3 grid of cubies. 
-        for (let x = -1; x <= 1; x++) {
-            for (let y = -1; y <= 1; y++) {
-                for (let z = -1; z <= 1; z++) {
-                    const cubie = new THREE.Mesh(this.geometry, this.material)
-                    cubie.position.set(x * this.pieceSize, y * this.pieceSize, z * this.pieceSize)
-                    this.cubeGroup.add(cubie)
-                    this.pieces.push(cubie)
-                    // console.log(cubie.position)
-                    // Add stickers to faces that are on the cube's outer surface.
-                    // A face is visible only when its axis position is at the extreme (±1, not 0).
-                    // Each axis is checked independently because corner cubies have multiple visible faces.
-                    if (x === 1) {
-                        this.addSticker(cubie, 'right', '+x');
-                    }
-                    if (x === -1) this.addSticker(cubie, 'left', '-x');
-                    if (y === 1) this.addSticker(cubie, 'top', '+y');
-                    if (y === -1) this.addSticker(cubie, 'bottom', '-y');
-                    if (z === 1) this.addSticker(cubie, 'front', '+z');
-                    if (z === -1) this.addSticker(cubie, 'back', '-z');
+    /**
+     * One white material for all visible sticker instances.
+     *
+     * The white base color is multiplied by each instance color.
+     */
+    this.stickerInstanceMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff
+    })
 
-                    // console.log(cubie.position)
+    /**
+     * All 54 visible stickers are now rendered by one InstancedMesh.
+     */
+    this.stickerInstances = new THREE.InstancedMesh(
+        this.stickerGeometry,
+        this.stickerInstanceMaterial,
+        STICKER_COUNT
+    )
+
+    this.stickerInstances.name = 'RubiksCubeStickers'
+
+    // Instance matrices change whenever a layer rotates.
+    this.stickerInstances.instanceMatrix.setUsage(
+        THREE.DynamicDrawUsage
+    )
+
+    this.cubeGroup.add(this.stickerInstances)
+
+    /**
+     * Reusable matrices.
+     *
+     * Reusing them avoids creating 54 new Matrix4 objects every
+     * time the player moves a layer.
+     */
+    this.stickerRootInverse = new THREE.Matrix4()
+    this.stickerInstanceMatrix = new THREE.Matrix4()
+
+    /**
+     * The invisible hit stickers are scaled up so they cover the
+     * entire cubie face.
+     *
+     * Before copying their matrices into the visible instances,
+     * this matrix removes that extra raycast-only scale.
+     */
+    this.hitStickerScaleCorrection = new THREE.Matrix4()
+
+    this.hitStickerScaleCorrection.makeScale(
+        STICKER_SCALE,
+        STICKER_SCALE,
+        1
+    )
+
+    // Shared cubie geometry.
+    this.geometry = new RoundedBoxGeometry(
+        this.pieceSize,
+        this.pieceSize,
+        this.pieceSize,
+        4,
+        PIECE_CORNER_RADIUS * this.pieceSize
+    )
+
+    // Shared cubie material.
+    this.material = new THREE.MeshLambertMaterial({
+        color: 'black'
+    })
+
+    this.buildCubies()
+}
+buildCubies() {
+    for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+            for (let z = -1; z <= 1; z++) {
+                const cubie = new THREE.Mesh(
+                    this.geometry,
+                    this.material
+                )
+
+                cubie.position.set(
+                    x * this.pieceSize,
+                    y * this.pieceSize,
+                    z * this.pieceSize
+                )
+
+                this.cubeGroup.add(cubie)
+                this.pieces.push(cubie)
+
+                if (x === 1) {
+                    this.addSticker(cubie, 'right', '+x')
+                }
+
+                if (x === -1) {
+                    this.addSticker(cubie, 'left', '-x')
+                }
+
+                if (y === 1) {
+                    this.addSticker(cubie, 'top', '+y')
+                }
+
+                if (y === -1) {
+                    this.addSticker(cubie, 'bottom', '-y')
+                }
+
+                if (z === 1) {
+                    this.addSticker(cubie, 'front', '+z')
+                }
+
+                if (z === -1) {
+                    this.addSticker(cubie, 'back', '-z')
                 }
             }
-
         }
-
-        // Position the entire cube in the room scene (sitting on the desk)
-        this.rotator = new Rotator(this)
-        this.cubeGroup.position.set(0, 1.8, -1.8)
-        this.scene.add(this.cubeGroup)
-        console.log(this.pieces[0].position)
-        // console.log(this.pieces)
-        // console.log(this.rotator)
-
     }
+
+    this.rotator = new Rotator(this)
+
+    this.cubeGroup.position.set(
+        0,
+        1.8,
+        -1.8
+    )
+
+    this.scene.add(this.cubeGroup)
+
+    /**
+     * Create the initial 54 instance matrices and calculate
+     * their bounds once.
+     */
+    this.syncStickerInstances(true)
+}
 
     /**
      * get one layer
@@ -215,67 +264,181 @@ export default class Cube {
      *                            and stays constant even after cube rotations (sticker's color identity)
      * @param {string} direction - Direction code ('+x', '-x', etc.) — used for positioning math
      */
-    addSticker(cubie, faceName, direction) {
-        // Shared sticker geometry
-        this.faceName = faceName
-        const sticker = new THREE.Mesh(this.stickerGeometry, this.stickerMaterials[faceName]);
+    /**
+ * Creates an invisible sticker used for:
+ *
+ * - raycasting
+ * - face normal detection
+ * - solve detection
+ * - tracking the sticker's transform
+ *
+ * The visible version is rendered by this.stickerInstances.
+ *
+ * @param {THREE.Mesh} cubie
+ * @param {string} faceName
+ * @param {string} direction
+ */
+addSticker(cubie, faceName, direction) {
+    this.faceName = faceName
 
-        // Distance from cubie center to its outer surface, plus a tiny buffer.
-        // The +0.001 prevents z-fighting between sticker and cubie face 
-        const offset = this.pieceSize / 2 + 0.001;
+    /**
+     * This mesh does not render.
+     *
+     * It remains a child of the cubie so all your current
+     * CubeInput and Rotator logic continues working.
+     */
+    const hitSticker = new THREE.Mesh(
+        this.stickerGeometry,
+        this.stickerMaterials[faceName]
+    )
 
-        // PlaneGeometry is created facing +Z by default. Each face direction needs different
-        // positioning AND rotation to make the sticker face outward correctly.
-        switch (direction) {
-            case '+x':
-                sticker.position.set(offset, 0, 0);
-                sticker.rotation.y = Math.PI / 2;
-                break;
-            case '-x':
-                sticker.position.set(-offset, 0, 0);
-                sticker.rotation.y = -Math.PI / 2;
-                break;
-            case '+y':
-                sticker.position.set(0, offset, 0);
-                sticker.rotation.x = -Math.PI / 2;
-                break;
-            case '-y':
-                sticker.position.set(0, -offset, 0);
-                sticker.rotation.x = Math.PI / 2;
-                break;
-            case '+z':
-                sticker.position.set(0, 0, offset);
-                // No rotation — plane already faces +Z by default
-                break;
-            case '-z':
-                sticker.position.set(0, 0, -offset);
-                sticker.rotation.y = Math.PI; // flip 180° to face backward
-                break;
-        }
+    const offset = this.pieceSize / 2 + 0.001
 
-        // Store the sticker's original face identity. Used later for solve detection —
-        // the cube is solved when all stickers on a face share the same name.
-        sticker.name = faceName;
+    switch (direction) {
+        case '+x':
+            hitSticker.position.set(offset, 0, 0)
+            hitSticker.rotation.y = Math.PI / 2
+            break
 
-        // Make sticker a child of cubie. Three.js scene graph will automatically apply
-        // any cubie rotations to its sticker children — no manual sticker math needed during animations.
-        cubie.add(sticker);
-        const hitSticker = sticker.clone();
+        case '-x':
+            hitSticker.position.set(-offset, 0, 0)
+            hitSticker.rotation.y = -Math.PI / 2
+            break
 
-        const hitScale = 1 / STICKER_SCALE;
-        hitSticker.scale.set(hitScale, hitScale, 1); // multiply by the inverse of STICKER_SCALE so it cancels out
-        hitSticker.visible = false;
-        cubie.add(hitSticker);
+        case '+y':
+            hitSticker.position.set(0, offset, 0)
+            hitSticker.rotation.x = -Math.PI / 2
+            break
 
-        this.stickerArr.push(hitSticker);
-        // Also keep flat reference for fast iteration during solve detection and animations
-        this.edges.push(sticker);
+        case '-y':
+            hitSticker.position.set(0, -offset, 0)
+            hitSticker.rotation.x = Math.PI / 2
+            break
+
+        case '+z':
+            hitSticker.position.set(0, 0, offset)
+            break
+
+        case '-z':
+            hitSticker.position.set(0, 0, -offset)
+            hitSticker.rotation.y = Math.PI
+            break
     }
 
-    scrambler() {
-        let rndAxis = Math.floor(Math.random() * this.rndAxisArr.length)
-        let rndLayerIndex = Math.floor(Math.random() * 3 - 1)
-        let rndDirection = Math.random() < 0.5 ? -1 : 1
-        this.rotator.rotateLayer(this.rndAxisArr[rndAxis], rndLayerIndex, rndDirection)
+    hitSticker.name = faceName
+
+    /**
+     * Increase only the invisible hit area.
+     *
+     * The original sticker geometry is STICKER_SCALE times the
+     * cubie face size, so this inverse scale expands the hit area
+     * back to the complete face.
+     */
+    const hitScale = 1 / STICKER_SCALE
+
+    hitSticker.scale.set(
+        hitScale,
+        hitScale,
+        1
+    )
+
+    hitSticker.visible = false
+
+    cubie.add(hitSticker)
+
+    const instanceIndex = this.stickerArr.length
+
+    hitSticker.userData.stickerInstanceIndex = instanceIndex
+
+    this.stickerArr.push(hitSticker)
+
+    /**
+     * Solve detection can keep using this.edges.
+     *
+     * Position, rotation, name and parent are all still correct.
+     * The extra scale does not affect the sticker's center or normal.
+     */
+    this.edges.push(hitSticker)
+
+    /**
+     * Give this visible instance its permanent sticker color.
+     */
+    const instanceColor = new THREE.Color(
+        colorMap[faceName]
+    )
+
+    this.stickerInstances.setColorAt(
+        instanceIndex,
+        instanceColor
+    )
+}
+
+/**
+ * Copies every invisible sticker's current transform into the
+ * corresponding visible sticker instance.
+ *
+ * @param {boolean} updateBounds
+ */
+syncStickerInstances(updateBounds = false) {
+    /**
+     * Update the cubies, helper group and invisible stickers before
+     * reading their matrixWorld values.
+     */
+    this.cubeGroup.updateMatrixWorld(true)
+
+    /**
+     * Instance matrices must be relative to the InstancedMesh,
+     * not relative to the world.
+     */
+    this.stickerRootInverse
+        .copy(this.stickerInstances.matrixWorld)
+        .invert()
+
+    for (let i = 0; i < this.stickerArr.length; i++) {
+        const hitSticker = this.stickerArr[i]
+
+        /**
+         * Convert:
+         *
+         * hit sticker world transform
+         *              ↓
+         * stickerInstances local transform
+         */
+        this.stickerInstanceMatrix.multiplyMatrices(
+            this.stickerRootInverse,
+            hitSticker.matrixWorld
+        )
+
+        /**
+         * Remove the extra scale that exists only to make
+         * raycasting easier.
+         */
+        this.stickerInstanceMatrix.multiply(
+            this.hitStickerScaleCorrection
+        )
+
+        this.stickerInstances.setMatrixAt(
+            i,
+            this.stickerInstanceMatrix
+        )
     }
+
+    /**
+     * Tell Three.js to upload the changed instance data.
+     */
+    this.stickerInstances.instanceMatrix.needsUpdate = true
+
+    if (this.stickerInstances.instanceColor) {
+        this.stickerInstances.instanceColor.needsUpdate = true
+    }
+
+    /**
+     * The overall cube bounds do not change during legal Rubik's
+     * Cube rotations, so this only needs to happen initially.
+     */
+    if (updateBounds) {
+        this.stickerInstances.computeBoundingBox()
+        this.stickerInstances.computeBoundingSphere()
+    }
+}
 }
