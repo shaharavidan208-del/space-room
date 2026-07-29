@@ -43,6 +43,10 @@ export default class SignalTraceInventory {
             {
                 pipe: new Pipe("splitDown", ["down", "left", "right"], 6),
                 count: this.signalTrace.level.pipeCount.splitDown,
+            },
+            {
+                pipe: new Pipe("splitRight", ["down", "right", "up"], 7),
+                count: this.signalTrace.level.pipeCount.splitRight,
             }
         ]
         this.ctx = signalTrace.ctx

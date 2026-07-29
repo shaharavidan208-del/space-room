@@ -24,7 +24,7 @@ export default class SignalTraceLevelSix {
         }
 
         this.relay = {
-            row: 2,
+            row: 1,
             col: 4,
             direction: "left"
         }
@@ -40,12 +40,13 @@ export default class SignalTraceLevelSix {
          */
         this.pipeCount = {
             vertical: 2,
-            cornerUpLeft: 0,
+            cornerUpLeft: 1,
             cornerDownLeft: 1,
             cornerUpRight: 2,
-            horizontal: 1,
+            horizontal: 2,
             cornerDownRight: 1,
-            splitDown: 1
+            splitDown: 1,
+            splitRight: 1
         }
 
         /**
@@ -75,14 +76,10 @@ export default class SignalTraceLevelSix {
         )
 
         this.lockedCornerPipe = new Pipe(
-            "cornerUpLeft",
-            ["up", "left"]
+            "cornerUpRight",
+            ["up", "right"]
         )
 
-        this.lockedBottomPipe = new Pipe(
-            "horizontal",
-            ["left", "right"]
-        )
     }
 
     createGrid() {
@@ -128,11 +125,7 @@ export default class SignalTraceLevelSix {
         grid[2][2].pipe = this.lockedMiddlePipe
         grid[2][2].locked = true
 
-        grid[4][3].pipe = this.lockedCornerPipe
-        grid[4][3].locked = true
 
-        grid[5][3].pipe = this.lockedBottomPipe
-        grid[5][3].locked = true
 
         return grid
     }

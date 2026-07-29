@@ -7,6 +7,7 @@ import SignalTraceLevelFive from './SignalTraceLevelFive.js'
 import SignalTraceLevelSix from './SignalTraceLevelSix.js'
 import SignalTraceDragController from './SignalTraceDragController.js'
 import SignalTraceInventory from './SignalTraceInventory.js'
+import SignalTraceTileRenderer from './SignalTraceTileRenderer.js'
 export default class SignalTrace {
     constructor(terminal) {
         this.terminal = terminal;  // store a reference to the terminal 
@@ -78,6 +79,13 @@ export default class SignalTrace {
 
 
 
+        this.tileRenderer = new SignalTraceTileRenderer(
+    this.ctx,
+    this.tileSize,
+    () => {
+        this.drawBootScreen()
+    }
+)
 
         this.pipeRenderer = new SignalTracePipeRenderer(
             this.ctx,
@@ -253,26 +261,9 @@ export default class SignalTrace {
                 const y = this.boardStartY + row * (this.tileSize + this.tileGap) // same logic as with x 
 
 
-
-                /**
-                 * Default tile background.
-                 */
-                this.ctx.fillStyle = "rgba(0, 255, 65, 0.035)"
-                this.ctx.fillRect(x, y, this.tileSize, this.tileSize)
-
-                /**
-                 * Default tile border.
-                 */
-                this.ctx.strokeStyle = "rgba(0, 255, 65, 0.13)"
-                this.ctx.lineWidth = 8
-                this.ctx.strokeRect(x, y, this.tileSize, this.tileSize) // this draws the actual rectangle
-
-                /**
-                * Draw the pipe inside this tile.
-                * The tile data comes from this.grid using the current row/col.
-                * This must happen after the tile background, otherwise the background covers it.
-                */
                 const tile = this.grid[row][col]
+
+                this.tileRenderer.drawTile(x, y)
                 /**
                  * drawPipe recieves a tile object and draws the pipe within that boundary
                  */
@@ -281,6 +272,9 @@ export default class SignalTrace {
                         console.log("tile in placehloder: ", tile)
                         this.pipeRenderer.drawPipe(x, y, tile.pipe.connections)
                     }
+                }
+                if (tile.locked) {
+                    this.tileRenderer.drawLockedTile(x, y)
                 }
                 if (row === this.source.row && col === this.source.col) {
                     this.drawNode(x, y, "#00ff99", "SRC")
