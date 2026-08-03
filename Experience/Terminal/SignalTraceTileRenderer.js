@@ -26,7 +26,6 @@ export default class SignalTraceTileRenderer {
     keyholeStemHeight: 7
 }
 
-    this.setupDebugGUI()
 }
 
 setupDebugGUI() {

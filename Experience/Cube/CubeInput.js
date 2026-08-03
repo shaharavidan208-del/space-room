@@ -67,7 +67,7 @@ export default class CubeInput {
         this.rotationAxis = ''
         this.flipAxis = null
         this.dxLarger = null
-        this.sensitivity = 0.008
+        this.sensitivity = 0.004
 
         // --- 2D Screen Coordinates ---
         this.startX = 0

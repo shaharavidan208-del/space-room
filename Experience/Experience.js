@@ -107,7 +107,7 @@ export default class Experience {
 
         const bedBackLight = new THREE.RectAreaLight(
             0xda581c, // Slightly cool fill color
-            2,        // Intensity
+            1,        // Intensity
             4,        // Width
             2.5       // Height
         )
@@ -129,7 +129,6 @@ export default class Experience {
         bedBackLight.lookAt(bedBackLightTarget)
 
         this.scene.add(bedBackLight)
-
         /**
          * Re-aim the light after changing either its position
          * or the target position through the GUI.
@@ -250,65 +249,6 @@ export default class Experience {
         document.body.appendChild(stats.dom);
 
 
-
-        /**
-         * Lights
-         */
-
-
-
-        // 2. The Supernova Rim Light (Warm)
-        const novaLight = new THREE.DirectionalLight(0xff4400, 20); // Deep orange/red, very intense
-        novaLight.position.set(0.8, 11.8, -10.7); // Positioned back where the supernova is
-        // novaLight.castShadow = true;
-        // (Keep your existing shadow frustum math here for the novaLight)
-        // this.scene.add(novaLight);
-
-        // 3. The Monitor/Desk Spill (Cool)
-        // const deskLight = new THREE.PointLight(0x00ffff, 2, 15); // Cyan, intensity 2, fades out after 15 units
-        // deskLight.position.set(0, 4, 0); // Hovering right above the keyboard/monitor
-        // deskLight.castShadow = true;
-        // deskLight.shadow.bias = -0.001; // Prevents shadow acne on the desk surface
-        // this.scene.add(deskLight);
-
-
-        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-        // this.scene.add(ambientLight)
-        // // directionalLight.castShadow = true
-
-        // // 1. The Light
-        // const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-        // directionalLight.position.set(0, 15, 0); // Positioned directly in the sky above the test
-        // directionalLight.castShadow = true;
-
-        // // 2. The Frustum (Massive box to guarantee no clipping)
-        // directionalLight.shadow.camera.left = -20;
-        // directionalLight.shadow.camera.right = 20;
-        // directionalLight.shadow.camera.top = 20;
-        // directionalLight.shadow.camera.bottom = -20;
-        // directionalLight.shadow.camera.near = 0.5;
-        // directionalLight.shadow.camera.far = 50;
-
-        // // 3. The Math Reset (CRITICAL)
-        // // If you change the camera boundaries, you MUST force Three.js to update the matrix.
-        // directionalLight.shadow.camera.updateProjectionMatrix();
-
-        // // 4. The Resolution
-
-        // // 5. The Bias (Prevents glitchy artifacts on the surface of objects)
-        // directionalLight.shadow.normalBias = 0.05;
-
-        // this.scene.add(directionalLight);
-
-
-
-
-
-        // directionalLight.shadow.camera.updateProjectionMatrix();
-
-        // directionalLight.shadow.normalBias = 0.05;
-
-
         const debugParams = {
             lookX: 1,
             lookY: 1.24, // Start slightly above the floor
@@ -320,10 +260,10 @@ export default class Experience {
             intensity: 14
         };
 
-        const novaLightMain = new THREE.DirectionalLight(0xda581c, 25);
+        const novaLightMain = new THREE.DirectionalLight(0xda581c, 20);
 
-        novaLightMain.position.set(0, 8.6, -14.9);
-        novaLightMain.target.position.set(0, -3.2, -9.7);
+        novaLightMain.position.set(0, 8.6, -11);
+        novaLightMain.target.position.set(0, -3.2, -5.6);
 
         this.scene.add(novaLightMain);
         this.scene.add(novaLightMain.target);
@@ -343,7 +283,6 @@ export default class Experience {
         novaLightMain.castShadow = true;
 
         this.scene.add(novaLightMain);
-        // THE CRITICAL FIX: You must add the target to the scene
         this.scene.add(novaLightMain.target);
 
         // const novaLightWideA = new THREE.DirectionalLight(0xff4400, 8);
@@ -391,7 +330,7 @@ export default class Experience {
 
         // const novaLightMainFolder = this.gu.addFolder('Nova Light Main')
 
-        // // Color
+        // // // Color
         // novaLightMainFolder
         //     .addColor(novaLightMainDebug, 'color')
         //     .name('Color')
@@ -399,7 +338,7 @@ export default class Experience {
         //         novaLightMain.color.set(value)
         //     })
 
-        // // Intensity
+        // // // Intensity
         // novaLightMainFolder
         //     .add(novaLightMain, 'intensity', 0, 50, 0.1)
         //     .name('Intensity')
@@ -441,9 +380,7 @@ export default class Experience {
 
 
 
-        // HELPERS & UPDATERS
-
-        // Add the visible lines showing light direction and shadow bounds
+        // // HELPERS & UPDATERS
         // const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
         // // Force helpers to redraw when GUI sliders are moved
         // const updateMainHelpers = () => {
@@ -453,7 +390,6 @@ export default class Experience {
         // };
 
         // mainFolder.onChange(updateMainHelpers);
-        // mainTargetFolder.onChange(updateMainHelpers);
 
         // ==========================================
         // DESK LIGHTS (Untouched)
@@ -469,26 +405,8 @@ export default class Experience {
         deskLight2.position.set(2.5, 1.2, -4.2); // near desk
         this.scene.add(deskLight, deskLight2);
 
-
+        this.gu.hide()
         this.scene.add(deskLight, deskLight2)
-        /**
-         * Light & Shadow Helpers
-         */
-        // 1. Shows the physical position and direction of the light
-        // const mainLightHelper = new THREE.DirectionalLightHelper(novaLight, 1);
-        // this.scene.add(mainLightHelper);
-
-        // 2. The Secret Weapon: Shows the exact box calculating your shadows
-        // const shadowCameraHelper = new THREE.CameraHelper(novaLight.shadow.camera);
-        // this.scene.add(shadowCameraHelper);
-
-
-        // this.supernova = new SupernovaRemnant(this.scene, {
-        //     position: new THREE.Vector3(-15, 5, 50),  // far away from room
-        //     scale: 8,
-        //     visible: true
-        // })
-
 
         // Load the noise image
         const textureLoader = new THREE.TextureLoader()
@@ -527,16 +445,30 @@ export default class Experience {
         /**
         * Environment map
         */
-        const environmentMap = loader.load('/environmentMaps/volcanic_planet_compressed.hdr', (texture) => {
-            environmentMap.mapping = THREE.EquirectangularReflectionMapping
+        const environmentMap = loader.load(
+            '/environmentMaps/volcanic_planet_compressed.hdr',
+            (environmentMap) => {
+                environmentMap.mapping =
+                    THREE.EquirectangularReflectionMapping
 
-            // This renders the skybox behind the window
-            this.scene.background = environmentMap;
-            environmentMap.mapping = THREE.EquirectangularReflectionMapping
-            this.scene.background = environmentMap
-            this.scene.environment = environmentMap
+                this.scene.background = environmentMap
+                this.scene.environment = environmentMap
 
-        })
+                /**
+                 * Only changes the visible skybox.
+                 */
+                this.scene.backgroundIntensity = 8
+
+                /**
+                 * Changes how strongly the HDR lights and reflects
+                 * on physical materials.
+                 */
+                this.scene.environmentIntensity = 0.8
+
+
+
+            }
+        )
 
         document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
 
@@ -578,7 +510,6 @@ export default class Experience {
 
 
         const cam = this.gu.addFolder('Camera')
-        this.gu.hide()
         // (min, max, increments), change supernova position 
         // cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
         // cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
@@ -604,12 +535,21 @@ export default class Experience {
         const lookTarget = this.cube.cubeGroup.position.clone(); // this is the point the camera will look at when focusing on a hotspot
 
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
-        const isometricDistance = 1.8;
-        const cameraTarget = new THREE.Vector3(
-            lookTarget.x + isometricDistance,
-            lookTarget.y + isometricDistance,
-            lookTarget.z + isometricDistance
-        );
+        const isometricDistance = 1.8
+
+/**
+ * The old camera was offset by 1.8 on X, Y and Z.
+ * This preserves approximately the same total camera distance
+ * while switching to a straight-on view.
+ */
+const frontDistance =
+    isometricDistance * Math.sqrt(3)
+
+const cameraTarget = new THREE.Vector3(
+    lookTarget.x,
+    lookTarget.y,
+    lookTarget.z + frontDistance
+)
 
         const cameraHome = this.camera.position.clone()
         const lookHome = new THREE.Vector3(0.9, 1.24, 0);
@@ -664,31 +604,47 @@ export default class Experience {
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
-                showItems(false, ceilingMeshes) // hide ceiling only in Cube mode
+                showItems(false, ceilingMeshes)
                 showItems(false, monitorMeshes)
-                controls.enabled = true
 
+                controls.enabled = true
                 controls.enableZoom = true
                 controls.enableRotate = false
                 controls.enablePan = false
-                cubeControlsHint.classList.add('visible');
-                lookTarget.copy(activePoint.position.clone());
-                targetFov = 15; // Isometric squeeze
 
-                const currentWindowAspect = window.innerWidth / window.innerHeight;
-                const BASE_ASPECT = 16 / 9; // default aspect ratio for the isometric distance calculation
-                let scaleFactor = 1.0;
-                if (currentWindowAspect < BASE_ASPECT) { // if the window is taller than 16:9, we need to scale the distance to maintain the correct isometric perspective
-                    scaleFactor = BASE_ASPECT / currentWindowAspect; // this is crucial for maintaining the correct isometric distance when the window is taller than 16:9
+                cubeControlsHint.classList.add('visible')
+
+                lookTarget.copy(activePoint.position)
+
+                targetFov = 15
+
+                const currentWindowAspect =
+                    window.innerWidth / window.innerHeight
+
+                const BASE_ASPECT = 16 / 9
+
+                let scaleFactor = 0.8
+
+                if (currentWindowAspect < BASE_ASPECT) {
+                    scaleFactor =
+                        BASE_ASPECT / currentWindowAspect
                 }
 
-                const dynamicDistance = isometricDistance * (1 + ((scaleFactor - 1) * 0.2)); // multiply by 0.2 to reduce the effect of the scale factor, making it less extreme for taller windows.
-                cameraTarget.set(
-                    lookTarget.x + dynamicDistance, // 
-                    lookTarget.y + dynamicDistance,
-                    lookTarget.z + dynamicDistance
-                );
+                const dynamicDistance =
+                    frontDistance *
+                    (1 + ((scaleFactor - 1) * 0.2))
 
+                /**
+                 * Keep the camera horizontally and vertically aligned
+                 * with the cube, and move it only along world Z.
+                 *
+                 * This creates a straight-on front view.
+                 */
+                cameraTarget.set(
+                    lookTarget.x,
+                    lookTarget.y,
+                    lookTarget.z + dynamicDistance
+                )
             }
 
             // --- 2. TERMINAL LOGIC ---
@@ -742,7 +698,7 @@ export default class Experience {
         console.log(renderer.info)
         // טעינת המודל
         let walls;
-        let monitorGlass; 
+        let monitorGlass;
         let monitorFrame;
         let terminalPosition;
 
@@ -791,7 +747,7 @@ export default class Experience {
         const gltfLoader = new GLTFLoader(loadingManager)
 
         gltfLoader.setDRACOLoader(dracoLoader)
-        const model = gltfLoader.load('/models/newSetup12.glb', (gltf) => {
+        const model = gltfLoader.load('/models/newSetup18.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -823,12 +779,6 @@ export default class Experience {
 
                     }
 
-                    if (obj.name === "Cube_Screen_0001") {
-                        "Cube_Screen_0"
-                        obj.visible = false
-                        monitorMesh = obj
-                    }
-
 
                     if (obj.name === "Mesh043_2") { // windows
                         obj.material.transparent = true;
@@ -842,15 +792,19 @@ export default class Experience {
                     }
 
 
-                    if (obj.name.includes("Circle") || obj.name.includes("Mesh_5700") || obj.name.includes("Plane002")) {
+                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Sci-fi_trash")) {
                         obj.castShadow = true
                     }
 
-                    if (obj.name === "Top_Tb_Tex_0") {
+                    if (obj.name === "Sci-fi_Bed2") {
+                        obj.receiveShadow = true
+                        obj.castShadow = true
+                    }
+
+                    if (obj.name === "Box007") {
                         obj.castShadow = true
                         obj.receiveShadow = true
                     }
-
 
                     if (obj.name === "Cube_Screen_0") {
                         monitorMeshes.push(obj)
