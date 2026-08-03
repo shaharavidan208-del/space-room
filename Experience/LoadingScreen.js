@@ -5,8 +5,8 @@ export default class LoadingScreen {
     /**
      * Creates and manages the entire loading-screen system.
      *
-     * @param {Object} options
-     * @param {THREE.Scene} options.scene
+     * @param {Object} options 
+     * @param {THREE.Scene} options.scene 
      * The Three.js scene containing the black WebGL overlay.
      *
      * @param {Function} options.onSceneReady
@@ -181,20 +181,20 @@ export default class LoadingScreen {
     }
 
     /**
-     * Creates one span for every character in the title.
-     *
-     * Real letters are stored in loadingLetters so their
-     * visibility can be controlled by loading progress.
-     *
-     * Spaces are added to the DOM but are not included
-     * in the animated letters array.
-     */
+ * Creates one span for every letter and space in the title.
+ *
+ * Letter elements are stored in loadingLetters so they
+ * can be animated individually.
+ *
+ * Space elements are added to preserve word spacing,
+ * but are not stored in the animated letters array.
+ */
     createLoadingTitle() {
         const titleCharacters =
             [...this.loadingTitleText]
 
         const titleCenter =
-            (titleCharacters.length - 1) / 2
+            (titleCharacters.length - 1) / 2 // we need the center of the title to calculate the distance from the center for each letter
 
         titleCharacters.forEach(
             (character, index) => {
@@ -212,7 +212,7 @@ export default class LoadingScreen {
 
                     this.loadingTitleElement.appendChild(
                         characterElement
-                    )
+                    ) // add the space to the title, but do not add it to the animated letters array
 
                     return
                 }
@@ -222,7 +222,7 @@ export default class LoadingScreen {
                 )
 
                 characterElement.textContent =
-                    character
+                    character // attach the letter to the span so it can be animated
 
                 /**
                  * Characters on the left start farther left.
@@ -264,7 +264,7 @@ export default class LoadingScreen {
 
                 this.loadingTitleElement.appendChild(
                     characterElement
-                )
+                ) // add the letter to the title element inside the actual DOM
 
                 this.loadingLetters.push(
                     characterElement
@@ -314,9 +314,6 @@ export default class LoadingScreen {
     /**
      * Reveals title letters according to displayed progress.
      *
-     * The first letter appears at 0%.
-     * The final letter appears only at exactly 100%.
-     *
      * @param {number} progress
      * A loading-progress value between 0 and 1.
      */
@@ -327,16 +324,13 @@ export default class LoadingScreen {
  * its complete journey into position independently.
  */
     launchNextLetter() {
-        if (
-            this.nextLetterIndex >=
-            this.loadingLetters.length
-        ) {
+        if (this.nextLetterIndex >= this.loadingLetters.length) {
             return
         }
 
         const nextLetter =
             this.loadingLetters[
-            this.nextLetterIndex
+            this.nextLetterIndex // starts at zero and increments each time a letter is launched
             ]
 
         nextLetter.classList.add('loaded')
@@ -365,7 +359,6 @@ export default class LoadingScreen {
     /**
      * Launches letters on a controlled timeline that is
      * completely independent of asset-loading progress.
-     *
      * @param {number} delta
      * Time since the previous rendered frame.
      */
@@ -400,10 +393,7 @@ export default class LoadingScreen {
 
         this.letterLaunchTimer += animationDelta
 
-        if (
-            this.letterLaunchTimer >=
-            this.LETTER_LAUNCH_INTERVAL
-        ) {
+        if (this.letterLaunchTimer >=this.LETTER_LAUNCH_INTERVAL) {
             this.letterLaunchTimer -=
                 this.LETTER_LAUNCH_INTERVAL
 
@@ -458,7 +448,7 @@ export default class LoadingScreen {
             Math.floor(
                 this.displayedLoadingProgress * 100
             )
-        
+
         /**
          * String(loadingPercentage) turns it into String because padStart() is a String method
          * padStart(3, 0) means:

@@ -8,6 +8,7 @@ import SignalTraceLevelSix from './SignalTraceLevelSix.js'
 import SignalTraceDragController from './SignalTraceDragController.js'
 import SignalTraceInventory from './SignalTraceInventory.js'
 import SignalTraceTileRenderer from './SignalTraceTileRenderer.js'
+import SignalTraceLevelManager from "./SignalTraceLevelManager.js"
 export default class SignalTrace {
     constructor(terminal) {
         this.terminal = terminal;  // store a reference to the terminal 
@@ -24,14 +25,7 @@ export default class SignalTrace {
         // After drawing to the canvas, we need to tell Three.js that the texture changed.
         this.texture = this.terminal.texture;
 
-        this.level = new SignalTraceLevelSix()
 
-        /**
- * Grid properties.
- * rows/cols/source/target come from the current level.
- */
-        this.rows = this.level.rows
-        this.cols = this.level.cols
 
         this.tileSize = 140
         this.tileGap = 8
@@ -55,37 +49,16 @@ export default class SignalTrace {
          * Copy the level endpoints into SignalTrace.
          * SignalTrace uses these for drawing and path checking.
          */
-        this.source = {
-            row: this.level.source.row,
-            col: this.level.source.col,
-            direction: this.level.source.direction
-        }
-
-        if (!this.source.direction) {
-            this.source.direction = "right"
-        }
-
-        this.target = {
-            row: this.level.target.row,
-            col: this.level.target.col,
-            direction: this.level.target.direction
-        }
-
-
-
-        if (!this.target.direction) {
-            this.target.direction = "left"
-        }
 
 
 
         this.tileRenderer = new SignalTraceTileRenderer(
-    this.ctx,
-    this.tileSize,
-    () => {
-        this.drawBootScreen()
-    }
-)
+            this.ctx,
+            this.tileSize,
+            () => {
+                this.drawBootScreen()
+            }
+        )
 
         this.pipeRenderer = new SignalTracePipeRenderer(
             this.ctx,
@@ -93,16 +66,14 @@ export default class SignalTrace {
             this.tileGap
         )
 
-        this.relay = {
-            row: this.level.relay.row,
-            col: this.level.relay.col,
-        }
 
         /**
          * the inventory is an object that manages the inventory state and drawing
          * SignalTrace owns the inventory, and passes itself to the inventory so it can call back to SignalTrace when needed
          */
         this.dragController = new SignalTraceDragController(this)
+
+        this.levelManager = new SignalTraceLevelManager(this)
         /**
         * Whether the current pipe layout creates
         * a valid signal path from SRC to ARC.
@@ -117,9 +88,6 @@ export default class SignalTrace {
         * 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
         * SignalTrace owns the active grid state after this point,
         */
-        this.grid = this.level.createGrid()
-        this.inventory = new SignalTraceInventory(this)
-        this.signalConnected = this.checkSignalPath()
         /**
          * Check the starting board state.
          * This lets the status text be correct immediately when Signal Trace opens.
@@ -137,11 +105,10 @@ export default class SignalTrace {
      * Go from dialogue into Signal Trace mode in the terminal
      */
     startSignalTrace() {
-        this.isRunning = true;
-        this.terminal.mode = "signalTrace"
-        // Draw a temporary startup screen.
-        this.drawBootScreen();
-    }
+    this.isRunning = true
+    this.terminal.mode = "signalTrace"
+    this.levelManager.openMainMenu()
+}
 
 
 
@@ -372,21 +339,38 @@ export default class SignalTrace {
         this.signalConnected = this.checkSignalPath()
     }
 
-    handlePointerDown(canvasX, canvasY) {
+   handlePointerDown(canvasX, canvasY) {
+    if (this.levelManager.currentScreen === "playing") {
         this.dragController.handlePointerDown(canvasX, canvasY)
+        return
     }
 
-    handlePointerMove(canvasX, canvasY) {
-        this.dragController.handlePointerMove(canvasX, canvasY)
+    this.levelManager.handlePointerDown(canvasX, canvasY)
+}
+
+handlePointerMove(canvasX, canvasY) {
+    if (this.levelManager.currentScreen !== "playing") {
+        return
     }
 
-    handlePointerUp(canvasX, canvasY) {
-        this.dragController.handlePointerUp(canvasX, canvasY)
+    this.dragController.handlePointerMove(canvasX, canvasY)
+}
+
+handlePointerUp(canvasX, canvasY) {
+    if (this.levelManager.currentScreen !== "playing") {
+        return
     }
 
-    handlePointerCancel() {
-        this.dragController.cancelDrag()
+    this.dragController.handlePointerUp(canvasX, canvasY)
+}
+
+handlePointerCancel() {
+    if (this.levelManager.currentScreen !== "playing") {
+        return
     }
+
+    this.dragController.cancelDrag()
+}
     /**
      * Draw a node at the specified position.
      * @param {number} x - the tile's top-left X position

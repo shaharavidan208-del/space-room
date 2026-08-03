@@ -56,7 +56,6 @@ export default class Cube {
 
     // Parent for the complete Rubik's Cube.
     this.cubeGroup = new THREE.Group()
-
     // Real cubie meshes.
     this.pieces = []
 

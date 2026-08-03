@@ -124,6 +124,8 @@ export default class SignalTraceLevelSix {
          */
         grid[2][2].pipe = this.lockedMiddlePipe
         grid[2][2].locked = true
+        grid[3][3].locked = true
+        grid[3][4].locked = true
 
 
 

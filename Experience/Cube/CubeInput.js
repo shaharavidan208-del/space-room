@@ -229,7 +229,7 @@ export default class CubeInput {
                 cameraRight.set(1, 0, 0).applyQuaternion(cameraQuaternion).normalize()
                 cameraUp.set(0, 1, 0).applyQuaternion(cameraQuaternion).normalize()
                 cameraForward.set(0, 0, -1).applyQuaternion(cameraQuaternion).normalize()
-
+                console.log(this.cube.cubeGroup.quaternion)
                 if (this.isRMB || this.isTouchPointer) {
                     // Horizontal drag = spin left/right around camera up
                     this.cube.cubeGroup.rotateOnWorldAxis(

@@ -514,24 +514,23 @@ canvas {
 }
 
 .loading-letter {
-    display: inline-block;
+    transform:
+        translate(
+            var(--start-x),
+            var(--start-y)
+        )
+        rotate(
+            var(--start-rotation)
+        );
+
     opacity: 0;
 
-    color: var(--cp-ink);
-
-    transform:
-        translate(var(--start-x), var(--start-y))
-        scale(0.65)
-        rotate(var(--start-rotation));
-
-    filter: blur(10px);
-
     transition:
-        transform 700ms cubic-bezier(0.16, 1, 0.3, 1),
-        opacity 250ms ease-out,
-        filter 700ms ease-out,
-        text-shadow 700ms ease-out,
-        color 700ms ease-out;
+        transform 0.7s ease,
+        opacity 0.7s ease;
+
+    transition-delay:
+        var(--launch-delay);
 }
 
 .loading-letter.loaded {

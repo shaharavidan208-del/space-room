@@ -747,7 +747,7 @@ const cameraTarget = new THREE.Vector3(
         const gltfLoader = new GLTFLoader(loadingManager)
 
         gltfLoader.setDRACOLoader(dracoLoader)
-        const model = gltfLoader.load('/models/newSetup18.glb', (gltf) => {
+        const model = gltfLoader.load('/models/Untitled.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
