@@ -17,7 +17,266 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import LoadingScreen from './LoadingScreen.js'
 
+
+
 export default class Experience {
+    instanceRepeatedMeshes(root, meshNames) {
+            root.updateMatrixWorld(true);
+
+            const inverseRootMatrix = new THREE.Matrix4()
+                .copy(root.matrixWorld)
+                .invert();
+
+            for (const meshName of meshNames) {
+                const matches = [];
+
+                root.traverse((child) => {
+                    if (!child.isMesh) {
+                        return;
+                    }
+
+                    if (child.name !== meshName) {
+                        return;
+                    }
+
+                    matches.push(child);
+                });
+
+                if (matches.length < 2) {
+                    continue;
+                }
+
+                const sourceMesh = matches[0];
+
+                const instancedMesh = new THREE.InstancedMesh(
+                    sourceMesh.geometry,
+                    sourceMesh.material,
+                    matches.length
+                );
+
+                instancedMesh.name = `${meshName}_Instanced`;
+
+                /*
+                 * This controls whether the bed contributes to the
+                 * directional light's shadow map.
+                 */
+                instancedMesh.castShadow = false
+                instancedMesh.receiveShadow =
+                    sourceMesh.receiveShadow
+
+
+                const instanceMatrix = new THREE.Matrix4();
+
+                for (
+                    let index = 0;
+                    index < matches.length;
+                    index++
+                ) {
+                    instanceMatrix
+                        .copy(inverseRootMatrix)
+                        .multiply(matches[index].matrixWorld);
+
+                    instancedMesh.setMatrixAt(
+                        index,
+                        instanceMatrix
+                    );
+                }
+
+                instancedMesh.instanceMatrix.needsUpdate = true;
+
+                /*
+                 * Important after changing instance matrices.
+                 * These bounds must include all 14 copies.
+                 */
+                instancedMesh.computeBoundingBox();
+                instancedMesh.computeBoundingSphere();
+
+                root.add(instancedMesh);
+
+                for (const mesh of matches) {
+                    mesh.removeFromParent();
+                }
+
+                console.log(
+                    `Instanced ${matches.length} copies of ${meshName}`,
+                    instancedMesh.boundingSphere
+                );
+            }
+
+            root.updateMatrixWorld(true);
+        }
+        
+    loadModel() {
+        const hotspotOccluderNames = new Set([
+            "Cylinder002",
+            "Cylinder003",
+            "Cube002",
+            "Cube1",
+            "Cylinder005",
+            "Plane",
+            "Screen",
+            "Mesh009",
+            "Mesh015",
+            "Mesh011",
+            "spaceship-window-side",
+            "spaceship-window-side001",
+            "Occluder_Floor",
+            "Occluder_Ceiling",
+            "Wall_mesh",
+            "Wall_mesh2",
+            "Circle013_1",
+            "Occluder_Wall"
+
+        ]);
+
+
+        const shouldAddHotspotOccluder = (obj) => {
+            if (hotspotOccluderNames.has(obj.name)) {
+                return true;
+            }
+
+            return false;
+        };
+
+         this.monitorMeshes = []
+        this.ceilingMeshes = [];
+        this.glbDebugMeshes = [];
+
+           let walls;
+        this.monitorGlass;
+        let monitorFrame;
+        this.terminalPosition;
+
+        this.objectsArr = []
+
+
+        const dracoLoader = new DRACOLoader(this.loadingManager)
+        dracoLoader.setDecoderPath('/draco/')
+        this.loader = new HDRLoader(this.loadingManager)
+        const gltfLoader = new GLTFLoader(this.loadingManager)
+        gltfLoader.setDRACOLoader(dracoLoader)
+        
+        gltfLoader.load('/models/Untitled.glb', (gltf) => {
+            gltf.scene.traverse((obj) => {
+                if (!obj.isMesh) {
+                    return;
+                }
+                this.glbDebugMeshes.push(obj);
+
+
+                // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
+                if (obj.material && obj.material.transmission > 0) {
+                    // Force transmission to 0 to cancel the background render pass
+                    obj.material.transmission = 0;
+                    // Ensure it falls back to standard, cheap transparency
+                    obj.material.transparent = true;
+                    obj.material.needsUpdate = true;
+                }
+                if (obj.isMesh) {
+
+
+                    if (shouldAddHotspotOccluder(obj)) {
+                        this.objectsArr.push(obj);
+                    }
+                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001") || obj.name.includes("Mesh045") || obj.name.includes("Mesh047")) {
+                        this.ceilingMeshes.push(obj); // it will catch all the ceiling meshes and hide them when the cube is focused on, but not when the terminal is focused on
+                    }
+                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
+                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
+                        obj.material.side = THREE.DoubleSide;
+                        obj.visible = false
+
+                    }
+
+
+                    if (obj.name === "Mesh043_2") { // windows
+                        obj.material.transparent = true;
+                        obj.material.opacity = 0.08;
+                        obj.material.depthWrite = false;
+                        obj.material.side = THREE.DoubleSide;
+                    }
+
+                    if (obj.name.includes("Mesh0")) { // floor 
+                        obj.receiveShadow = true
+                    }
+
+
+                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Sci-fi_trash")) {
+                        obj.castShadow = true
+                    }
+
+                    if (obj.name === "Sci-fi_Bed2") {
+                        obj.receiveShadow = true
+                        obj.castShadow = true
+                    }
+
+                    if (obj.name === "Box007") {
+                        obj.castShadow = true
+                        obj.receiveShadow = true
+                    }
+
+                    if (obj.name === "Cube_Screen_0") {
+                        this.monitorMeshes.push(obj)
+                        this.monitorGlass = obj
+                        this.terminalPosition = obj.position
+                        // Completely overwrite whatever material Blender sent
+                        obj.material = new THREE.MeshBasicMaterial({
+                            map: this.terminal.texture,
+                        });
+
+                        // If the edges start tiling/repeating when you move it, lock them:
+                        // 4. Apply and update
+                        obj.material.map = this.terminal.texture;
+                        this.terminal.texture.repeat.set(1, 1); // No tiling
+                        obj.material.needsUpdate = true;
+                    }
+
+
+                }
+
+            })
+            this.instanceRepeatedMeshes(gltf.scene, [
+                'Mesh057_1',
+                'Mesh057_2',
+                'Mesh057_3',
+                'Mesh048',
+                'Mesh048_1'
+            ]);
+            this.initHotspots();
+            this.scene.add(gltf.scene)
+        })
+
+    }
+
+    loadEnvironmentMap() {
+         /**
+        * Environment map
+        */
+        const environmentMap = this.loader.load(
+            '/environmentMaps/volcanic_planet_compressed.hdr',
+            (environmentMap) => {
+                environmentMap.mapping =
+                    THREE.EquirectangularReflectionMapping
+
+                this.scene.background = environmentMap
+                this.scene.environment = environmentMap
+
+                /**
+                 * Only changes the visible skybox.
+                 */
+                this.scene.backgroundIntensity = 8
+
+                /**
+                 * Changes how strongly the HDR lights and reflects
+                 * on physical materials.
+                 */
+                this.scene.environmentIntensity = 0.8
+
+
+
+            }
+        )
+    }
     constructor(canvas) {
         // Scene
         let sceneReady = false
@@ -42,7 +301,7 @@ export default class Experience {
          * Keep a local reference so the existing loaders do not
          * need to change beyond this extraction.
          */
-        const loadingManager =
+        this.loadingManager =
             this.loadingScreen.loadingManager
         // Initialize the math library BEFORE creating the light
         RectAreaLightUniformsLib.init();
@@ -208,7 +467,7 @@ export default class Experience {
         bedBackLightFolder.open()
 
 
-        const loader = new HDRLoader(loadingManager)
+
 
         this.cube = new Cube(this.scene)
 
@@ -442,33 +701,7 @@ export default class Experience {
 
 
 
-        /**
-        * Environment map
-        */
-        const environmentMap = loader.load(
-            '/environmentMaps/volcanic_planet_compressed.hdr',
-            (environmentMap) => {
-                environmentMap.mapping =
-                    THREE.EquirectangularReflectionMapping
 
-                this.scene.background = environmentMap
-                this.scene.environment = environmentMap
-
-                /**
-                 * Only changes the visible skybox.
-                 */
-                this.scene.backgroundIntensity = 8
-
-                /**
-                 * Changes how strongly the HDR lights and reflects
-                 * on physical materials.
-                 */
-                this.scene.environmentIntensity = 0.8
-
-
-
-            }
-        )
 
         document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
 
@@ -537,19 +770,19 @@ export default class Experience {
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
         const isometricDistance = 1.8
 
-/**
- * The old camera was offset by 1.8 on X, Y and Z.
- * This preserves approximately the same total camera distance
- * while switching to a straight-on view.
- */
-const frontDistance =
-    isometricDistance * Math.sqrt(3)
+        /**
+         * The old camera was offset by 1.8 on X, Y and Z.
+         * This preserves approximately the same total camera distance
+         * while switching to a straight-on view.
+         */
+        const frontDistance =
+            isometricDistance * Math.sqrt(3)
 
-const cameraTarget = new THREE.Vector3(
-    lookTarget.x,
-    lookTarget.y,
-    lookTarget.z + frontDistance
-)
+        const cameraTarget = new THREE.Vector3(
+            lookTarget.x,
+            lookTarget.y,
+            lookTarget.z + frontDistance
+        )
 
         const cameraHome = this.camera.position.clone()
         const lookHome = new THREE.Vector3(0.9, 1.24, 0);
@@ -604,8 +837,8 @@ const cameraTarget = new THREE.Vector3(
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
-                showItems(false, ceilingMeshes)
-                showItems(false, monitorMeshes)
+                showItems(false, this.ceilingMeshes)
+                showItems(false, this.monitorMeshes)
 
                 controls.enabled = true
                 controls.enableZoom = true
@@ -667,8 +900,8 @@ const cameraTarget = new THREE.Vector3(
         };
 
         const exitFocusMode = () => {
-            showItems(true, ceilingMeshes) // unhide ceiling
-            showItems(true, monitorMeshes)
+            showItems(true, this.ceilingMeshes) // unhide ceiling
+            showItems(true, this.monitorMeshes)
             cubeControlsHint.classList.remove('visible');
             isTransitioning = true;
 
@@ -695,147 +928,10 @@ const cameraTarget = new THREE.Vector3(
         });
 
 
-        console.log(renderer.info)
-        // טעינת המודל
-        let walls;
-        let monitorGlass;
-        let monitorFrame;
-        let terminalPosition;
-
-        const objectsArr = []
-
-        const hotspotOccluderNames = new Set([
-            "Cylinder002",
-            "Cylinder003",
-            "Cube002",
-            "Cube1",
-            "Cylinder005",
-            "Plane",
-            "Screen",
-            "Mesh009",
-            "Mesh015",
-            "Mesh011",
-            "spaceship-window-side",
-            "spaceship-window-side001",
-            "Occluder_Floor",
-            "Occluder_Ceiling",
-            "Wall_mesh",
-            "Wall_mesh2",
-            "Circle013_1",
-            "Occluder_Wall"
-
-        ]);
 
 
-        const shouldAddHotspotOccluder = (obj) => {
-            if (hotspotOccluderNames.has(obj.name)) {
-                return true;
-            }
 
-            return false;
-        };
-        const monitorMeshes = []
-        const ceilingMeshes = [];
-        const glbDebugMeshes = [];
-
-        let monitorMesh
-
-        const dracoLoader = new DRACOLoader(loadingManager)
-
-        dracoLoader.setDecoderPath('/draco/')
-
-        const gltfLoader = new GLTFLoader(loadingManager)
-
-        gltfLoader.setDRACOLoader(dracoLoader)
-        const model = gltfLoader.load('/models/Untitled.glb', (gltf) => {
-            gltf.scene.traverse((obj) => {
-                if (!obj.isMesh) {
-                    return;
-                }
-                glbDebugMeshes.push(obj);
-
-
-                // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
-                if (obj.material && obj.material.transmission > 0) {
-                    // Force transmission to 0 to cancel the background render pass
-                    obj.material.transmission = 0;
-                    // Ensure it falls back to standard, cheap transparency
-                    obj.material.transparent = true;
-                    obj.material.needsUpdate = true;
-                }
-                if (obj.isMesh) {
-
-
-                    if (shouldAddHotspotOccluder(obj)) {
-                        objectsArr.push(obj);
-                    }
-                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001") || obj.name.includes("Mesh045") || obj.name.includes("Mesh047")) {
-                        ceilingMeshes.push(obj); // it will catch all the ceiling meshes and hide them when the cube is focused on, but not when the terminal is focused on
-                    }
-                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
-                        obj.material.side = THREE.DoubleSide;
-                        obj.visible = false
-
-                    }
-
-
-                    if (obj.name === "Mesh043_2") { // windows
-                        obj.material.transparent = true;
-                        obj.material.opacity = 0.08;
-                        obj.material.depthWrite = false;
-                        obj.material.side = THREE.DoubleSide;
-                    }
-
-                    if (obj.name.includes("Mesh0")) { // floor 
-                        obj.receiveShadow = true
-                    }
-
-
-                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Sci-fi_trash")) {
-                        obj.castShadow = true
-                    }
-
-                    if (obj.name === "Sci-fi_Bed2") {
-                        obj.receiveShadow = true
-                        obj.castShadow = true
-                    }
-
-                    if (obj.name === "Box007") {
-                        obj.castShadow = true
-                        obj.receiveShadow = true
-                    }
-
-                    if (obj.name === "Cube_Screen_0") {
-                        monitorMeshes.push(obj)
-                        monitorGlass = obj
-                        terminalPosition = obj.position
-                        // Completely overwrite whatever material Blender sent
-                        obj.material = new THREE.MeshBasicMaterial({
-                            map: this.terminal.texture,
-                        });
-
-                        // If the edges start tiling/repeating when you move it, lock them:
-                        // 4. Apply and update
-                        obj.material.map = this.terminal.texture;
-                        this.terminal.texture.repeat.set(1, 1); // No tiling
-                        obj.material.needsUpdate = true;
-                    }
-
-
-                }
-
-            })
-            instanceRepeatedMeshes(gltf.scene, [
-                'Mesh057_1',
-                'Mesh057_2',
-                'Mesh057_3',
-                'Mesh048',
-                'Mesh048_1'
-            ]);
-            this.initHotspots();
-            this.scene.add(gltf.scene)
-        })
+        
 
 
         // Press 'i' on your keyboard to print the Draw Call Ledger
@@ -864,136 +960,8 @@ const cameraTarget = new THREE.Vector3(
                 console.table(drawCallLedger);
             }
         });
-        /**
- * Replaces repeated meshes with THREE.InstancedMesh objects.
- *
- * Each mesh name becomes its own instanced batch because each one
- * has different geometry and/or material.
- */
-        function instanceRepeatedMeshes(root, meshNames) {
-            root.updateMatrixWorld(true);
-
-            const inverseRootMatrix = new THREE.Matrix4()
-                .copy(root.matrixWorld)
-                .invert();
-
-            for (const meshName of meshNames) {
-                const matches = [];
-
-                root.traverse((child) => {
-                    if (!child.isMesh) {
-                        return;
-                    }
-
-                    if (child.name !== meshName) {
-                        return;
-                    }
-
-                    matches.push(child);
-                });
-
-                if (matches.length < 2) {
-                    continue;
-                }
-
-                const sourceMesh = matches[0];
-
-                const instancedMesh = new THREE.InstancedMesh(
-                    sourceMesh.geometry,
-                    sourceMesh.material,
-                    matches.length
-                );
-
-                instancedMesh.name = `${meshName}_Instanced`;
-
-                /*
-                 * This controls whether the bed contributes to the
-                 * directional light's shadow map.
-                 */
-                instancedMesh.castShadow = false
-                instancedMesh.receiveShadow =
-                    sourceMesh.receiveShadow
 
 
-                const instanceMatrix = new THREE.Matrix4();
-
-                for (
-                    let index = 0;
-                    index < matches.length;
-                    index++
-                ) {
-                    instanceMatrix
-                        .copy(inverseRootMatrix)
-                        .multiply(matches[index].matrixWorld);
-
-                    instancedMesh.setMatrixAt(
-                        index,
-                        instanceMatrix
-                    );
-                }
-
-                instancedMesh.instanceMatrix.needsUpdate = true;
-
-                /*
-                 * Important after changing instance matrices.
-                 * These bounds must include all 14 copies.
-                 */
-                instancedMesh.computeBoundingBox();
-                instancedMesh.computeBoundingSphere();
-
-                root.add(instancedMesh);
-
-                for (const mesh of matches) {
-                    mesh.removeFromParent();
-                }
-
-                console.log(
-                    `Instanced ${matches.length} copies of ${meshName}`,
-                    instancedMesh.boundingSphere
-                );
-            }
-
-            root.updateMatrixWorld(true);
-        }
-        /**
-         * Points of interest
-         */
-
-        const shadowCameraHelper =
-            new THREE.CameraHelper(
-                novaLightMain.shadow.camera
-            )
-        this.initHotspots = () => {
-            const glassBox = new THREE.Box3().setFromObject(monitorGlass);
-            const trueGlassCenter = new THREE.Vector3();
-            glassBox.getCenter(trueGlassCenter);
-
-            this.points = [
-                {
-                    name: 'RubiksCube',
-                    position: this.cube.cubeGroup.position,
-                    element: document.querySelector('#hotspot-cube'),
-                    ignoreMeshes: [this.cube.cubeGroup, this.floorMesh, this.ceilingMesh]
-                },
-                {
-                    name: 'Terminal',
-                    position: trueGlassCenter,
-                    element: document.querySelector('#hotspot-terminal'),
-                    ignoreMeshes: [monitorFrame, monitorGlass, this.floorMesh, this.ceilingMesh]
-                }
-            ];
-
-            // NEW: Dynamically attach a click listener to every hotspot in the array
-            this.points.forEach((point) => {
-                point.element.addEventListener('click', () => {
-                    if (!this.isFocused && !isTransitioning) {
-                        // Pass the specific point we clicked into the focus function
-                        enterFocusMode(point);
-                        this.currPointName = point.name
-                    }
-                });
-            });
-        }
         //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
 
 
@@ -1083,7 +1051,7 @@ const cameraTarget = new THREE.Vector3(
 
             raycaster.setFromCamera(pointer, this.camera);
 
-            const hits = raycaster.intersectObjects(glbDebugMeshes, true);
+            const hits = raycaster.intersectObjects(this.glbDebugMeshes, true);
 
             if (hits.length === 0) {
                 console.log("No GLB object hit.");
@@ -1203,7 +1171,7 @@ const cameraTarget = new THREE.Vector3(
          * @returns an object with x and y properties representing the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
          */
         const getTerminalCanvasPositionFromPointerEvent = (event) => {
-            if (!monitorGlass) {
+            if (!this.monitorGlass) {
                 return null
             }
 
@@ -1214,7 +1182,7 @@ const cameraTarget = new THREE.Vector3(
 
             raycaster.setFromCamera(pointer, this.camera)
 
-            const hits = raycaster.intersectObject(monitorGlass)
+            const hits = raycaster.intersectObject(this.monitorGlass)
 
             if (hits.length === 0) {
                 return null
@@ -1457,6 +1425,38 @@ const cameraTarget = new THREE.Vector3(
         // Trigger once on load to establish the initial layout and cache the rect.
         window.dispatchEvent(new Event('resize'));
 
+        this.initHotspots = () => {
+            const glassBox = new THREE.Box3().setFromObject(this.monitorGlass);
+            const trueGlassCenter = new THREE.Vector3();
+            glassBox.getCenter(trueGlassCenter);
+
+            this.points = [
+                {
+                    name: 'RubiksCube',
+                    position: this.cube.cubeGroup.position,
+                    element: document.querySelector('#hotspot-cube'),
+                    ignoreMeshes: [this.cube.cubeGroup, this.floorMesh, this.ceilingMeshes]
+                },
+                {
+                    name: 'Terminal',
+                    position: trueGlassCenter,
+                    element: document.querySelector('#hotspot-terminal'),
+                    ignoreMeshes: [this.monitorGlass, this.floorMesh, this.ceilingMeshes]
+                }
+            ];
+
+            // NEW: Dynamically attach a click listener to every hotspot in the array
+            this.points.forEach((point) => {
+                point.element.addEventListener('click', () => {
+                    if (!this.isFocused && !isTransitioning) {
+                        // Pass the specific point we clicked into the focus function
+                        enterFocusMode(point);
+                        this.currPointName = point.name
+                    }
+                });
+            });
+        }
+        //  // console.log(this.cube.cubeGroup.getWorldPosition(new THREE.Vector3()))
 
 
         // ---------------------------------------------------------
@@ -1474,6 +1474,7 @@ const cameraTarget = new THREE.Vector3(
         let targetY = 0;
         const tempScreenVector = new THREE.Vector2();
         const tempHitPoint = new THREE.Vector3();
+        this.assetsLoaded = false
 
         controls.addEventListener('change', () => {
             hotspotNeedUpdate = true;
@@ -1491,7 +1492,16 @@ const cameraTarget = new THREE.Vector3(
             const elapsedTime = timer.getElapsed();
             const delta = timer.getDelta()
 
-            this.loadingScreen.update(delta)
+            this.loadingScreen.updateLetterAnimation(delta)
+            if (this.loadingScreen.titleAnimationFinished) {
+                this.loadingScreen.updateLoadingProgress(delta)
+                if(!this.assetsLoaded ) {
+                    this.loadModel()
+                    this.loadEnvironmentMap()
+                    this.assetsLoaded = true
+                }
+
+                }
 
             stats.begin()
             // ---- CAMERA LERP ----
@@ -1554,7 +1564,7 @@ const cameraTarget = new THREE.Vector3(
                     // Create a ray from the camera through the hotspot's projected screen position.
                     // This ray represents the line of sight between the camera and the hotspot.
                     raycaster.setFromCamera(tempScreenVector, this.camera);
-                    const intersects = raycaster.intersectObjects(objectsArr, true)
+                    const intersects = raycaster.intersectObjects(this.objectsArr, true)
                     // .filter(hit => !point.ignoreMeshes.some(ignoreObj => ignoreObj.getObjectById(hit.object.id)));
                     // 🚨 THE DETECTIVE LOG
                     if (intersects.length === 0) {

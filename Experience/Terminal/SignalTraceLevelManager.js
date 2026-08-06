@@ -37,6 +37,37 @@ export default class SignalTraceLevelManager {
         }
 
         this.levelButtons = []
+
+        /**
+ * Stores completed levels for the current session.
+ *
+ * We will use this later when drawing completed states
+ * on the level selection screen.
+ */
+this.completedLevelIndexes = new Set()
+
+/**
+ * Victory animation state.
+ */
+this.victoryAnimationFrame = null
+this.victorySplashStartedAt = 0
+
+/**
+ * Victory screen buttons.
+ */
+this.nextLevelButton = {
+    x: 0,
+    y: 0,
+    width: 360,
+    height: 96
+}
+
+this.victoryLevelSelectButton = {
+    x: 0,
+    y: 0,
+    width: 360,
+    height: 96
+}
     }
 
     /**
@@ -386,6 +417,42 @@ export default class SignalTraceLevelManager {
                 this.loadLevel(button.index)
             }
         }
+        if (this.currentScreen === "victorySplash") {
+    /**
+     * The cinematic splash cannot be skipped accidentally.
+     */
+    return
+}
+
+if (this.currentScreen === "victory") {
+    const hasNextLevel =
+        this.currentLevelIndex <
+        this.levelClasses.length - 1
+
+    if (
+        hasNextLevel &&
+        this.isInsideRect(
+            canvasX,
+            canvasY,
+            this.nextLevelButton
+        )
+    ) {
+        this.loadNextLevel()
+        return
+    }
+
+    if (
+        this.isInsideRect(
+            canvasX,
+            canvasY,
+            this.victoryLevelSelectButton
+        )
+    ) {
+        this.openLevelSelect()
+    }
+
+    return
+}
     }
 
     /**
@@ -430,6 +497,7 @@ export default class SignalTraceLevelManager {
      * Load a playable level.
      */
     loadLevel(index) {
+        this.stopVictoryAnimation()
         const LevelClass = this.levelClasses[index]
 
         if (!LevelClass) {
@@ -493,6 +561,666 @@ export default class SignalTraceLevelManager {
     }
 
     loadNextLevel() {
-        this.loadLevel(this.currentLevelIndex + 1)
+    const nextLevelIndex =
+        this.currentLevelIndex + 1
+
+    if (
+        nextLevelIndex >=
+        this.levelClasses.length
+    ) {
+        this.openLevelSelect()
+        return
     }
+
+    this.loadLevel(nextLevelIndex)
+}
+
+    /**
+ * Begins the cinematic victory sequence.
+ *
+ * The solved board remains visible briefly before the
+ * SIGNAL RESTORED banner begins appearing over it.
+ */
+openVictorySplash() {
+    if (this.currentScreen !== "playing") {
+        return
+    }
+
+    this.stopVictoryAnimation()
+
+    this.currentScreen = "victorySplash"
+
+    /**
+     * Record this level as completed.
+     *
+     * The level selection screen will use this later.
+     */
+    this.completedLevelIndexes.add(
+        this.currentLevelIndex
+    )
+
+    this.victorySplashStartedAt = performance.now()
+
+    this.animateVictorySplash()
+}
+
+/**
+ * Draws every frame of the victory splash.
+ */
+animateVictorySplash() {
+    if (this.currentScreen !== "victorySplash") {
+        return
+    }
+
+    const currentTime = performance.now()
+    const elapsedTime =
+        currentTime - this.victorySplashStartedAt
+
+    /**
+     * Let the player see the completed board before
+     * covering it with the victory announcement.
+     */
+    const boardHoldDuration = 350
+
+    /**
+     * Time used by the actual SIGNAL RESTORED animation.
+     */
+    const bannerDuration = 1550
+
+    const totalDuration =
+        boardHoldDuration + bannerDuration
+
+    /**
+     * Always redraw the solved board first.
+     */
+    this.signalTrace.drawBootScreen()
+
+    if (elapsedTime >= boardHoldDuration) {
+        const bannerElapsed =
+            elapsedTime - boardHoldDuration
+
+        let progress =
+            bannerElapsed / bannerDuration
+
+        if (progress > 1) {
+            progress = 1
+        }
+
+        this.drawVictorySplashOverlay(progress)
+    }
+
+    this.signalTrace.texture.needsUpdate = true
+
+    if (elapsedTime < totalDuration) {
+        this.victoryAnimationFrame =
+            requestAnimationFrame(() => {
+                this.animateVictorySplash()
+            })
+
+        return
+    }
+
+    this.victoryAnimationFrame = null
+    this.openVictoryScreen()
+}
+
+/**
+ * Draws the darkened overlay and cinematic victory banner.
+ *
+ * @param {number} progress
+ * Animation progress between 0 and 1.
+ */
+drawVictorySplashOverlay(progress) {
+    const ctx = this.signalTrace.ctx
+    const canvas = this.signalTrace.canvas
+
+    const easedProgress =
+        1 - Math.pow(1 - progress, 3)
+
+    /**
+     * Gradually darken the solved board.
+     */
+    const overlayAlpha =
+        easedProgress * 0.78
+
+    ctx.save()
+
+    ctx.fillStyle =
+        `rgba(0, 0, 0, ${overlayAlpha})`
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    )
+
+    ctx.restore()
+
+    this.drawVictoryBanner(
+        progress,
+        canvas.height / 2
+    )
+}
+
+/**
+ * Draws the wide SIGNAL RESTORED announcement.
+ *
+ * The design borrows the geometry of the reference:
+ * - large centered text
+ * - horizontal glowing band
+ * - light trails extending sideways
+ *
+ * @param {number} progress
+ * Banner animation progress between 0 and 1.
+ *
+ * @param {number} centerY
+ * Vertical center of the banner.
+ */
+drawVictoryBanner(progress, centerY) {
+    const ctx = this.signalTrace.ctx
+    const canvas = this.signalTrace.canvas
+
+    /**
+     * The banner finishes expanding before the entire
+     * splash animation ends, giving it time to remain visible.
+     */
+    let expansionProgress = progress / 0.55
+
+    if (expansionProgress > 1) {
+        expansionProgress = 1
+    }
+
+    const easedExpansion =
+        1 - Math.pow(1 - expansionProgress, 3)
+
+    /**
+     * Fade the main text in shortly after the band begins.
+     */
+    let textAlpha =
+        (progress - 0.08) / 0.32
+
+    if (textAlpha < 0) {
+        textAlpha = 0
+    }
+
+    if (textAlpha > 1) {
+        textAlpha = 1
+    }
+
+    /**
+     * Supporting text appears near the end.
+     */
+    let subtitleAlpha =
+        (progress - 0.55) / 0.25
+
+    if (subtitleAlpha < 0) {
+        subtitleAlpha = 0
+    }
+
+    if (subtitleAlpha > 1) {
+        subtitleAlpha = 1
+    }
+
+    const bandWidth =
+        canvas.width * easedExpansion
+
+    const bandX =
+        canvas.width / 2 - bandWidth / 2
+
+    const bandHeight = 132
+    const bandY = centerY - bandHeight / 2
+
+    ctx.save()
+
+    /**
+     * Broad, dim glow behind the title.
+     */
+    const outerBandGradient =
+        ctx.createLinearGradient(
+            bandX,
+            0,
+            bandX + bandWidth,
+            0
+        )
+
+    outerBandGradient.addColorStop(
+        0,
+        "rgba(0, 255, 65, 0)"
+    )
+
+    outerBandGradient.addColorStop(
+        0.16,
+        "rgba(0, 255, 65, 0.04)"
+    )
+
+    outerBandGradient.addColorStop(
+        0.5,
+        "rgba(0, 255, 65, 0.17)"
+    )
+
+    outerBandGradient.addColorStop(
+        0.84,
+        "rgba(0, 255, 65, 0.04)"
+    )
+
+    outerBandGradient.addColorStop(
+        1,
+        "rgba(0, 255, 65, 0)"
+    )
+
+    ctx.fillStyle = outerBandGradient
+
+    ctx.fillRect(
+        bandX,
+        bandY,
+        bandWidth,
+        bandHeight
+    )
+
+    /**
+     * Brighter central signal strip.
+     */
+    const innerBandGradient =
+        ctx.createLinearGradient(
+            bandX,
+            0,
+            bandX + bandWidth,
+            0
+        )
+
+    innerBandGradient.addColorStop(
+        0,
+        "rgba(92, 255, 177, 0)"
+    )
+
+    innerBandGradient.addColorStop(
+        0.25,
+        "rgba(92, 255, 177, 0.12)"
+    )
+
+    innerBandGradient.addColorStop(
+        0.5,
+        "rgba(92, 255, 177, 0.46)"
+    )
+
+    innerBandGradient.addColorStop(
+        0.75,
+        "rgba(92, 255, 177, 0.12)"
+    )
+
+    innerBandGradient.addColorStop(
+        1,
+        "rgba(92, 255, 177, 0)"
+    )
+
+    ctx.fillStyle = innerBandGradient
+
+    ctx.fillRect(
+        bandX,
+        centerY - 13,
+        bandWidth,
+        26
+    )
+
+    /**
+     * Thin signal line through the middle.
+     */
+    ctx.fillStyle =
+        `rgba(216, 255, 220, ${textAlpha * 0.34})`
+
+    ctx.fillRect(
+        bandX,
+        centerY - 2,
+        bandWidth,
+        4
+    )
+
+    /**
+     * Main title.
+     */
+    const titleFontSize =
+        Math.min(
+            112,
+            canvas.width * 0.065
+        )
+
+    ctx.font =
+        `${titleFontSize}px monospace`
+
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+
+    /**
+     * Horizontal ghost copies create the stretched,
+     * signal-smear look from the reference.
+     */
+    const trailDistance =
+        90 * (1 - easedExpansion)
+
+    for (let trail = 4; trail >= 1; trail--) {
+        const offset =
+            trailDistance * (trail / 4)
+
+        const trailAlpha =
+            textAlpha * (0.035 + trail * 0.012)
+
+        ctx.fillStyle =
+            `rgba(92, 255, 177, ${trailAlpha})`
+
+        ctx.fillText(
+            "SIGNAL RESTORED",
+            canvas.width / 2 - offset,
+            centerY
+        )
+
+        ctx.fillText(
+            "SIGNAL RESTORED",
+            canvas.width / 2 + offset,
+            centerY
+        )
+    }
+
+    /**
+     * Bright central title.
+     */
+    ctx.shadowColor = "#00ff77"
+    ctx.shadowBlur = 30
+
+    ctx.fillStyle =
+        `rgba(216, 255, 220, ${textAlpha})`
+
+    ctx.fillText(
+        "SIGNAL RESTORED",
+        canvas.width / 2,
+        centerY
+    )
+
+    ctx.shadowBlur = 0
+
+    /**
+     * Small confirmation message underneath.
+     */
+    ctx.font = "30px monospace"
+
+    ctx.fillStyle =
+        `rgba(92, 255, 177, ${subtitleAlpha * 0.72})`
+
+    ctx.fillText(
+        "ARCHIVE CONNECTION STABILIZED",
+        canvas.width / 2,
+        centerY + 92
+    )
+
+    ctx.restore()
+}
+
+/**
+ * Opens the interactive victory screen after the
+ * cinematic announcement finishes.
+ */
+openVictoryScreen() {
+    this.stopVictoryAnimation()
+
+    this.currentScreen = "victory"
+
+    this.drawVictoryScreen()
+}
+
+/**
+ * Draws the completed-level screen.
+ */
+drawVictoryScreen() {
+    const signalTrace = this.signalTrace
+    const ctx = signalTrace.ctx
+    const canvas = signalTrace.canvas
+
+    /**
+     * Keep the solved board behind the victory interface.
+     */
+    signalTrace.drawBootScreen()
+
+    /**
+     * Dark overlay.
+     */
+    ctx.fillStyle = "rgba(0, 0, 0, 0.84)"
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    )
+
+    /**
+     * Keep the cinematic announcement geometry,
+     * but position it higher to leave room for buttons.
+     */
+    const bannerCenterY =
+        canvas.height * 0.34
+
+    this.drawVictoryBanner(
+        1,
+        bannerCenterY
+    )
+
+    /**
+     * Level recovery confirmation.
+     */
+    const levelNumber =
+        String(
+            this.currentLevelIndex + 1
+        ).padStart(3, "0")
+
+    ctx.save()
+
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+
+    ctx.fillStyle =
+        "rgba(0, 255, 65, 0.5)"
+
+    ctx.font = "30px monospace"
+
+    ctx.fillText(
+        `ARCHIVE NODE ${levelNumber} RECOVERED`,
+        canvas.width / 2,
+        bannerCenterY + 148
+    )
+
+    ctx.restore()
+
+    this.drawVictoryButtons()
+
+    /**
+     * CRT scanlines over the completed screen.
+     */
+    ctx.fillStyle =
+        "rgba(0, 255, 65, 0.022)"
+
+    for (
+        let y = 0;
+        y < canvas.height;
+        y += 6
+    ) {
+        ctx.fillRect(
+            0,
+            y,
+            canvas.width,
+            2
+        )
+    }
+
+    signalTrace.texture.needsUpdate = true
+}
+
+/**
+ * Draws the victory navigation buttons.
+ */
+drawVictoryButtons() {
+    const ctx = this.signalTrace.ctx
+    const canvas = this.signalTrace.canvas
+
+    const hasNextLevel =
+        this.currentLevelIndex <
+        this.levelClasses.length - 1
+
+    const gap = 38
+    const buttonY =
+        canvas.height * 0.68
+
+    if (hasNextLevel) {
+        const totalWidth =
+            this.nextLevelButton.width +
+            this.victoryLevelSelectButton.width +
+            gap
+
+        this.nextLevelButton.x =
+            canvas.width / 2 -
+            totalWidth / 2
+
+        this.nextLevelButton.y =
+            buttonY
+
+        this.victoryLevelSelectButton.x =
+            this.nextLevelButton.x +
+            this.nextLevelButton.width +
+            gap
+
+        this.victoryLevelSelectButton.y =
+            buttonY
+
+        this.drawVictoryButton(
+            this.nextLevelButton,
+            "NEXT LEVEL",
+            true
+        )
+    } else {
+        /**
+         * There is no NEXT LEVEL button after
+         * the final currently available level.
+         */
+        this.victoryLevelSelectButton.x =
+            canvas.width / 2 -
+            this.victoryLevelSelectButton.width / 2
+
+        this.victoryLevelSelectButton.y =
+            buttonY
+    }
+
+    this.drawVictoryButton(
+        this.victoryLevelSelectButton,
+        "LEVEL SELECT",
+        false
+    )
+
+    ctx.textAlign = "center"
+}
+
+/**
+ * Draws one victory-screen button.
+ *
+ * @param {Object} button
+ * Button rectangle.
+ *
+ * @param {string} label
+ * Text shown inside the button.
+ *
+ * @param {boolean} primary
+ * Whether this is the main action.
+ */
+drawVictoryButton(button, label, primary) {
+    const ctx = this.signalTrace.ctx
+
+    ctx.save()
+
+    /**
+     * Shadow behind the button.
+     */
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)"
+
+    ctx.fillRect(
+        button.x + 14,
+        button.y + 14,
+        button.width,
+        button.height
+    )
+
+    if (primary) {
+        ctx.fillStyle =
+            "rgba(0, 255, 65, 0.12)"
+
+        ctx.strokeStyle =
+            "rgba(92, 255, 177, 0.58)"
+    } else {
+        ctx.fillStyle =
+            "rgba(0, 255, 65, 0.045)"
+
+        ctx.strokeStyle =
+            "rgba(0, 255, 65, 0.24)"
+    }
+
+    ctx.fillRect(
+        button.x,
+        button.y,
+        button.width,
+        button.height
+    )
+
+    ctx.lineWidth = 5
+
+    ctx.strokeRect(
+        button.x,
+        button.y,
+        button.width,
+        button.height
+    )
+
+    /**
+     * Bright top edge.
+     */
+    ctx.fillStyle = primary
+        ? "rgba(216, 255, 220, 0.62)"
+        : "rgba(216, 255, 220, 0.24)"
+
+    ctx.fillRect(
+        button.x + 10,
+        button.y + 9,
+        button.width - 20,
+        4
+    )
+
+    ctx.fillStyle = primary
+        ? "#d8ffdc"
+        : "rgba(216, 255, 220, 0.68)"
+
+    ctx.font = "38px monospace"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+
+    ctx.fillText(
+        label,
+        button.x + button.width / 2,
+        button.y + button.height / 2 + 3
+    )
+
+    ctx.restore()
+}
+
+/**
+ * Stops any victory animation that is currently running.
+ */
+stopVictoryAnimation() {
+    if (this.victoryAnimationFrame === null) {
+        return
+    }
+
+    cancelAnimationFrame(
+        this.victoryAnimationFrame
+    )
+
+    this.victoryAnimationFrame = null
+}
+
+
 }

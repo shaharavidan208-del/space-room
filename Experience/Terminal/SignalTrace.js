@@ -336,8 +336,21 @@ export default class SignalTrace {
     }
 
     updateSignalState() {
-        this.signalConnected = this.checkSignalPath()
+    this.signalConnected = this.checkSignalPath()
+
+    /**
+     * Only trigger victory while actively playing.
+     *
+     * This prevents the victory sequence from being started
+     * multiple times after the puzzle has already been solved.
+     */
+    if (
+        this.signalConnected &&
+        this.levelManager.currentScreen === "playing"
+    ) {
+        this.levelManager.openVictorySplash()
     }
+}
 
    handlePointerDown(canvasX, canvasY) {
     if (this.levelManager.currentScreen === "playing") {
@@ -736,7 +749,6 @@ handlePointerCancel() {
             if (!relayReachesTarget) {
                 return false
             }
-
             return true
         }
 

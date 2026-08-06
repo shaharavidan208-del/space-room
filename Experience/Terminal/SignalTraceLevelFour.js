@@ -1,4 +1,6 @@
-export default class SignalTraceLevelThree {
+import Pipe from './Pipe.js'
+
+export default class SignalTraceLevelFour {
     constructor() {
         /**
          * Level display info.
@@ -20,92 +22,70 @@ export default class SignalTraceLevelThree {
          */
         this.source = {
             row: 0,
-            col: 0
+            col: 0,
+            direction: "down"
         }
 
         this.target = {
             row: 5,
-            col: 3
+            col: 3,
+            direction: "left"
         }
-        this.inventory = [
-            {
-            connections: ["left", "down"],
-                count: 1
-            },
-            {
-            connections: ["up", "down"],
-                count: 8
-            },
-            {
-            connections: ["up", "left"],
-                count: 1
-            },
-             {
-            connections: ["up", "right"],
-                count: 1
-            },
-            {
-            connections: ["right", "left"],
-                count: 1
-            },
-            {
-            connections: ["down", "right"],
-                count: 1
-            },
-        ]
 
+        this.tile = {
+            row: 0,
+            col: 0,
+            pipe: null,
+            locked: false,
+            blocked: false
+        }
+
+        this.pipeCount = {
+            vertical: 8,
+            cornerUpLeft: 1,
+            cornerDownLeft: 1,
+            cornerUpRight: 1,
+            horizontal: 1,
+            cornerDownRight: 1,
+            splitDown: 0
+        }
+
+        this.sourcePipe = new Pipe(
+            null,
+            [this.source.direction]
+        )
+
+        this.targetPipe = new Pipe(
+            null,
+            [this.target.direction]
+        )
     }
 
     createGrid() {
-        return [
-             [
-                { connections: ["down"] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: []},
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: ["left"] },
-                { connections: [] },
-                { connections: [] }
-            ]
-        ]
+        const grid = []
+
+        for (let row = 0; row < this.rows; row++) {
+            const gridRow = []
+
+            for (let col = 0; col < this.cols; col++) {
+                const newTile = {
+                    ...this.tile,
+                    row: row,
+                    col: col
+                }
+
+                gridRow.push(newTile)
+            }
+
+            grid.push(gridRow)
+        }
+
+        grid[this.source.row][this.source.col].pipe =
+            this.sourcePipe
+
+        grid[this.target.row][this.target.col].pipe =
+            this.targetPipe
+
+        return grid
     }
 }

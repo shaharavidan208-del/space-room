@@ -91,7 +91,7 @@ export default class LoadingScreen {
          * Duration of each letter's CSS transition.
          * This must match your CSS transition duration.
          */
-        this.LETTER_TRAVEL_DURATION = 0.7
+        this.LETTER_TRAVEL_DURATION = 0.5
 
         /**
          * How quickly the visual loading progress moves.
@@ -367,6 +367,7 @@ export default class LoadingScreen {
             return
         }
 
+
         /**
          * Launch the W during the first rendered frame.
          *
@@ -400,22 +401,9 @@ export default class LoadingScreen {
             this.launchNextLetter()
         }
     }
-    /**
-     * Updates the independent title animation and the real
-     * asset-loading progress.
-     *
-     * @param {number} delta
-     * Time since the previous rendered frame.
-     */
-    update(delta) {
-        /**
-         * The title animation now runs independently.
-         */
-        //  This tells the title-animation system:
-        // “Another frame passed. Decide whether it is time to launch the next letter.”
-        this.updateLetterAnimation(delta)
 
-        /**
+    updateLoadingProgress(delta) {
+         /**
          * The progress bar still follows real asset progress.
          */
         // Use Math.min so the loading animation stays linear

@@ -1,3 +1,5 @@
+import Pipe from './Pipe.js'
+
 export default class SignalTraceLevelOne {
     constructor() {
         /**
@@ -18,100 +20,114 @@ export default class SignalTraceLevelOne {
          * SRC is the signal source.
          * ARC is the archive target.
          */
-        this.source = { row: 2, col: 0 }
-        this.target = { row: 2, col: 4 }
+        this.source = {
+            row: 2,
+            col: 0,
+            direction: "right"
+        }
+
+        this.target = {
+            row: 2,
+            col: 4,
+            direction: "left"
+        }
+
+        this.tile = {
+            row: 0,
+            col: 0,
+            pipe: null,
+            locked: false,
+            blocked: false
+        }
+
+        /**
+         * Level One starts with every available pipe already
+         * placed on the board, so its inventory begins empty.
+         */
+        this.pipeCount = {
+            vertical: 0,
+            cornerUpLeft: 0,
+            cornerDownLeft: 0,
+            cornerUpRight: 0,
+            horizontal: 0,
+            cornerDownRight: 0,
+            splitDown: 0,
+            splitRight: 0
+        }
+
+        this.sourcePipe = new Pipe(
+            null,
+            [this.source.direction]
+        )
+
+        this.targetPipe = new Pipe(
+            null,
+            [this.target.direction]
+        )
+
+        /**
+         * Existing board pipes from the original Level One layout.
+         */
+        this.topLeftPipe = new Pipe(
+            "cornerUpRight",
+            ["right", "up"]
+        )
+
+        this.topRightPipe = new Pipe(
+            "cornerDownRight",
+            ["down", "right"]
+        )
+
+        this.bottomLeftPipe = new Pipe(
+            "cornerDownLeft",
+            ["down", "left"]
+        )
+
+        this.bottomRightPipe = new Pipe(
+            "cornerUpLeft",
+            ["left", "up"]
+        )
+
+        this.leftRightPipe = new Pipe(
+            "horizontal",
+            ["left", "right"]
+        )
     }
 
-
-    /**
-     * Create the initial grid layout for this level.
-     * @returns {Array<Array<{connections: Array<string>}>>} 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
-     */
     createGrid() {
+        const grid = []
+
+        for (let row = 0; row < this.rows; row++) {
+            const gridRow = []
+
+            for (let col = 0; col < this.cols; col++) {
+                const newTile = {
+                    ...this.tile,
+                    row: row,
+                    col: col
+                }
+
+                gridRow.push(newTile)
+            }
+
+            grid.push(gridRow)
+        }
+
+        grid[this.source.row][this.source.col].pipe =
+            this.sourcePipe
+
+        grid[this.target.row][this.target.col].pipe =
+            this.targetPipe
+
         /**
-         * Level 1 starting layout.
-         *
-         * This is a scrambled version of a simple path:
-         *
-         * SRC -> right -> up -> right -> right -> down -> right -> ARC
-         *
-         * The path tiles are intentionally rotated incorrectly,
-         * so the level starts with SIGNAL LINK: BROKEN.
+         * Preserve the original Level One pipe layout.
          */
-        return [ // return a 2D array of tile objects, each with a connections array that lists the directions of the pipes in that tile
-            [
-                // this is the first row of the grid
-                { connections: [] }, // connections: [] means no pipes in this tile
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-                // 5 columns for the first row, all empty tiles with no connections
-            ],
-            [
-                { connections: [] },
+        grid[1][0].pipe = this.leftRightPipe
+        grid[1][1].pipe = this.topLeftPipe
+        grid[1][3].pipe = this.topRightPipe
+        grid[2][1].pipe = this.bottomLeftPipe
+        grid[2][3].pipe = this.bottomRightPipe
 
-                /**
-                 * Intended solved state: ["down", "right"]
-                 * Current state is rotated one step away.
-                 */
-                { connections: ["right", "up"] },
-
-                /**
-                 * Intended solved state: ["left", "right"]
-                 * Current state is vertical, so it needs rotation.
-                 */
-                { connections: ["up", "down"] },
-
-                /**
-                 * Intended solved state: ["left", "down"]
-                 * Current state is rotated one step away.
-                 */
-                { connections: ["down", "right"] },
-
-                { connections: [] }
-            ],
-            [
-                /**
-                 * Source endpoint.
-                 * It stays fixed and should not rotate.
-                 */
-                { connections: ["right"] },
-
-                /**
-                 * Intended solved state: ["left", "up"]
-                 * Current state is rotated one step away.
-                 */
-                { connections: ["down", "left"] },
-
-                { connections: [] },
-
-                /**
-                 * Intended solved state: ["up", "right"]
-                 * Current state is rotated one step away.
-                 */
-                { connections: ["left", "up"] },
-
-                /**
-                 * Archive endpoint.
-                 * It stays fixed and should not rotate.
-                 */
-                { connections: ["left"] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ],
-            [
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] },
-                { connections: [] }
-            ]
-        ]
+        return grid
     }
 }
