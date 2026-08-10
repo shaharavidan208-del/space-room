@@ -16,10 +16,661 @@ import { Timer } from "three";
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import LoadingScreen from './LoadingScreen.js'
+import { createPortfolioWallDecal } from './createPortfolioWallDecal.js'
 
 
 
 export default class Experience {
+
+    setupLighting(renderer) {
+    RectAreaLightUniformsLib.init()
+
+    /**
+     * Final scene and exposure values.
+     *
+     * These are also set inside loadEnvironmentMap() because the
+     * HDR finishes loading asynchronously.
+     */
+    this.scene.backgroundIntensity = 11.9
+    this.scene.environmentIntensity = 0.2
+    this.scene.backgroundBlurriness = 0
+
+    renderer.toneMappingExposure = 1.35
+
+    /**
+     * Adds a color controller for any THREE.Color property.
+     */
+    const addColorController = (
+        folder,
+        object,
+        property,
+        label
+    ) => {
+        const colorSettings = {
+            color: `#${object[property].getHexString()}`
+        }
+
+        folder
+            .addColor(colorSettings, 'color')
+            .name(label)
+            .onChange((value) => {
+                object[property].set(value)
+            })
+    }
+
+    /**
+     * Adds position or target controls for a Vector3.
+     */
+    const addVector3Controls = (
+        parentFolder,
+        label,
+        vector,
+        onChange
+    ) => {
+        const folder =
+            parentFolder.addFolder(label)
+
+        folder
+            .add(vector, 'x', -50, 50, 0.1)
+            .name('X')
+            .onChange(onChange)
+
+        folder
+            .add(vector, 'y', -50, 50, 0.1)
+            .name('Y')
+            .onChange(onChange)
+
+        folder
+            .add(vector, 'z', -50, 50, 0.1)
+            .name('Z')
+            .onChange(onChange)
+
+        return folder
+    }
+
+    /**
+     * Adds the complete GUI for a RectAreaLight.
+     */
+    const addRectAreaLightGUI = (
+        parentFolder,
+        label,
+        light,
+        target
+    ) => {
+        const folder =
+            parentFolder.addFolder(label)
+
+        const updateDirection = () => {
+            light.lookAt(target)
+        }
+
+        addColorController(
+            folder,
+            light,
+            'color',
+            'Color'
+        )
+
+        folder
+            .add(light, 'intensity', 0, 30, 0.05)
+            .name('Intensity')
+
+        folder
+            .add(light, 'width', 0.1, 50, 0.1)
+            .name('Width')
+
+        folder
+            .add(light, 'height', 0.1, 30, 0.1)
+            .name('Height')
+
+        folder
+            .add(light, 'visible')
+            .name('Visible')
+
+        addVector3Controls(
+            folder,
+            'Position',
+            light.position,
+            updateDirection
+        )
+
+        addVector3Controls(
+            folder,
+            'Target',
+            target,
+            updateDirection
+        )
+    }
+
+    /**
+     * Adds the complete GUI for a PointLight.
+     */
+    const addPointLightGUI = (
+        parentFolder,
+        label,
+        light
+    ) => {
+        const folder =
+            parentFolder.addFolder(label)
+
+        addColorController(
+            folder,
+            light,
+            'color',
+            'Color'
+        )
+
+        folder
+            .add(light, 'intensity', 0, 30, 0.05)
+            .name('Intensity')
+
+        folder
+            .add(light, 'distance', 0, 50, 0.1)
+            .name('Distance')
+
+        folder
+            .add(light, 'decay', 0, 4, 0.05)
+            .name('Decay')
+
+        folder
+            .add(light, 'visible')
+            .name('Visible')
+
+        addVector3Controls(
+            folder,
+            'Position',
+            light.position,
+            () => {}
+        )
+    }
+
+    /**
+     * STATION BASE FILL
+     *
+     * Provides broad visibility and prevents unlit geometry from
+     * disappearing into complete darkness.
+     */
+    const stationBaseFillLight =
+        new THREE.HemisphereLight(
+            0xec5555,
+            0x164574,
+            1.9
+        )
+
+    stationBaseFillLight.name =
+        'StationBaseFillLight'
+
+    /**
+     * STATION MAIN LIGHT
+     *
+     * This used to be called novaLightMain. It now provides the
+     * station's dominant cool directional illumination.
+     */
+    const stationMainLight =
+        new THREE.DirectionalLight(
+            0x8a7575,
+            10.85
+        )
+
+    stationMainLight.name =
+        'StationMainLight'
+
+    stationMainLight.position.set(
+        0,
+        8.6,
+        -11
+    )
+
+    stationMainLight.target.position.set(
+        0,
+        -3.2,
+        -5.6
+    )
+
+    stationMainLight.castShadow = true
+
+    stationMainLight.shadow.mapSize.set(
+        1024,
+        1024
+    )
+
+    stationMainLight.shadow.camera.left = -12
+    stationMainLight.shadow.camera.right = 12
+    stationMainLight.shadow.camera.top = 10
+    stationMainLight.shadow.camera.bottom = -10
+    stationMainLight.shadow.camera.near = 0.1
+    stationMainLight.shadow.camera.far = 500
+
+    stationMainLight.shadow.normalBias = 0
+    stationMainLight.shadow.bias = 0
+
+    stationMainLight.shadow.camera
+        .updateProjectionMatrix()
+
+    /**
+     * NOVA FLOOR SPILL
+     *
+     * This used to be called windowBounceLight. It now creates the
+     * subtle orange illumination visible across the floor.
+     */
+    const novaFloorSpillLight =
+        new THREE.RectAreaLight(
+            0xff4400,
+            8.05,
+            40,
+            10
+        )
+
+    novaFloorSpillLight.name =
+        'NovaFloorSpillLight'
+
+    novaFloorSpillLight.position.set(
+        0,
+        5,
+        -18
+    )
+
+    const novaFloorSpillTarget =
+        new THREE.Vector3(
+            0,
+            5,
+            0
+        )
+
+    novaFloorSpillLight.lookAt(
+        novaFloorSpillTarget
+    )
+
+    /**
+     * BED VISIBILITY LIGHT
+     *
+     * Keeps the bed and nearby geometry readable using a localized
+     * blue fill.
+     */
+    const bedVisibilityLight =
+        new THREE.RectAreaLight(
+            0x5f9fc7,
+            6,
+            8.1,
+            3.5
+        )
+
+    bedVisibilityLight.name =
+        'BedVisibilityLight'
+
+    bedVisibilityLight.position.set(
+        3.2,
+        -0.6,
+        6.6
+    )
+
+    const bedVisibilityTarget =
+        new THREE.Vector3(
+            1.9,
+            7.6,
+            1.9
+        )
+
+    bedVisibilityLight.lookAt(
+        bedVisibilityTarget
+    )
+
+    /**
+     * TERMINAL FRONT LIGHT
+     */
+    const terminalFrontLight =
+        new THREE.PointLight(
+            0x44bbc5,
+            8.35,
+            21.3
+        )
+
+    terminalFrontLight.name =
+        'TerminalFrontLight'
+
+    terminalFrontLight.decay = 1.1
+
+    terminalFrontLight.position.set(
+        0.8,
+        -0.1,
+        0.8
+    )
+
+    /**
+     * TERMINAL SIDE LIGHT
+     */
+    const terminalSideLight =
+        new THREE.PointLight(
+            0x35d5e5,
+            4,
+            14.7
+        )
+
+    terminalSideLight.name =
+        'TerminalSideLight'
+
+    terminalSideLight.decay = 1.15
+
+    terminalSideLight.position.set(
+        5.5,
+        1.2,
+        -3.9
+    )
+
+    /**
+     * Add every active light and the directional-light target.
+     */
+    this.scene.add(
+        stationBaseFillLight,
+        stationMainLight,
+        stationMainLight.target,
+        novaFloorSpillLight,
+        bedVisibilityLight,
+        terminalFrontLight,
+        terminalSideLight
+    )
+
+    /**
+     * Keep references available for other systems if needed later.
+     */
+    this.lights = {
+        stationBaseFillLight,
+        stationMainLight,
+        novaFloorSpillLight,
+        bedVisibilityLight,
+        terminalFrontLight,
+        terminalSideLight
+    }
+
+    /**
+     * LIGHTING GUI
+     */
+    const lightingFolder =
+        this.gu.addFolder('Lighting')
+
+    /**
+     * Scene and HDR controls.
+     */
+    const sceneFolder =
+        lightingFolder.addFolder('Scene / HDR')
+
+    sceneFolder
+        .add(
+            this.scene,
+            'backgroundIntensity',
+            0,
+            20,
+            0.05
+        )
+        .name('Background Intensity')
+        .listen()
+
+    sceneFolder
+        .add(
+            this.scene,
+            'environmentIntensity',
+            0,
+            3,
+            0.01
+        )
+        .name('Environment Intensity')
+        .listen()
+
+    sceneFolder
+        .add(
+            this.scene,
+            'backgroundBlurriness',
+            0,
+            1,
+            0.01
+        )
+        .name('Background Blur')
+        .listen()
+
+    sceneFolder
+        .add(
+            renderer,
+            'toneMappingExposure',
+            0.1,
+            3,
+            0.01
+        )
+        .name('Exposure')
+        .listen()
+
+    /**
+     * Station base-fill controls.
+     */
+    const baseFillFolder =
+        lightingFolder.addFolder(
+            'Station Base Fill'
+        )
+
+    addColorController(
+        baseFillFolder,
+        stationBaseFillLight,
+        'color',
+        'Sky Color'
+    )
+
+    addColorController(
+        baseFillFolder,
+        stationBaseFillLight,
+        'groundColor',
+        'Ground Color'
+    )
+
+    baseFillFolder
+        .add(
+            stationBaseFillLight,
+            'intensity',
+            0,
+            5,
+            0.01
+        )
+        .name('Intensity')
+
+    baseFillFolder
+        .add(
+            stationBaseFillLight,
+            'visible'
+        )
+        .name('Visible')
+
+    /**
+     * Station directional-light controls.
+     */
+    const stationMainFolder =
+        lightingFolder.addFolder(
+            'Station Main Light'
+        )
+
+    addColorController(
+        stationMainFolder,
+        stationMainLight,
+        'color',
+        'Color'
+    )
+
+    stationMainFolder
+        .add(
+            stationMainLight,
+            'intensity',
+            0,
+            30,
+            0.05
+        )
+        .name('Intensity')
+
+    stationMainFolder
+        .add(
+            stationMainLight,
+            'visible'
+        )
+        .name('Visible')
+
+    stationMainFolder
+        .add(
+            stationMainLight,
+            'castShadow'
+        )
+        .name('Cast Shadow')
+
+    addVector3Controls(
+        stationMainFolder,
+        'Position',
+        stationMainLight.position,
+        () => {}
+    )
+
+    addVector3Controls(
+        stationMainFolder,
+        'Target',
+        stationMainLight.target.position,
+        () => {}
+    )
+
+    /**
+     * Shadow controls.
+     */
+    const shadowFolder =
+        stationMainFolder.addFolder('Shadow')
+
+    const updateShadowCamera = () => {
+        stationMainLight.shadow.camera
+            .updateProjectionMatrix()
+    }
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow,
+            'normalBias',
+            -0.2,
+            0.2,
+            0.001
+        )
+        .name('Normal Bias')
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow,
+            'bias',
+            -0.01,
+            0.01,
+            0.0001
+        )
+        .name('Bias')
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'near',
+            0.1,
+            20,
+            0.1
+        )
+        .name('Near')
+        .onChange(updateShadowCamera)
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'far',
+            10,
+            1000,
+            1
+        )
+        .name('Far')
+        .onChange(updateShadowCamera)
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'left',
+            -50,
+            0,
+            0.1
+        )
+        .name('Left')
+        .onChange(updateShadowCamera)
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'right',
+            0,
+            50,
+            0.1
+        )
+        .name('Right')
+        .onChange(updateShadowCamera)
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'top',
+            0,
+            50,
+            0.1
+        )
+        .name('Top')
+        .onChange(updateShadowCamera)
+
+    shadowFolder
+        .add(
+            stationMainLight.shadow.camera,
+            'bottom',
+            -50,
+            0,
+            0.1
+        )
+        .name('Bottom')
+        .onChange(updateShadowCamera)
+
+    /**
+     * Local area-light controls.
+     */
+    const areaLightsFolder =
+        lightingFolder.addFolder(
+            'Local Area Lights'
+        )
+
+    addRectAreaLightGUI(
+        areaLightsFolder,
+        'Nova Floor Spill',
+        novaFloorSpillLight,
+        novaFloorSpillTarget
+    )
+
+    addRectAreaLightGUI(
+        areaLightsFolder,
+        'Bed Visibility Fill',
+        bedVisibilityLight,
+        bedVisibilityTarget
+    )
+
+    /**
+     * Terminal-light controls.
+     */
+    const terminalLightsFolder =
+        lightingFolder.addFolder(
+            'Terminal Lights'
+        )
+
+    addPointLightGUI(
+        terminalLightsFolder,
+        'Terminal Front Light',
+        terminalFrontLight
+    )
+
+    addPointLightGUI(
+        terminalLightsFolder,
+        'Terminal Side Light',
+        terminalSideLight
+    )
+
+    lightingFolder.open()
+}
     instanceRepeatedMeshes(root, meshNames) {
             root.updateMatrixWorld(true);
 
@@ -156,7 +807,7 @@ export default class Experience {
         const gltfLoader = new GLTFLoader(this.loadingManager)
         gltfLoader.setDRACOLoader(dracoLoader)
         
-        gltfLoader.load('/models/Untitled.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled6.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -282,6 +933,8 @@ export default class Experience {
         let sceneReady = false
         this.scene = new THREE.Scene()
 
+
+
         /**
  * Loading screen
  *
@@ -314,6 +967,22 @@ export default class Experience {
         windowBounceLight.lookAt(0, 5, 0);
 
 
+
+
+        
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        renderer.toneMapping =
+            THREE.ACESFilmicToneMapping
+
+        renderer.toneMappingExposure = 0.95
+
         this.gu = new GUI()
 
         this.terminal = new TerminalCanvas(this);
@@ -333,24 +1002,50 @@ export default class Experience {
 
 
 
+
+        const novaLightMain = new THREE.DirectionalLight(0xda581c, 2.5);
+
+        novaLightMain.position.set(0, 8.6, -11);
+        novaLightMain.target.position.set(0, -3.2, -5.6);
+
+        this.scene.add(novaLightMain);
+        this.scene.add(novaLightMain.target);
+
+         // ==========================================
+        // DESK LIGHTS (Untouched)
+        // ==========================================
+        const deskLight =
+            new THREE.PointLight(0x35d5e5, 5, 5)
+
+        const deskLight2 =
+            new THREE.PointLight(0x35d5e5, 5, 5)
+        deskLight.decay = 2;
+        deskLight2.decay = 2;
+        deskLight.position.set(0, 2.5, 0); // up in the ceiling
+        deskLight2.position.set(2.5, 1.2, -4.2); // near desk
+        this.scene.add(deskLight, deskLight2);
+
+
+        this.scene.add(deskLight, deskLight2)
+
         // ---------------------------------------------------------
         // COOL FLOOR DETAIL LIGHT
         // final-ish favorite version
         // ---------------------------------------------------------
-        const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
+        const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
 
         coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
         coolFloorDetailLight.lookAt(3.8, 0, 2.1);
 
         this.scene.add(coolFloorDetailLight);
 
-        const coolFloorDetailLight2 = new THREE.RectAreaLight(0x7eb5e2, 0.5, 22, 9);
+        const coolFloorDetailLight2 = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
 
         coolFloorDetailLight2.position.set(10, -9.2, -4.9);
         coolFloorDetailLight2.lookAt(3.8, 0, 2.1);
 
 
-        const coolFloorDetailLight3 = new THREE.RectAreaLight(0x7eb5e2, 1, 22, 9);
+        const coolFloorDetailLight3 = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
 
         coolFloorDetailLight3.position.set(-5, -9.2, -4.9);
         coolFloorDetailLight3.lookAt(3.8, 0, 2.1);
@@ -365,11 +1060,28 @@ export default class Experience {
          */
 
         const bedBackLight = new THREE.RectAreaLight(
-            0xda581c, // Slightly cool fill color
-            1,        // Intensity
-            4,        // Width
-            2.5       // Height
-        )
+    0x5f9fc7,
+    0.8,
+    4,
+    2.5
+)
+
+this.scene.add(
+    coolFloorDetailLight2,
+    coolFloorDetailLight3
+)
+coolFloorDetailLight.intensity = 0.9
+coolFloorDetailLight2.intensity = 0.9
+coolFloorDetailLight3.intensity = 0.9
+this.scene.environmentIntensity = 0.55
+
+const stationAmbientLight = new THREE.HemisphereLight(
+    0x9ab3c4, // Pale blue-grey, not saturated cyan
+    0x101820, // Dark blue-grey underneath
+    0.65
+)
+
+this.scene.add(stationAmbientLight)
 
         bedBackLight.name = 'BedBackFillLight'
 
@@ -466,6 +1178,344 @@ export default class Experience {
 
         bedBackLightFolder.open()
 
+            /**
+ * LIGHTING DEBUG GUI
+ */
+
+const lightingFolder =
+    this.gu.addFolder('Lighting')
+
+/**
+ * Adds a color controller for any THREE.Color property.
+ */
+const addColorController = (
+    folder,
+    object,
+    property,
+    label
+) => {
+    const colorParams = {
+        color: `#${object[property].getHexString()}`
+    }
+
+    folder
+        .addColor(colorParams, 'color')
+        .name(label)
+        .onChange((value) => {
+            object[property].set(value)
+        })
+}
+
+/**
+ * Adds XYZ position controls.
+ */
+const addPositionControls = (
+    folder,
+    position,
+    onChange
+) => {
+    folder
+        .add(position, 'x', -30, 30, 0.1)
+        .name('X')
+        .onChange(onChange)
+
+    folder
+        .add(position, 'y', -20, 20, 0.1)
+        .name('Y')
+        .onChange(onChange)
+
+    folder
+        .add(position, 'z', -30, 30, 0.1)
+        .name('Z')
+        .onChange(onChange)
+}
+
+/**
+ * Adds controls for a RectAreaLight.
+ */
+const addRectAreaLightGUI = (
+    parentFolder,
+    label,
+    light,
+    target
+) => {
+    const folder =
+        parentFolder.addFolder(label)
+
+    addColorController(
+        folder,
+        light,
+        'color',
+        'Color'
+    )
+
+    folder
+        .add(light, 'intensity', 0, 20, 0.05)
+        .name('Intensity')
+
+    folder
+        .add(light, 'width', 0.1, 40, 0.1)
+        .name('Width')
+
+    folder
+        .add(light, 'height', 0.1, 20, 0.1)
+        .name('Height')
+
+    folder
+        .add(light, 'visible')
+        .name('Visible')
+
+    const updateDirection = () => {
+        light.lookAt(target)
+    }
+
+    const positionFolder =
+        folder.addFolder('Position')
+
+    addPositionControls(
+        positionFolder,
+        light.position,
+        updateDirection
+    )
+
+    const targetFolder =
+        folder.addFolder('Target')
+
+    addPositionControls(
+        targetFolder,
+        target,
+        updateDirection
+    )
+}
+
+/**
+ * SCENE / HDR
+ */
+
+const sceneFolder =
+    lightingFolder.addFolder('Scene / HDR')
+
+sceneFolder
+    .add(
+        this.scene,
+        'backgroundIntensity',
+        0,
+        15,
+        0.05
+    )
+    .name('Background Intensity')
+    .listen()
+
+sceneFolder
+    .add(
+        this.scene,
+        'environmentIntensity',
+        0,
+        3,
+        0.01
+    )
+    .name('Environment Intensity')
+    .listen()
+
+sceneFolder
+    .add(
+        this.scene,
+        'backgroundBlurriness',
+        0,
+        1,
+        0.01
+    )
+    .name('Background Blur')
+
+sceneFolder
+    .add(
+        renderer,
+        'toneMappingExposure',
+        0.1,
+        3,
+        0.01
+    )
+    .name('Exposure')
+
+/**
+ * NEUTRAL STATION FILL
+ */
+
+const ambientFolder =
+    lightingFolder.addFolder('Station Fill')
+
+addColorController(
+    ambientFolder,
+    stationAmbientLight,
+    'color',
+    'Sky Color'
+)
+
+addColorController(
+    ambientFolder,
+    stationAmbientLight,
+    'groundColor',
+    'Ground Color'
+)
+
+ambientFolder
+    .add(
+        stationAmbientLight,
+        'intensity',
+        0,
+        3,
+        0.01
+    )
+    .name('Intensity')
+
+ambientFolder
+    .add(stationAmbientLight, 'visible')
+    .name('Visible')
+
+/**
+ * MAIN NOVA LIGHT
+ */
+
+const novaFolder =
+    lightingFolder.addFolder('Nova Main Light')
+
+addColorController(
+    novaFolder,
+    novaLightMain,
+    'color',
+    'Color'
+)
+
+novaFolder
+    .add(novaLightMain, 'intensity', 0, 30, 0.05)
+    .name('Intensity')
+
+novaFolder
+    .add(novaLightMain, 'visible')
+    .name('Visible')
+
+novaFolder
+    .add(novaLightMain, 'castShadow')
+    .name('Cast Shadow')
+
+const novaPositionFolder =
+    novaFolder.addFolder('Position')
+
+addPositionControls(
+    novaPositionFolder,
+    novaLightMain.position,
+    () => {}
+)
+
+const novaTargetFolder =
+    novaFolder.addFolder('Target')
+
+addPositionControls(
+    novaTargetFolder,
+    novaLightMain.target.position,
+    () => {}
+)
+
+/**
+ * NOVA SHADOW
+ */
+
+const novaShadowFolder =
+    novaFolder.addFolder('Shadow')
+
+novaShadowFolder
+    .add(
+        novaLightMain.shadow,
+        'normalBias',
+        -0.2,
+        0.2,
+        0.001
+    )
+    .name('Normal Bias')
+
+novaShadowFolder
+    .add(
+        novaLightMain.shadow,
+        'bias',
+        -0.01,
+        0.01,
+        0.0001
+    )
+    .name('Bias')
+
+novaShadowFolder
+    .add(
+        novaLightMain.shadow.camera,
+        'near',
+        0.1,
+        20,
+        0.1
+    )
+    .name('Near')
+    .onChange(() => {
+        novaLightMain.shadow.camera
+            .updateProjectionMatrix()
+    })
+
+novaShadowFolder
+    .add(
+        novaLightMain.shadow.camera,
+        'far',
+        10,
+        200,
+        1
+    )
+    .name('Far')
+    .onChange(() => {
+        novaLightMain.shadow.camera
+            .updateProjectionMatrix()
+    })
+
+/**
+ * RECT AREA LIGHTS
+ *
+ * Each RectAreaLight needs a stored Vector3 target.
+ */
+
+const windowBounceTarget =
+    new THREE.Vector3(0, 5, 0)
+
+const floorBounceTarget =
+    new THREE.Vector3(11.7, 0, 0)
+
+const coolFloorTarget1 =
+    new THREE.Vector3(3.8, 0, 2.1)
+
+const coolFloorTarget2 =
+    new THREE.Vector3(10, 0, 2.1)
+
+const coolFloorTarget3 =
+    new THREE.Vector3(-5, 0, 2.1)
+
+windowBounceLight.lookAt(windowBounceTarget)
+floorBounceLight.lookAt(floorBounceTarget)
+
+coolFloorDetailLight.lookAt(coolFloorTarget1)
+coolFloorDetailLight2.lookAt(coolFloorTarget2)
+coolFloorDetailLight3.lookAt(coolFloorTarget3)
+
+/**
+ * Lights must be inside the scene for their Visible toggles
+ * to have any effect.
+ */
+this.scene.add(
+    windowBounceLight,
+    coolFloorDetailLight2,
+    coolFloorDetailLight3
+)
+
+/**
+ * Start the problematic accent lights disabled.
+ */
+windowBounceLight.visible = false
+coolFloorDetailLight.visible = false
+coolFloorDetailLight2.visible = false
+coolFloorDetailLight3.visible = false
 
 
 
@@ -488,24 +1538,13 @@ export default class Experience {
                 ).color
         })
 
-
-
-        // Renderer
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFShadowMap;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-        renderer.toneMapping =
-            THREE.ACESFilmicToneMapping
-
-        renderer.toneMappingExposure = 0.95
+        this.setupLighting(renderer)
 
         // FPS counter 
         const stats = new Stats();
         document.body.appendChild(stats.dom);
+
+
 
 
         const debugParams = {
@@ -519,13 +1558,7 @@ export default class Experience {
             intensity: 14
         };
 
-        const novaLightMain = new THREE.DirectionalLight(0xda581c, 20);
 
-        novaLightMain.position.set(0, 8.6, -11);
-        novaLightMain.target.position.set(0, -3.2, -5.6);
-
-        this.scene.add(novaLightMain);
-        this.scene.add(novaLightMain.target);
 
         const mainLightFolder = this.gu.addFolder('Main Light');
 
@@ -571,7 +1604,6 @@ export default class Experience {
 
         // Only need to update the projection matrix ONCE after setting all camera bounds
         novaLightMain.shadow.camera.updateProjectionMatrix();
-
 
 
 
@@ -650,22 +1682,6 @@ export default class Experience {
 
         // mainFolder.onChange(updateMainHelpers);
 
-        // ==========================================
-        // DESK LIGHTS (Untouched)
-        // ==========================================
-        const deskLight =
-            new THREE.PointLight(0x35d5e5, 5, 5)
-
-        const deskLight2 =
-            new THREE.PointLight(0x35d5e5, 5, 5)
-        deskLight.decay = 2;
-        deskLight2.decay = 2;
-        deskLight.position.set(0, 2.5, 0); // up in the ceiling
-        deskLight2.position.set(2.5, 1.2, -4.2); // near desk
-        this.scene.add(deskLight, deskLight2);
-
-        this.gu.hide()
-        this.scene.add(deskLight, deskLight2)
 
         // Load the noise image
         const textureLoader = new THREE.TextureLoader()
@@ -966,7 +1982,7 @@ export default class Experience {
 
 
 
-
+        
         console.log(this)
 
         const raycaster = new THREE.Raycaster()
@@ -1284,83 +2300,89 @@ export default class Experience {
  *
  * Press Shift + H to download it as a GLB.
  */
-        window.addEventListener('keydown', async (event) => {
-            if (event.code !== 'KeyH' || !event.shiftKey) {
-                return
+        /**
+ * Export the portfolio wall decal.
+ *
+ * Press Shift + J.
+ */
+
+
+window.addEventListener('keydown', async (event) => {
+    if (event.code !== 'KeyJ' || !event.shiftKey) {
+        return
+    }
+
+    const exporter = new GLTFExporter()
+
+    /**
+     * Clone the decal so exporting it doesn't change
+     * the version currently positioned in the station.
+     */
+    const decalToExport =
+        this.portfolioDecal.clone(true)
+
+    /**
+     * Put it at Blender's origin.
+     *
+     * We keep its current scale so the size you've chosen
+     * in Three.js is preserved.
+     */
+    decalToExport.position.set(0, 0, 0)
+    decalToExport.rotation.set(0, 0, 0)
+
+    decalToExport.updateMatrixWorld(true)
+
+    const exportScene = new THREE.Scene()
+
+    exportScene.name = 'PortfolioDecalExport'
+    exportScene.add(decalToExport)
+
+    try {
+        const glb = await exporter.parseAsync(
+            exportScene,
+            {
+                binary: true,
+                onlyVisible: true,
             }
+        )
 
-            const exporter = new GLTFExporter()
-
-            /**
-             * Clone it so exporting does not move or modify
-             * the version currently inside the station.
-             */
-            const hologramToExport =
-                this.cubeHologram.clone(true)
-
-            /**
-             * Center it in Blender.
-             *
-             * Keep its current scale so Blender receives the size
-             * you established through the GUI.
-             */
-            hologramToExport.position.set(0, 0, 0)
-            hologramToExport.rotation.set(0, 0, 0)
-
-            hologramToExport.updateMatrixWorld(true)
-
-            /**
-             * Wrap it in a temporary scene for the exporter.
-             */
-            const exportScene = new THREE.Scene()
-
-            exportScene.name = 'HologramExportScene'
-            exportScene.add(hologramToExport)
-
-            try {
-                const glb = await exporter.parseAsync(
-                    exportScene,
-                    {
-                        binary: true,
-                        onlyVisible: true,
-                    }
-                )
-
-                const blob = new Blob(
-                    [glb],
-                    {
-                        type: 'model/gltf-binary',
-                    }
-                )
-
-                const downloadUrl =
-                    URL.createObjectURL(blob)
-
-                const downloadLink =
-                    document.createElement('a')
-
-                downloadLink.href = downloadUrl
-                downloadLink.download =
-                    'cube-hologram-platform.glb'
-
-                document.body.appendChild(downloadLink)
-
-                downloadLink.click()
-                downloadLink.remove()
-
-                URL.revokeObjectURL(downloadUrl)
-
-                console.log(
-                    'Cube hologram exported successfully.'
-                )
+        const blob = new Blob(
+            [glb],
+            {
+                type: 'model/gltf-binary',
             }
-            catch (error) {
-                console.error(
-                    'Failed to export cube hologram:',
-                    error
-                )
-            }
-        })
+        )
+
+        const downloadUrl =
+            URL.createObjectURL(blob)
+
+        const downloadLink =
+            document.createElement('a')
+
+        downloadLink.href = downloadUrl
+        downloadLink.download =
+            'portfolio-wall-decal.glb'
+
+        document.body.appendChild(
+            downloadLink
+        )
+
+        downloadLink.click()
+        downloadLink.remove()
+
+        URL.revokeObjectURL(downloadUrl)
+
+        console.log(
+            'Portfolio decal exported successfully.'
+        )
+    }
+    catch (error) {
+        console.error(
+            'Failed to export portfolio decal:',
+            error
+        )
+    }
+})
         let hotspotNeedUpdate = false
         window.addEventListener('resize', () => {
             hotspotNeedUpdate = true

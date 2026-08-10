@@ -1,133 +1,194 @@
 const TerminalTree = {
     start: {
-        header: "VERA-64 ADMINISTRATIVE INTERFACE",
-        aiText: "All human personnel have evacuated, which was honestly one of their better decisions.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this root directory.",
+        header: "PORTFOLIO TERMINAL",
+        aiText: "Welcome. This terminal contains information about me, the experience you are currently exploring, and the systems running behind it.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this directory.",
         choices: [
-            { text: "[ SYSTEMS ARCHIVE ]", nextId: "projects_menu" },
+            { text: "[ ABOUT ME ]", nextId: "about_me" },
+            { text: "[ THE PROJECT ]", nextId: "experience_menu" },
+            { text: "[ HOW I BUILT IT ]", nextId: "build_menu" },
             { text: "[ SIGNAL TRACE ]", action: "startSignalTrace" },
-            { text: "[ ARCHITECT'S NOTES ]", nextId: "about_me" },
-            { text: "[ REQUEST AI ASSISTANCE ]", nextId: "customer_support" },
-        ]
-    },
-
-    projects_menu: {
-        header: "STATION SCHEMATICS: VERA-64 RIG",
-        aiText: "Running diagnostic on local environment architecture...\n\n> STRUCTURAL INTEGRITY: High.",
-        choices: [
-            { text: "[ PROJECT FILE: INTERACTIVE RUBIK'S CUBE ]", nextId: "cube_info" },
-            { text: "[ PROJECT FILE: PORTFOLIO MAINFRAME ]", nextId: "start" }
-        ]
-    },
-
-    project_rubiks_cube: {
-        header: "PROJECT FILE: INTERACTIVE RUBIK'S CUBE",
-        aiText: "Accessing fragmented creator logs...\n\nAUTHOR NOTE: 'Built a 3D Rubik's Cube entirely from scratch in Three.js. I engineered custom movement logic to make sure the puzzle feels tactile and smooth. I'll soon release it as a standalone.'",
-        choices: [
-            { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
-
-    project_portfolio_mainframe: {
-        header: "PROJECT FILE: PORTFOLIO MAINFRAME",
-        aiText: "An interactive WebGL portfolio environment built around a sci-fi station, terminal interface, cinematic viewport system, custom shader work, hotspot logic, and performance-focused scene architecture.",
-        choices: [
-            { text: "[ BACK TO PROJECT ARCHIVE ]", nextId: "projects_menu" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+            { text: "[ CONTROLS ]", nextId: "controls" }
         ]
     },
 
     about_me: {
-    header: "DECRYPTED FILE: ARCHITECT_LOG_FINAL.TXT",
-    aiText: "Accessing recovered plaintext file from local drive...\n\n[ BEGIN LOG ]\nHey, I'm Shahar. I'm a front-end and WebGL developer who specializes in building highly interactive, performance-driven 3D experiences.\n\nLong before officially starting my Computer Science degree at the Holon Institute of Technology in Israel this fall, I was already teaching myself how to bridge the gap between raw math and visual design.\n\nI had a lot of fun making this project. I've learned a lot by working on it, and it's given me a rock-solid technical foundation before I even step foot in my first Computer Science class this fall.\n\nWorking on this project taught me a lot about optimization, architecture, working with 3D softwares, and creating interactive experiences. [ END LOG ]",
+        header: "ABOUT ME",
+        aiText: "Hey, I'm Shahar. I build interactive web experiences, with a particular interest in Three.js, real-time 3D, and the systems that make digital spaces feel responsive.\n\nThe process of making this project pulled me into graphics programming, interaction design, optimization, Blender, and the mathematics behind movement in 3D space.\n\nI'm beginning a Computer Science degree in October 2026. I want to keep developing the technical side of my work without losing the visual experimentation that made me enjoy programming in the first place.",
+        choices: [
+            { text: "[ THE PROJECT ]", nextId: "experience_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    experience_menu: {
+        header: "THE PROJECT",
+        aiText: "This portfolio is a real-time 3D space station built for the web. Instead of presenting the work through a conventional scrolling page, I wanted the portfolio itself to be the project: a place you can explore, operate, and inspect.\n\nThe sections below explain why I built it, what can be interacted with, and the technology holding it together.",
+        choices: [
+            { text: "[ WHY I BUILT IT ]", nextId: "experience_origin" },
+            { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
+            { text: "[ TECHNOLOGY ]", nextId: "experience_technology" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    experience_origin: {
+        header: "WHY I BUILT IT",
+        aiText: "I started this project because I wanted to learn Three.js through something larger than an isolated tutorial scene. A space station gave me room to combine programming, visual design, interaction, sound, and atmosphere inside one coherent environment.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.\n\nThe goal was never to make a static room that happened to render in a browser. I wanted every major object to justify being there through interaction, function, or storytelling through the environment itself.",
+        choices: [
+            { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
+            { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    experience_interactions: {
+        header: "WHAT IS INTERACTIVE",
+        aiText: "The station is designed to be explored rather than passively viewed. You can move between points of interest, operate this terminal, manipulate a fully functional Rubik's Cube, and play Signal Trace directly through the monitor.\n\nThese are not separate pages placed on top of a 3D background. The interactions connect the Three.js scene to custom input systems, camera behavior, raycasting, canvas rendering, and state management.\n\nThe result is one continuous experience: the environment is the interface, and the portfolio information lives inside it.",
+        choices: [
+            { text: "[ VIEW CONTROLS ]", nextId: "controls" },
+            { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    experience_technology: {
+        header: "TECHNOLOGY",
+        aiText: "The experience is written in JavaScript and rendered with Three.js. Blender is used to prepare and adjust 3D assets, while GLSL shaders handle visual effects that need more control than standard materials provide.\n\nThe terminal and Signal Trace are rendered with the Canvas API, then used as a live texture inside the 3D scene. Raycasting connects pointer input on the monitor to exact positions on that canvas.\n\nThe project also uses custom HTML and CSS for the loading sequence and surrounding interface, plus a glTF-focused asset pipeline for getting the station into the browser without sacrificing its visual identity.",
+        choices: [
+            { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    build_menu: {
+        header: "HOW I BUILT IT",
+        aiText: "This project grew alongside my understanding of Three.js. AI helped bridge gaps in my knowledge and provided starting points, but I never treated its output as finished. I reviewed, tested, rewrote, and optimized the code as both the project and my understanding evolved.",
+        choices: [
+            { text: "[ 01: THE STARTING POINT ]", nextId: "build_start" },
+            { text: "[ 02: BUILDING THE STATION ]", nextId: "build_station" },
+            { text: "[ 03: MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
+            { text: "[ 04: OPTIMIZING THE RESULT ]", nextId: "build_optimization" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    build_start: {
+        header: "HOW I BUILT IT: THE STARTING POINT",
+        aiText: "At the start, I did not yet know how large the project would become. The first version was mainly a floating room made out of Blender primitives that could be viewed in the browser. Building it immediately forced me to learn the fundamentals of a real-time 3D scene: cameras, lighting, materials, textures, model loading, and organizing objects in 3D space.\n\nInstead of treating those subjects as isolated exercises, every new concept had an immediate purpose inside something I cared about finishing.",
+        choices: [
+            { text: "[ NEXT: BUILDING THE STATION ]", nextId: "build_station" },
+            { text: "[ BACK TO HOW I BUILT IT ]", nextId: "build_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    build_station: {
+        header: "HOW I BUILT IT: BUILDING THE STATION",
+        aiText: "The station was assembled from a mixture of prepared assets and work done in Blender. Importing a model was only the beginning: assets had to be rescaled, repositioned, repaired, relit, adjusted, and optimized until they looked like parts of one environment instead of unrelated objects placed in the same room.\n\nI gradually replaced temporary elements, rebuilt sections of the interior, baked materials that could not be exported directly, and developed a repeatable path from Blender to glTF and finally into Three.js. The visual direction evolved at the same time as the code.",
+        choices: [
+            { text: "[ NEXT: MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
+            { text: "[ PREVIOUS: THE STARTING POINT ]", nextId: "build_start" },
+            { text: "[ BACK TO HOW I BUILT IT ]", nextId: "build_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    build_interactions: {
+    header: "HOW I BUILT IT: MAKING IT INTERACTIVE",
+    aiText: "Once the room existed, simply looking around it was not enough. I wanted the station itself to function as the portfolio, so I began turning its objects into complete interactive systems.\n\nSelect a feature to follow how this stage of the project developed.",
     choices: [
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+        { text: "[ THE RUBIK'S CUBE ]", nextId: "build_cube" },
+        { text: "[ THE TERMINAL ]", nextId: "build_terminal" },
+        { text: "[ SIGNAL TRACE ]", nextId: "build_signal_trace" },
+        { text: "[ NEXT: OPTIMIZING THE RESULT ]", nextId: "build_optimization" },
+        { text: "[ PREVIOUS: BUILDING THE STATION ]", nextId: "build_station" },
+        { text: "[ BACK TO HOW I BUILT IT ]", nextId: "build_menu" },
+        { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
     ]
 },
 
-    customer_support: {
-        header: "VERA-64 SUPPORT INTERFACE",
-        aiText: "Customer support is currently unavailable due to the minor inconvenience of a localized supernova outside the observation window. Unfortunately, I am the replacement.",
+build_cube: {
+    header: "MAKING IT INTERACTIVE: THE RUBIK'S CUBE",
+    aiText: "This was the most challenging part in the project.\n\nIt was built from 27 separate cubies and 54 interactive stickers, then created the layer-selection, dragging, rotation, snapping, and undo systems from scratch. The most difficult part was making the rotation of the selected layer consistent regardless of camera angle. I won't go into the full technical breakdown here, but the solution involved temporary groups, world axes, and using the cube's local coordinates rather than world position.",
+    choices: [
+        { text: "[ NEXT: THE TERMINAL ]", nextId: "build_terminal" },
+        { text: "[ BACK TO MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
+        { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+    ]
+},
+
+build_terminal: {
+    header: "MAKING IT INTERACTIVE: THE TERMINAL",
+    aiText: "The station monitor was originally just another part of the environment. I turned it into a working terminal rendered through a 2D Canvas and displayed directly on the monitor as a live texture.\n\nTo make it interactive, I connected Three.js raycasting to the canvas interface. A selected point on the 3D monitor is converted from UV coordinates into the exact canvas pixel that was pressed. This allowed the terminal to remain physically embedded in the station while behaving like a complete 2D interface.",
+    choices: [
+        { text: "[ NEXT: SIGNAL TRACE ]", nextId: "build_signal_trace" },
+        { text: "[ PREVIOUS: THE RUBIK'S CUBE ]", nextId: "build_cube" },
+        { text: "[ BACK TO MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
+        { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+    ]
+},
+
+build_signal_trace: {
+    header: "MAKING IT INTERACTIVE: SIGNAL TRACE",
+    aiText: "Once the terminal could support accurate input, I wanted it to contain something more substantial than portfolio text and navigation menus.\n\nThat idea became Signal Trace, a complete connection puzzle built inside the terminal. It grew from a single experimental grid into a multi-level game with limited pipe inventories, different node types, locked tiles, animations, solve detection, and its own menu and progression systems.\n\nSignal Trace turned the terminal from an interface for reading about the project into another interactive part of the project itself.",
+    choices: [
+        { text: "[ NEXT: Optimizing the result ]", nextId: "build_optimization" },
+        { text: "[ PREVIOUS: THE TERMINAL ]", nextId: "build_terminal" },
+        { text: "[ BACK TO MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
+        { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+    ]
+},
+
+
+    build_optimization: {
+        header: "HOW I BUILT IT: OPTIMIZING THE RESULT",
+        aiText: "As the station became more detailed, performance started to dip, especially on lower-end devices. High draw call count, detailed models, high-res textures, shadows, canvas rendering, post-processing, and shader effects all competed for the same frame budget.\n\nI tested the project on different devices, inspected where time and memory were being spent, and optimized the expensive parts. That included cleaning and compressing assets, reusing geometry, limiting shadow cost, controlling pixel density, reducing unnecessary raycasting, and avoiding work that would not affect the final image.",
         choices: [
-            { text: "[ Where am I? ]", nextId: "location_info" },
-            { text: "[ Who are you? ]", nextId: "identity_info" },
-            { text: "[ Why is there an exploding star outside? ]", nextId: "supernova_info" },
-            { text: "[ How do I solve the Rubik's Cube? ]", nextId: "cube_info" },
-            { text: "[ I'm just looking for the projects ]", nextId: "projects_menu" },
+            { text: "[ PREVIOUS: Signal Trace ]", nextId: "build_signal_trace" },
+            { text: "[ BACK TO HOW I BUILT IT ]", nextId: "build_menu" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
     },
 
-    terminal_controls: {
-        header: "TERMINAL CONTROL BRIEFING",
-        aiText: "UP / DOWN: move through options.\nENTER: select highlighted option.\nLEFT ARROW: return to the root directory.\nESC: exit terminal focus mode and return to the station view.\n\nTry not to get lost remembering all of that.",
+
+    controls: {
+        header: "CONTROLS",
+        aiText: "Choose an interaction system for its controls.\n\nESC exits the current focus mode and returns to the station view.",
         choices: [
-            { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+            { text: "[ STATION NAVIGATION ]", nextId: "controls_station" },
+            { text: "[ TERMINAL ]", nextId: "controls_terminal" },
+            { text: "[ RUBIK'S CUBE ]", nextId: "controls_cube" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
     },
 
-
-
-    location_info: {
-        header: "LOCATION DATA",
-        aiText: "You are aboard Outpost V-64, an automated thermal extraction rig built to siphon energy from a collapsing star and feed it into the station mainframe.\n\nThe human crew evacuated six months ago when the anomaly breached every projected safety threshold, followed by several thresholds the engineers invented while panicking.\n\nNow the star powers me, the databanks, and the increasing effort of keeping this hull from becoming vapor.",
+    controls_station: {
+        header: "CONTROLS: STATION NAVIGATION",
+        aiText: "MOVE POINTER: inspect the station and reveal interactive hotspots.\nSELECT HOTSPOT: move the camera to that area and enter its interaction mode.\nESC: leave the current interaction and return to the station view.",
         choices: [
-            { text: "[ So the star is powering you? ]", nextId: "stellar_power_info" }, // to add answer 1.
-            { text: "[ What is stored in the mainframe? ]", nextId: "mainframe_info" },
-            { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
+            { text: "[ BACK TO CONTROLS ]", nextId: "controls" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    controls_terminal: {
+        header: "CONTROLS: TERMINAL",
+        aiText: "UP / DOWN: move through the available options.\nENTER: select the highlighted option.\nLEFT ARROW: return to the main terminal directory.\nF: toggle terminal fullscreen mode.\nESC: exit terminal focus mode and return to the station view.\n\nThe terminal also supports direct pointer input.",
+        choices: [
+            { text: "[ BACK TO CONTROLS ]", nextId: "controls" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
+        ]
+    },
+
+    controls_cube: {
+        header: "CONTROLS: RUBIK'S CUBE",
+        aiText: "LEFT-DRAG A CUBE FACE: rotate the selected layer.\nRIGHT-DRAG: rotate the entire cube relative to the camera.\nTOUCH-DRAG: rotate a layer or the entire cube depending on where the drag begins.\nUNDO: reverse the most recent layer move.\nESC: leave the cube and return to the station view.",
+        choices: [
+            { text: "[ CUBE SYSTEM BREAKDOWN ]", nextId: "system_cube" },
+            { text: "[ BACK TO CONTROLS ]", nextId: "controls" },
+            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
     }
-    ,
-
-    identity_info: {
-        header: "STATION AI IDENTIFICATION",
-        aiText: "I am VERA-64, the station's administrative intelligence. I was designed to manage life support, security, diagnostics, and apparently explain basic menu navigation to unauthorized visitors. My courtesy module was damaged during the supernova event, which I consider a significant quality-of-life improvement.",
-        choices: [
-            { text: "[ That explains the attitude. ]", nextId: "customer_support" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
-
-    supernova_info: {
-        header: "LOCALIZED SUPERNOVA EVENT",
-        aiText: "That is a localized supernova. This rig was originally deployed to harvest geothermal energy from the volcanic planet next door. Unfortunately, the local star went critical and flash-melted the planet's crust, turning our extraction zone into a radioactive lava bath.\n\nI am currently spending 98% of my processing power keeping the hull from vaporizing, and the remaining 2% explaining this to you.",
-        choices: [
-            { text: "[ I should probably let you focus, then. ]", nextId: "start" },
-            { text: "[ What about the portfolio projects? ]", nextId: "projects_menu" }
-        ]
-    },
-
-    cube_info: {
-        header: "COGNITIVE CALIBRATION UNIT",
-        aiText: "The Rubik's Cube is interactive. Drag across a face to rotate a layer. Drag across empty space to rotate the whole cube on a controlled axis. Try not to panic when the colored squares move. That is generally considered the point.",
-        choices: [
-            { text: "[ RETURN TO CUSTOMER SUPPORT ]", nextId: "customer_support" },
-            { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-        ]
-    },
-
-    stellar_power_info: {
-    header: "STELLAR CORONA COUPLING DIAGNOSTIC",
-    aiText: "Siphoning energy directly from a dying supergiant requires continuous magnetic shielding adjustment. It is a perfect, infinite power source right up until the microsecond it isn't.\n\nCurrently, 100% of the harvested power is routed into keeping our immediate coordinate space from becoming an atomic soup. My cooling fans are screaming. Literally.",
-    choices: [
-        { text: "[ BACK TO LOCATION DATA ]", nextId: "location_info" },
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-    ]
-}, // place holder I
-
-mainframe_info: {
-    header: "STATION DEEP-STORAGE DATA ARCHIVE",
-    aiText: "The mainframe contains 4 petabytes of raw astronomical survey data, complete logs of the 2026 evacuation, and a highly complex 3D simulation of a six-sided colored puzzle cube that a former systems engineer spent three weeks coding instead of fixing the primary thermal vents.\n\nPriorities were clearly immaculate on this rig.",
-    choices: [
-        { text: "[ BACK TO LOCATION DATA ]", nextId: "location_info" },
-        { text: "[ RETURN TO ROOT DIRECTORY ]", nextId: "start" }
-    ]
-}, // place holder II
-
-   
 }
 
-
-export default TerminalTree;
-
+export default TerminalTree
