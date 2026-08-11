@@ -17,6 +17,10 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import LoadingScreen from './LoadingScreen.js'
 import { createPortfolioWallDecal } from './createPortfolioWallDecal.js'
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js"
 
 
 
@@ -194,7 +198,7 @@ export default class Experience {
         new THREE.HemisphereLight(
             0xec5555,
             0x164574,
-            1.9
+            1.61
         )
 
     stationBaseFillLight.name =
@@ -209,7 +213,7 @@ export default class Experience {
     const stationMainLight =
         new THREE.DirectionalLight(
             0x8a7575,
-            10.85
+            16.15
         )
 
     stationMainLight.name =
@@ -217,8 +221,8 @@ export default class Experience {
 
     stationMainLight.position.set(
         0,
-        8.6,
-        -11
+        9.2,
+        -6.7
     )
 
     stationMainLight.target.position.set(
@@ -244,6 +248,8 @@ export default class Experience {
     stationMainLight.shadow.normalBias = 0
     stationMainLight.shadow.bias = 0
 
+    stationMainLight.shadow.radius = 0.25
+
     stationMainLight.shadow.camera
         .updateProjectionMatrix()
 
@@ -256,9 +262,9 @@ export default class Experience {
     const novaFloorSpillLight =
         new THREE.RectAreaLight(
             0xff4400,
-            8.05,
-            40,
-            10
+            1.6,
+            7.1,
+            3
         )
 
     novaFloorSpillLight.name =
@@ -266,8 +272,8 @@ export default class Experience {
 
     novaFloorSpillLight.position.set(
         0,
-        5,
-        -18
+        -4.9,
+        -19
     )
 
     const novaFloorSpillTarget =
@@ -281,69 +287,16 @@ export default class Experience {
         novaFloorSpillTarget
     )
 
-    /**
-     * BED VISIBILITY LIGHT
-     *
-     * Keeps the bed and nearby geometry readable using a localized
-     * blue fill.
-     */
-    const bedVisibilityLight =
-        new THREE.RectAreaLight(
-            0x5f9fc7,
-            6,
-            8.1,
-            3.5
-        )
-
-    bedVisibilityLight.name =
-        'BedVisibilityLight'
-
-    bedVisibilityLight.position.set(
-        3.2,
-        -0.6,
-        6.6
-    )
-
-    const bedVisibilityTarget =
-        new THREE.Vector3(
-            1.9,
-            7.6,
-            1.9
-        )
-
-    bedVisibilityLight.lookAt(
-        bedVisibilityTarget
-    )
-
-    /**
-     * TERMINAL FRONT LIGHT
-     */
-    const terminalFrontLight =
-        new THREE.PointLight(
-            0x44bbc5,
-            8.35,
-            21.3
-        )
-
-    terminalFrontLight.name =
-        'TerminalFrontLight'
-
-    terminalFrontLight.decay = 1.1
-
-    terminalFrontLight.position.set(
-        0.8,
-        -0.1,
-        0.8
-    )
 
     /**
      * TERMINAL SIDE LIGHT
      */
     const terminalSideLight =
         new THREE.PointLight(
-            0x35d5e5,
-            4,
-            14.7
+            0x186a72,
+           15.15,
+            26.7,
+            0.8
         )
 
     terminalSideLight.name =
@@ -352,7 +305,7 @@ export default class Experience {
     terminalSideLight.decay = 1.15
 
     terminalSideLight.position.set(
-        5.5,
+        2.9,
         1.2,
         -3.9
     )
@@ -365,8 +318,6 @@ export default class Experience {
         stationMainLight,
         stationMainLight.target,
         novaFloorSpillLight,
-        bedVisibilityLight,
-        terminalFrontLight,
         terminalSideLight
     )
 
@@ -377,8 +328,6 @@ export default class Experience {
         stationBaseFillLight,
         stationMainLight,
         novaFloorSpillLight,
-        bedVisibilityLight,
-        terminalFrontLight,
         terminalSideLight
     }
 
@@ -642,12 +591,6 @@ export default class Experience {
         novaFloorSpillTarget
     )
 
-    addRectAreaLightGUI(
-        areaLightsFolder,
-        'Bed Visibility Fill',
-        bedVisibilityLight,
-        bedVisibilityTarget
-    )
 
     /**
      * Terminal-light controls.
@@ -657,11 +600,6 @@ export default class Experience {
             'Terminal Lights'
         )
 
-    addPointLightGUI(
-        terminalLightsFolder,
-        'Terminal Front Light',
-        terminalFrontLight
-    )
 
     addPointLightGUI(
         terminalLightsFolder,
@@ -807,7 +745,7 @@ export default class Experience {
         const gltfLoader = new GLTFLoader(this.loadingManager)
         gltfLoader.setDRACOLoader(dracoLoader)
         
-        gltfLoader.load('/models/Untitled6.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled8.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -852,7 +790,7 @@ export default class Experience {
                     }
 
 
-                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Sci-fi_trash")) {
+                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Machine") || obj.name.includes("Shelf") || obj.name.includes("Cube007")) {
                         obj.castShadow = true
                     }
 
@@ -981,7 +919,7 @@ export default class Experience {
         renderer.toneMapping =
             THREE.ACESFilmicToneMapping
 
-        renderer.toneMappingExposure = 0.95
+        renderer.toneMappingExposure = 1 // this sets the overall brightness of the scene, but does not affect the HDR background intensity
 
         this.gu = new GUI()
 
@@ -1000,16 +938,10 @@ export default class Experience {
 
         this.scene.add(floorBounceLight);
 
+            console.log(renderer.info)
 
 
-
-        const novaLightMain = new THREE.DirectionalLight(0xda581c, 2.5);
-
-        novaLightMain.position.set(0, 8.6, -11);
-        novaLightMain.target.position.set(0, -3.2, -5.6);
-
-        this.scene.add(novaLightMain);
-        this.scene.add(novaLightMain.target);
+        
 
          // ==========================================
         // DESK LIGHTS (Untouched)
@@ -1061,7 +993,7 @@ export default class Experience {
 
         const bedBackLight = new THREE.RectAreaLight(
     0x5f9fc7,
-    0.8,
+    3,
     4,
     2.5
 )
@@ -1376,100 +1308,7 @@ ambientFolder
  * MAIN NOVA LIGHT
  */
 
-const novaFolder =
-    lightingFolder.addFolder('Nova Main Light')
 
-addColorController(
-    novaFolder,
-    novaLightMain,
-    'color',
-    'Color'
-)
-
-novaFolder
-    .add(novaLightMain, 'intensity', 0, 30, 0.05)
-    .name('Intensity')
-
-novaFolder
-    .add(novaLightMain, 'visible')
-    .name('Visible')
-
-novaFolder
-    .add(novaLightMain, 'castShadow')
-    .name('Cast Shadow')
-
-const novaPositionFolder =
-    novaFolder.addFolder('Position')
-
-addPositionControls(
-    novaPositionFolder,
-    novaLightMain.position,
-    () => {}
-)
-
-const novaTargetFolder =
-    novaFolder.addFolder('Target')
-
-addPositionControls(
-    novaTargetFolder,
-    novaLightMain.target.position,
-    () => {}
-)
-
-/**
- * NOVA SHADOW
- */
-
-const novaShadowFolder =
-    novaFolder.addFolder('Shadow')
-
-novaShadowFolder
-    .add(
-        novaLightMain.shadow,
-        'normalBias',
-        -0.2,
-        0.2,
-        0.001
-    )
-    .name('Normal Bias')
-
-novaShadowFolder
-    .add(
-        novaLightMain.shadow,
-        'bias',
-        -0.01,
-        0.01,
-        0.0001
-    )
-    .name('Bias')
-
-novaShadowFolder
-    .add(
-        novaLightMain.shadow.camera,
-        'near',
-        0.1,
-        20,
-        0.1
-    )
-    .name('Near')
-    .onChange(() => {
-        novaLightMain.shadow.camera
-            .updateProjectionMatrix()
-    })
-
-novaShadowFolder
-    .add(
-        novaLightMain.shadow.camera,
-        'far',
-        10,
-        200,
-        1
-    )
-    .name('Far')
-    .onChange(() => {
-        novaLightMain.shadow.camera
-            .updateProjectionMatrix()
-    })
 
 /**
  * RECT AREA LIGHTS
@@ -1553,135 +1392,17 @@ coolFloorDetailLight3.visible = false
             lookZ: 0
         };
 
-        const novaLightMainParams = {
-            color: "'#da581c'",
-            intensity: 14
-        };
+       
 
 
 
         const mainLightFolder = this.gu.addFolder('Main Light');
 
-        // mainLightFolder
-        //     .addColor(novaLightMainParams, 'color')
-        //     .name('Color')
-        //     .onChange((value) => {
-        //         novaLightMain.color.set(value);
-        //     });
-
-        // mainLightFolder
-        //     .add(novaLightMain, 'intensity', 0, 40, 0.1)
-        //     .name('Intensity');
-        novaLightMain.castShadow = true;
-
-        this.scene.add(novaLightMain);
-        this.scene.add(novaLightMain.target);
-
-        // const novaLightWideA = new THREE.DirectionalLight(0xff4400, 8);
-        // novaLightWideA.position.set(-8, 8, -22);
-        // novaLightWideA.target.position.set(0, 3, -10);
-        // novaLightWideA.castShadow = false;
-
-        // const novaLightWideB = new THREE.DirectionalLight(0xff4400, 1.5);
-        // novaLightWideB.position.set(12, 6, -20);
-        // novaLightWideB.target.position.set(0, 2, -5);
-        // novaLightWideB.castShadow = false;
-
-        // Tighter shadow box for higher resolution shadows
-        novaLightMain.shadow.mapSize.width = 1024;
-        novaLightMain.shadow.mapSize.height = 1024;
-
-        novaLightMain.shadow.camera.left = -12
-        novaLightMain.shadow.camera.right = 12
-        novaLightMain.shadow.camera.top = 10
-        novaLightMain.shadow.camera.bottom = -10
-
-        novaLightMain.shadow.camera.near = 0.5;
-        novaLightMain.shadow.camera.far = 100;
-
-        novaLightMain.shadow.normalBias = 0.03;
-        novaLightMain.shadow.bias = -0.0005;
-
-        // Only need to update the projection matrix ONCE after setting all camera bounds
-        novaLightMain.shadow.camera.updateProjectionMatrix();
+       
 
 
 
-
-        // ==========================================
-        // SUPERNOVA LIGHTING GUI & HELPERS
-        // ==========================================
-        //         const lightFolder = this.gu.addFolder('Supernova Lights');
-
-        //         // // 1. MAIN LIGHT (The Shadow Caster)
-        //         const mainFolder = lightFolder.addFolder('Main Light (Shadow Caster)');
-        //         const novaLightMainDebug = {
-        //     color: `#${novaLightMain.color.getHexString()}`
-        // }
-
-        // const novaLightMainFolder = this.gu.addFolder('Nova Light Main')
-
-        // // // Color
-        // novaLightMainFolder
-        //     .addColor(novaLightMainDebug, 'color')
-        //     .name('Color')
-        //     .onChange((value) => {
-        //         novaLightMain.color.set(value)
-        //     })
-
-        // // // Intensity
-        // novaLightMainFolder
-        //     .add(novaLightMain, 'intensity', 0, 50, 0.1)
-        //     .name('Intensity')
-
-        // // Light position
-        // const novaPositionFolder =
-        //     novaLightMainFolder.addFolder('Position')
-
-        // novaPositionFolder
-        //     .add(novaLightMain.position, 'x', -50, 50, 0.1)
-        //     .name('X')
-
-        // novaPositionFolder
-        //     .add(novaLightMain.position, 'y', -50, 50, 0.1)
-        //     .name('Y')
-
-        // novaPositionFolder
-        //     .add(novaLightMain.position, 'z', -50, 50, 0.1)
-        //     .name('Z')
-
-        // // DirectionalLight aims toward its target object.
-        // const novaTargetFolder =
-        //     novaLightMainFolder.addFolder('Target')
-
-        // novaTargetFolder
-        //     .add(novaLightMain.target.position, 'x', -50, 50, 0.1)
-        //     .name('X')
-
-        // novaTargetFolder
-        //     .add(novaLightMain.target.position, 'y', -50, 50, 0.1)
-        //     .name('Y')
-
-        // novaTargetFolder
-        //     .add(novaLightMain.target.position, 'z', -50, 50, 0.1)
-        //     .name('Z')
-
-        // novaLightMainFolder.open()
-
-
-
-
-        // // HELPERS & UPDATERS
-        // const mainHelper = new THREE.DirectionalLightHelper(novaLightMain, 2);
-        // // Force helpers to redraw when GUI sliders are moved
-        // const updateMainHelpers = () => {
-        //     mainHelper.update();
-        //     novaLightMain.shadow.camera.updateProjectionMatrix();
-        //     shadowCameraHelper.update();
-        // };
-
-        // mainFolder.onChange(updateMainHelpers);
-
+        
 
         // Load the noise image
         const textureLoader = new THREE.TextureLoader()
@@ -1733,6 +1454,7 @@ coolFloorDetailLight3.visible = false
         this.camera.position.set(1.5, 2.5, 10.5);
         this.camera.lookAt(0.9, 1.24, 0)
         this.scene.add(this.camera);
+        
 
 
         // 3. Create a helper function to update both systems safely
