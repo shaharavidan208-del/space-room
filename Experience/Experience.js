@@ -21,23 +21,13 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js"
-
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js'
 
 
 export default class Experience {
 
     setupLighting(renderer) {
     RectAreaLightUniformsLib.init()
-
-    /**
-     * Final scene and exposure values.
-     *
-     * These are also set inside loadEnvironmentMap() because the
-     * HDR finishes loading asynchronously.
-     */
-    this.scene.backgroundIntensity = 11.9
-    this.scene.environmentIntensity = 0.2
-    this.scene.backgroundBlurriness = 0
 
     renderer.toneMappingExposure = 1.35
 
@@ -245,10 +235,10 @@ export default class Experience {
     stationMainLight.shadow.camera.near = 0.1
     stationMainLight.shadow.camera.far = 500
 
-    stationMainLight.shadow.normalBias = 0
+    stationMainLight.shadow.normalBias = 0.01
     stationMainLight.shadow.bias = 0
 
-    stationMainLight.shadow.radius = 0.25
+    stationMainLight.shadow.radius = 1
 
     stationMainLight.shadow.camera
         .updateProjectionMatrix()
@@ -742,10 +732,11 @@ export default class Experience {
         const dracoLoader = new DRACOLoader(this.loadingManager)
         dracoLoader.setDecoderPath('/draco/')
         this.loader = new HDRLoader(this.loadingManager)
+        this.exrLoader = new EXRLoader()
         const gltfLoader = new GLTFLoader(this.loadingManager)
         gltfLoader.setDRACOLoader(dracoLoader)
         
-        gltfLoader.load('/models/Untitled8.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled11.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -841,8 +832,8 @@ export default class Experience {
          /**
         * Environment map
         */
-        const environmentMap = this.loader.load(
-            '/environmentMaps/volcanic_planet_compressed.hdr',
+        const environmentMap = this.exrLoader.load(
+            '/environmentMaps/abstract-sci-fi-space_2K_2d6e1402-da4e-4b19-b175-931eceb2ceda.exr',
             (environmentMap) => {
                 environmentMap.mapping =
                     THREE.EquirectangularReflectionMapping
@@ -853,13 +844,13 @@ export default class Experience {
                 /**
                  * Only changes the visible skybox.
                  */
-                this.scene.backgroundIntensity = 8
+                this.scene.backgroundIntensity = 0.7
 
                 /**
                  * Changes how strongly the HDR lights and reflects
                  * on physical materials.
                  */
-                this.scene.environmentIntensity = 0.8
+                this.scene.environmentIntensity = 1.8
 
 
 
@@ -911,7 +902,7 @@ export default class Experience {
         // Renderer
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.4));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1433,8 +1424,6 @@ coolFloorDetailLight3.visible = false
         // novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
         //     this.supernova.mesh.scale.setScalar(val)
         // })
-
-
 
 
 
