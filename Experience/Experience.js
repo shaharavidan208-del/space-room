@@ -739,7 +739,7 @@ export default class Experience {
 
         this.objsToHide = []
         
-        gltfLoader.load('/models/Untitled11.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled20.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -754,6 +754,7 @@ export default class Experience {
 
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
                 if (obj.material && obj.material.transmission > 0) {
+                    console.log("Transmission obj: ")
                     // Force transmission to 0 to cancel the background render pass
                     obj.material.transmission = 0;
                     // Ensure it falls back to standard, cheap transparency
@@ -1639,6 +1640,7 @@ coolFloorDetailLight3.visible = false
         const exitFocusMode = () => {
             showItems(true, this.ceilingMeshes) // unhide ceiling
             showItems(true, this.monitorMeshes)
+            showItems(true, this.objsToHide)
             cubeControlsHint.classList.remove('visible');
             isTransitioning = true;
 
