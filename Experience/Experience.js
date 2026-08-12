@@ -222,6 +222,7 @@ export default class Experience {
     )
 
     stationMainLight.castShadow = true
+    
 
     stationMainLight.shadow.mapSize.set(
         1024,
@@ -735,12 +736,19 @@ export default class Experience {
         this.exrLoader = new EXRLoader()
         const gltfLoader = new GLTFLoader(this.loadingManager)
         gltfLoader.setDRACOLoader(dracoLoader)
+
+        this.objsToHide = []
         
         gltfLoader.load('/models/Untitled11.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
                 }
+
+                if(!obj.name.includes("Mesh043") && !obj.name.includes("Box00") && !obj.name.includes("Auto") && !obj.name.includes("Cube_Screen") && !obj.name.includes("Cube007"))
+                    this.objsToHide.push(obj)
+
+
                 this.glbDebugMeshes.push(obj);
 
 
@@ -1609,6 +1617,8 @@ coolFloorDetailLight3.visible = false
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
+                showItems(false, this.objsToHide)
+                showItems(false, this.ceilingMeshes)
                 lookTarget.copy(activePoint.position.clone());
 
                 // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
@@ -2004,7 +2014,7 @@ coolFloorDetailLight3.visible = false
         // This physically shrinks the canvas on standard 16:9 or 16:10 monitors, 
         // acting as a massive fill-rate optimization by saving the GPU from 
         // rendering the empty space at the top and bottom of the screen.
-        const TARGET_ASPECT = 20 / 9;
+        const TARGET_ASPECT = 22 / 9;
 
         /**
  * Export the procedural hologram platform.
