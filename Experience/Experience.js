@@ -24,6 +24,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js"
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js'
 
 
+
 export default class Experience {
 
     setupLighting(renderer) {
@@ -225,8 +226,8 @@ export default class Experience {
     
 
     stationMainLight.shadow.mapSize.set(
-        1024,
-        1024
+        512,
+        512
     )
 
     stationMainLight.shadow.camera.left = -12
@@ -739,7 +740,7 @@ export default class Experience {
 
         this.objsToHide = []
         
-        gltfLoader.load('/models/Untitled20.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled21.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -909,11 +910,15 @@ export default class Experience {
 
         
         // Renderer
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas, 
+            antialias: window.devicePixelRatio <= 1,
+            powerPreference: 'high-performance' 
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.4));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         renderer.toneMapping =
@@ -1515,9 +1520,9 @@ coolFloorDetailLight3.visible = false
             isometricDistance * Math.sqrt(3)
 
         const cameraTarget = new THREE.Vector3(
-            lookTarget.x,
-            lookTarget.y,
-            lookTarget.z + frontDistance
+            lookTarget.x + isometricDistance,
+            lookTarget.y + isometricDistance,
+            lookTarget.z + isometricDistance
         )
 
         const cameraHome = this.camera.position.clone()
@@ -1600,7 +1605,7 @@ coolFloorDetailLight3.visible = false
                 }
 
                 const dynamicDistance =
-                    frontDistance *
+                    isometricDistance *
                     (1 + ((scaleFactor - 1) * 0.2))
 
                 /**
@@ -1610,8 +1615,8 @@ coolFloorDetailLight3.visible = false
                  * This creates a straight-on front view.
                  */
                 cameraTarget.set(
-                    lookTarget.x,
-                    lookTarget.y,
+                    lookTarget.x  + dynamicDistance,
+                    lookTarget.y + dynamicDistance,
                     lookTarget.z + dynamicDistance
                 )
             }
@@ -1932,6 +1937,7 @@ coolFloorDetailLight3.visible = false
             if (!hit.uv) {
                 return null
             }
+            console.log(hit)
 
             const rawU = hit.uv.x
             const rawV = hit.uv.y
@@ -2236,6 +2242,7 @@ window.addEventListener('keydown', async (event) => {
             timer.update(timestamp)
             const elapsedTime = timer.getElapsed();
             const delta = timer.getDelta()
+            this.CubeInput.update(delta)
 
             this.loadingScreen.updateLetterAnimation(delta)
             if (this.loadingScreen.titleAnimationFinished) {

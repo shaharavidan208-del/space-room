@@ -1,7 +1,88 @@
 import * as THREE from 'three'
 import gsap from 'gsap';
 export default class CubeInput {
+    applyCubeRotation(dx, dy) {
+    // Get camera orientation in world space.
+    this.experience.camera.getWorldQuaternion(
+        this.cameraQuaternion
+    )
 
+    // Camera-relative horizontal axis.
+    this.cameraRight
+        .set(1, 0, 0)
+        .applyQuaternion(this.cameraQuaternion)
+        .normalize()
+
+    // Camera-relative vertical axis.
+    this.cameraUp
+        .set(0, 1, 0)
+        .applyQuaternion(this.cameraQuaternion)
+        .normalize()
+
+    // Horizontal mouse movement = rotate around camera up.
+    this.cube.cubeGroup.rotateOnWorldAxis(
+        this.cameraUp,
+        dx * this.sensitivity
+    )
+
+    // Vertical mouse movement = rotate around camera right.
+    this.cube.cubeGroup.rotateOnWorldAxis(
+        this.cameraRight,
+        dy * this.sensitivity
+    )
+}
+
+
+update(delta) {
+    // Inertia only belongs to the Rubik's Cube interaction.
+    if (!this.experience.isFocused) return
+    if (this.experience.currPointName !== "RubiksCube") return
+
+    // Never move the whole cube while a layer is being manipulated.
+    if (this.dragMode === "layer") return
+
+    // RMB/touch currently owns the cube directly.
+    // Don't apply inertia at the same time.
+    if (this.isCubeDragging) return
+
+    // Don't interfere with layer snapping animations.
+    if (this.cube.rotator.isAnimating) return
+
+    const speed = Math.sqrt(
+        this.velocityX * this.velocityX +
+        this.velocityY * this.velocityY
+    )
+
+    // Velocity has become effectively zero.
+    if (speed < this.inertiaStopThreshold) {
+        this.velocityX = 0
+        this.velocityY = 0
+        return
+    }
+
+    // Continue rotating using the final movement velocity.
+    this.applyCubeRotation(
+        this.velocityX,
+        this.velocityY
+    )
+
+    /**
+     * Claude's original behaviour was:
+     *
+     * velocity *= 0.92
+     *
+     * every frame.
+     *
+     * Math.pow(... delta * 60) makes that equivalent
+     * to 0.92 per frame at 60 FPS, while behaving
+     * consistently at 60 / 120 / 165 FPS.
+     */
+    const damping =
+        Math.pow(this.inertiaDamping, delta * 60)
+
+    this.velocityX *= damping
+    this.velocityY *= damping
+}
     onEmptyDown() {
         this.isDragging = true
         this.dragMode = "cube"
@@ -13,24 +94,30 @@ export default class CubeInput {
     }
 
     onDragEnd() {
-        this.isRMB = false
-        this.isLMB = false
-        // Snap whole-cube rotations to the nearest 90 degrees (Pi/2)
+    this.isRMB = false
+    this.isLMB = false
 
-        if (this.dragMode === 'layer' && this.axisLocked) {
+    if (this.dragMode === "layer") {
+
+        // Layer interaction should NEVER inherit cube inertia.
+        this.velocityX = 0
+        this.velocityY = 0
+
+        if (this.axisLocked) {
             this.cube.rotator.endRotation()
         }
-
-        this.activePointerId = null
-        this.isPointerActive = false
-        this.dragMode = ''
-        this.isDragging = false
-
-        // TODO: Future snapping logic
-        // if(Math.cos(this.cube.cubeGroup.rotation.x) > 0.5)
-        //     this.cube.cubeGroup.rotation.x = 0
-        // else if(Math.cos(this.cube.cubeGroup.rotation.x) < 0.5)
     }
+
+    // For cube mode we deliberately keep velocityX/Y.
+    // update() will turn them into inertia.
+
+    this.isCubeDragging = false
+
+    this.activePointerId = null
+    this.isPointerActive = false
+    this.dragMode = ''
+    this.isDragging = false
+}
 
     constructor(cube, renderer, experience) {
 
@@ -46,10 +133,23 @@ export default class CubeInput {
         const axes = ['x', 'y', 'z'];
         this.raycaster = new THREE.Raycaster() // Projects a 3D ray starting at the camera and passing through that 2D pixel into the 3D scene.
         this.mouse = new THREE.Vector2()
-        const cameraRight = new THREE.Vector3()
-        const cameraUp = new THREE.Vector3()
-        const cameraForward = new THREE.Vector3()
-        const cameraQuaternion = new THREE.Quaternion()
+        this.cameraRight = new THREE.Vector3()
+this.cameraUp = new THREE.Vector3()
+this.cameraQuaternion = new THREE.Quaternion()
+
+// --- Whole Cube Rotation ---
+this.isCubeDragging = false
+
+// Last pointer movement.
+// These become the cube's angular momentum after release.
+this.velocityX = 0
+this.velocityY = 0
+
+// Claude's original damping was 0.92 per 60 FPS frame.
+this.inertiaDamping = 0.92
+
+// Stop microscopic rotations once velocity is tiny.
+this.inertiaStopThreshold = 0.01
 
         // --- Drag State Trackers ---
         this.isDragging = false
@@ -113,6 +213,9 @@ export default class CubeInput {
             this.activePointerId = input.pointerId;
             this.button = input.button
             this.isTouchPointer = false
+
+            this.velocityX = 0
+this.velocityY = 0
 
             if (input.pointerType === "touch") {
                 this.isTouchPointer = true
@@ -220,32 +323,86 @@ export default class CubeInput {
             // ------------------------------------------
             // TRACK 1: FREE WHOLE CUBE ROTATION
             // ------------------------------------------
-            if (this.dragMode === "cube") {
-                if (this.isLMB) {
-                    return; // Left mouse button is reserved for layer rotation, so we ignore it here.
-                }
-                this.experience.camera.getWorldQuaternion(cameraQuaternion)
+            // ------------------------------------------
+// TRACK 1: WHOLE CUBE ROTATION
+// ------------------------------------------
+// ------------------------------------------
+// TRACK 1: WHOLE CUBE ROTATION
+// ------------------------------------------
+if (this.dragMode === "cube") {
 
-                cameraRight.set(1, 0, 0).applyQuaternion(cameraQuaternion).normalize()
-                cameraUp.set(0, 1, 0).applyQuaternion(cameraQuaternion).normalize()
-                cameraForward.set(0, 0, -1).applyQuaternion(cameraQuaternion).normalize()
-                console.log(this.cube.cubeGroup.quaternion)
-                if (this.isRMB || this.isTouchPointer) {
-                    // Horizontal drag = spin left/right around camera up
-                    this.cube.cubeGroup.rotateOnWorldAxis(
-                        cameraUp,
-                        this.dx * this.sensitivity
-                    )
+    const isTouch =
+        input.pointerType === "touch"
 
-                    // Vertical drag = tilt around camera right
-                    this.cube.cubeGroup.rotateOnWorldAxis(
-                        cameraRight,
-                        this.dy * this.sensitivity
-                    )
-                }
-            }
+    const isRMBHeld =
+        (input.buttons & 2) !== 0
 
+    // ==========================================
+    // DESKTOP RMB STATE
+    // ==========================================
+    if (!isTouch) {
 
+        // RMB has physically been released.
+        if (!isRMBHeld) {
+            this.isCubeDragging = false
+
+            // DO NOT clear velocity here.
+            //
+            // The final dx/dy is exactly what we want
+            // to turn into inertia.
+            return
+        }
+
+        // RMB has become active again after being released
+        // without a clean pointerdown.
+        //
+        // This can happen when another mouse button remained
+        // held during the RMB release.
+        if (!this.isCubeDragging) {
+
+            // Kill the old inertia because the user has
+            // physically grabbed the cube again.
+            this.velocityX = 0
+            this.velocityY = 0
+
+            // Re-anchor coordinates so the first frame cannot
+            // produce a giant stale delta.
+            this.prevX = input.clientX
+            this.prevY = input.clientY
+
+            this.isCubeDragging = true
+            return
+        }
+    }
+
+    // ==========================================
+    // CURRENT FRAME MOVEMENT
+    // ==========================================
+    this.dx =
+        input.clientX - this.prevX
+
+    this.dy =
+        input.clientY - this.prevY
+
+    // Remember the most recent movement.
+    //
+    // When the user releases RMB/touch,
+    // these values become the inertia velocity.
+    this.velocityX = this.dx
+    this.velocityY = this.dy
+
+    // Apply direct rotation while dragging.
+    this.applyCubeRotation(
+        this.dx,
+        this.dy
+    )
+
+    // Prepare for the next pointermove event.
+    this.prevX = input.clientX
+    this.prevY = input.clientY
+
+    return
+}
             // Update NDC and Raycaster for 3D logic
             const rect = renderer.domElement.getBoundingClientRect(); // Get the exact boundaries of the canvas on the screen
             const canvasX = input.clientX - rect.left;
@@ -381,6 +538,10 @@ export default class CubeInput {
             this.onDragEnd()
             this.dragMode = null
             this.isDragging = false
+
+this.velocityX = 0
+this.velocityY = 0
+
         })
 
     }
