@@ -15,40 +15,57 @@ export default class SignalTraceInventory {
          */
         this.signalTrace = signalTrace
 
+        if(this.signalTrace.level.pipeCount) {
         this.items = [
             {
                 pipe: new Pipe("vertical", ["up", "down"], 0),
                 count: this.signalTrace.level.pipeCount.vertical,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("cornerUpLeft", ["up", "left"], 1),
                 count: this.signalTrace.level.pipeCount.cornerUpLeft,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("cornerDownLeft", ["down", "left"], 2),
                 count: this.signalTrace.level.pipeCount.cornerDownLeft,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("cornerUpRight", ["up", "right"], 3),
                 count: this.signalTrace.level.pipeCount.cornerUpRight,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("horizontal", ["left", "right"], 4),
                 count: this.signalTrace.level.pipeCount.horizontal,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("cornerDownRight", ["down", "right"], 5),
                 count: this.signalTrace.level.pipeCount.cornerDownRight,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("splitDown", ["down", "left", "right"], 6),
                 count: this.signalTrace.level.pipeCount.splitDown,
+                drawPipe: null
             },
             {
                 pipe: new Pipe("splitRight", ["down", "right", "up"], 7),
                 count: this.signalTrace.level.pipeCount.splitRight,
-            }
+                drawPipe: null
+            },
+            {
+                pipe: new Pipe("splitUp", ["left", "right", "up"], 8),
+                count: this.signalTrace.level.pipeCount.splitRight,
+                drawPipe: null
+            },
+
         ]
+    }
+
         this.ctx = signalTrace.ctx
 
         /**
@@ -74,12 +91,24 @@ export default class SignalTraceInventory {
         this.panelWidth = 500
         this.rightSideInventoryCnt = -1
         this.columnGap = 60
+
+        if(this.items)
+            this.shouldDrawSlot()
         /**
          * Active mutable inventory state.
          *
          * This is copied from the level inventory instead of directly referencing it,
          * so changing counts during gameplay does not mutate the level definition.
          */
+    }
+
+    shouldDrawSlot() {
+        for(let i = 0; i < this.items.length; i++) {
+            if(this.items[i].count > 0)
+                this.items[i].drawPipe = true
+            else 
+                this.items[i].drawPipe = false
+        }
     }
 
 
@@ -94,12 +123,16 @@ export default class SignalTraceInventory {
      * This should be called from SignalTrace's main draw method.
      */
     draw() {
+        if(!this.items)
+            return
         this.drawPanelBackground()
         this.drawPanelTitle()
-
         for (let i = 0; i < this.items.length; i++) {
-            this.drawSlot(i)
-        }
+                if(this.items[i].drawPipe) {
+                    console.log(this.items[i].drawPipe)
+                    this.drawSlot(i)
+                }
+    }
     }
 
     /**

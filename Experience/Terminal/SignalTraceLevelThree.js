@@ -41,14 +41,17 @@ export default class SignalTraceLevelThree {
         }
 
         this.pipeCount = {
-            vertical: 0,
-            cornerUpLeft: 1,
-            cornerDownLeft: 3,
-            cornerUpRight: 3,
-            horizontal: 1,
-            cornerDownRight: 1,
-            splitDown: 0
-        }
+    vertical: 1,
+    horizontal: 3,
+
+    cornerUpLeft: 3,
+    cornerDownLeft: 1,
+    cornerUpRight: 1,
+    cornerDownRight: 2,
+
+    splitDown: 0,
+    splitRight: 0
+}
 
         this.sourcePipe = new Pipe(
             null,
@@ -85,6 +88,19 @@ export default class SignalTraceLevelThree {
 
         grid[this.target.row][this.target.col].pipe =
             this.targetPipe
+
+        // Part of the intended path, but their purpose isn't immediately obvious.
+grid[2][2].pipe = new Pipe(
+    "vertical",
+    ["up", "down"]
+)
+grid[2][2].locked = true
+
+grid[3][1].pipe = new Pipe(
+    "horizontal",
+    ["left", "right"]
+)
+grid[3][1].locked = true
 
         return grid
     }

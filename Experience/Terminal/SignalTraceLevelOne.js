@@ -40,20 +40,7 @@ export default class SignalTraceLevelOne {
             blocked: false
         }
 
-        /**
-         * Level One starts with every available pipe already
-         * placed on the board, so its inventory begins empty.
-         */
-        this.pipeCount = {
-            vertical: 0,
-            cornerUpLeft: 0,
-            cornerDownLeft: 0,
-            cornerUpRight: 0,
-            horizontal: 0,
-            cornerDownRight: 0,
-            splitDown: 0,
-            splitRight: 0
-        }
+
 
         this.sourcePipe = new Pipe(
             null,

@@ -1144,11 +1144,14 @@ diffuseColor *=
             antialias: window.devicePixelRatio <= 1,
             powerPreference: 'high-performance'
         });
+        console.log(renderer.antialias)
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        renderer.shadowMap.type = THREE.PCFShadowMap
         renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        console.log("Pixel Ratio: ", window.devicePixelRatio)
 
         renderer.toneMapping =
             THREE.ACESFilmicToneMapping
@@ -1180,8 +1183,11 @@ diffuseColor *=
             // If on desktop (landscape), we enforce the cinematic 21:9 crop.
             // [ RESPONSIVE ASPECT RATIO ]
 
-            let DYNAMIC_TARGET_ASPECT = TARGET_ASPECT; // start by assuming we want the cinematic 23/9 crop (Default state). 
-
+            let DYNAMIC_TARGET_ASPECT = TARGET_ASPECT; // start by assuming we want the cinematic 22/9 crop (Default state). 
+            let fullWidth = 1920                              // 100% black bars - 1920x1080 - 22/9
+            // if the resolution is 1920x1080, DYNAMIC_TARGET_ASPECT stays 22/9
+            DYNAMIC_TARGET_ASPECT *= window.innerWidth * 1/fullWidth  
+            console.log("Dynmaic target aspect: ", DYNAMIC_TARGET_ASPECT)  // otherwise, multiply it by the percentage of the width from 1920
             if (isPortrait || windowAspect >= DYNAMIC_TARGET_ASPECT) {
                 // Mobile: Abandon the crop and use the phone's native aspect ratio to fill the screen
                 DYNAMIC_TARGET_ASPECT = windowAspect; // the aspect ratio just becomes the phone's native 
@@ -1191,13 +1197,14 @@ diffuseColor *=
             // create two mutable variables and initially set them to fill 100% of the screen
             this.canvasWidth = window.innerWidth;
             this.canvasHeight = window.innerHeight;
-
+            console.log(window.innerWidth)
             // [ CANVAS BOUNDARY MATH ]
             // Calculate exact pixel dimensions to maintain the DYNAMIC_TARGET_ASPECT.
             if (windowAspect < DYNAMIC_TARGET_ASPECT) {
                 // if the window is narrower than target (e.g., standard 16:9 monitor).
                 // Keep max width, shrink height. Flexbox will auto-center it, creating Top/Bottom black bars.
                 this.canvasHeight = window.innerWidth / DYNAMIC_TARGET_ASPECT;
+                console.log(this.canvasHeight)
             }
 
             // 1. Lock the Three.js Camera frustum to the new mathematical ratio
@@ -1208,7 +1215,7 @@ diffuseColor *=
 
             // 2. Physically resize the WebGL Canvas element in the DOM
             renderer.setSize(this.canvasWidth, this.canvasHeight);
-
+            effectComposer.setSize(this.canvasWidth, this.canvasHeight)
             // 3. Sync the Heavy Shader (Supernova)
             // The shader requires the exact pixel count to calculate uv coordinates correctly.
             // We multiply by devicePixelRatio to ensure it stays sharp on high-density displays (like retina/phones).
@@ -1225,31 +1232,21 @@ diffuseColor *=
             // This is required for raycasting and UI hotspots. 
             this.canvasRect = renderer.domElement.getBoundingClientRect();
         });
-        window.dispatchEvent(new Event('resize'));
-        /**
- * Post processing
- */
         const effectComposer = new EffectComposer(renderer)
         console.log(this.canvasHeight, this.canvasWidth)
         effectComposer.setSize(this.canvasWidth, this.canvasHeight)
         effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        window.dispatchEvent(new Event('resize'));
+        /**
+ * Post processing
+ */
 
         const renderPass = new RenderPass(this.scene, this.camera)
         effectComposer.addPass(renderPass)
 
-        const dotScreenPass = new DotScreenPass()
-        effectComposer.addPass(dotScreenPass)
-        dotScreenPass.enabled = false
-
         const glitchPass = new GlitchPass()
         effectComposer.addPass(glitchPass)
         glitchPass.enabled = false
-
-        const rgbShiftPass = new ShaderPass(RGBShiftShader)
-        effectComposer.addPass(rgbShiftPass)
-        rgbShiftPass.enabled = false
-
-
 
 
         const outputPass = new OutputPass()
@@ -1397,7 +1394,7 @@ diffuseColor *=
         )
 
         bedBackLight.lookAt(bedBackLightTarget)
-
+        this.gu.hide()
         this.scene.add(bedBackLight)
         /**
          * Re-aim the light after changing either its position

@@ -53,7 +53,8 @@ export default class SignalTraceLevelFive {
             cornerUpRight: 2,
             horizontal: 1,
             cornerDownRight: 1,
-            splitDown: 1
+            splitDown: 1,
+            splitRight: 0
         }
 
 

@@ -9,8 +9,9 @@ export default class Pipe {
      * @param {string[]} connections
      * The directions this pipe connects to.
      */
-    constructor(type, connections) {
+    constructor(type, connections, index) {
         this.type = type
         this.connections = [...connections]
+        this.index = index
     }
 }

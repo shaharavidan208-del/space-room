@@ -47,7 +47,8 @@ export default class SignalTraceLevelTwo {
             cornerUpRight: 1,
             horizontal: 0,
             cornerDownRight: 1,
-            splitDown: 0
+            splitDown: 0,
+            splitRight: 0
         }
 
         this.sourcePipe = new Pipe(

@@ -6,7 +6,7 @@ export default class SignalTraceLevelFour {
          * Level display info.
          * SignalTrace can use this text when drawing the terminal UI.
          */
-        this.title = "LEVEL 02 // ARCHIVE HANDSHAKE"
+        this.title = "LEVEL 04 // ARCHIVE HANDSHAKE"
         this.description = "Restore a basic signal route from SRC to ARC."
 
         /**
@@ -32,6 +32,12 @@ export default class SignalTraceLevelFour {
             direction: "left"
         }
 
+        this.relay = {
+            row: 1,
+            col: 3,
+            direction: "left"
+        }
+
         this.tile = {
             row: 0,
             col: 0,
@@ -44,10 +50,12 @@ export default class SignalTraceLevelFour {
             vertical: 8,
             cornerUpLeft: 1,
             cornerDownLeft: 1,
-            cornerUpRight: 1,
-            horizontal: 1,
+            cornerUpRight: 2,
+            horizontal: 2,
             cornerDownRight: 1,
-            splitDown: 0
+            splitDown: 0,
+            splitRight: 0,
+            splitUp: 1
         }
 
         this.sourcePipe = new Pipe(
@@ -58,6 +66,11 @@ export default class SignalTraceLevelFour {
         this.targetPipe = new Pipe(
             null,
             [this.target.direction]
+        )
+
+        this.relayPipe = new Pipe(
+            null,
+            [this.relay.direction]
         )
     }
 
@@ -85,6 +98,8 @@ export default class SignalTraceLevelFour {
 
         grid[this.target.row][this.target.col].pipe =
             this.targetPipe
+
+        grid[this.relay.row][this.relay.col].pipe = this.relayPipe
 
         return grid
     }
