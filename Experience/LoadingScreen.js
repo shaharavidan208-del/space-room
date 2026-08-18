@@ -15,11 +15,13 @@ export default class LoadingScreen {
      */
     constructor({
         scene,
+        onAnimationFinished,
         onSceneReady
     }) {
         this.scene = scene
+        this.onAnimationFinished = onAnimationFinished
         this.onSceneReady = onSceneReady
-
+        this.update = this.updateLetterAnimation
         // ---------------------------------------------------------
         // LOADING TITLE
         // ---------------------------------------------------------
@@ -364,6 +366,8 @@ export default class LoadingScreen {
      */
     updateLetterAnimation(delta) {
         if (this.titleAnimationFinished) {
+            this.update = this.updateLoadingProgress
+            this.onAnimationFinished() // tell Experience to start updating the loading progress bar
             return
         }
 
