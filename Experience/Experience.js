@@ -1160,14 +1160,7 @@ diffuseColor *=
 
         let hotspotNeedUpdate = false
 
-        // ---------------------------------------------------------
-        // VIEWPORT & ASPECT RATIO MANAGER
-        // ---------------------------------------------------------
-        // We lock the baseline to 21:9 (Ultra-wide cinematic). 
-        // This physically shrinks the canvas on standard 16:9 or 16:10 monitors, 
-        // acting as a massive fill-rate optimization by saving the GPU from 
-        // rendering the empty space at the top and bottom of the screen.
-        const TARGET_ASPECT = 22 / 9;
+
 
         window.addEventListener('resize', () => {
             hotspotNeedUpdate = true
@@ -1176,39 +1169,19 @@ diffuseColor *=
             // [ MOBILE PORTRAIT DETECTION ]
             // If the window is taller than it is wide (< 1.0), the user is on a vertical screen.
             const isPortrait = windowAspect < 1.0;
-
-            // [ RESPONSIVE ASPECT RATIO ]
-            // If on mobile (portrait), we abandon the 21:9 crop (which would create a tiny slit)
-            // and adapt to the phone's native aspect ratio, filling the screen.
-            // If on desktop (landscape), we enforce the cinematic 21:9 crop.
-            // [ RESPONSIVE ASPECT RATIO ]
-
-            let DYNAMIC_TARGET_ASPECT = TARGET_ASPECT; // start by assuming we want the cinematic 22/9 crop (Default state). 
-            let fullWidth = 1920                              // 100% black bars - 1920x1080 - 22/9
-            // if the resolution is 1920x1080, DYNAMIC_TARGET_ASPECT stays 22/9
-            DYNAMIC_TARGET_ASPECT *= window.innerWidth * 1/fullWidth  
-            console.log("Dynmaic target aspect: ", DYNAMIC_TARGET_ASPECT)  // otherwise, multiply it by the percentage of the width from 1920
-            if (isPortrait || windowAspect >= DYNAMIC_TARGET_ASPECT) {
-                // Mobile: Abandon the crop and use the phone's native aspect ratio to fill the screen
-                DYNAMIC_TARGET_ASPECT = windowAspect; // the aspect ratio just becomes the phone's native 
-
-            }
+                    // 100% black bars - 1920x1080 - 22/9
 
             // create two mutable variables and initially set them to fill 100% of the screen
             this.canvasWidth = window.innerWidth;
             this.canvasHeight = window.innerHeight;
-            console.log(window.innerWidth)
-            // [ CANVAS BOUNDARY MATH ]
-            // Calculate exact pixel dimensions to maintain the DYNAMIC_TARGET_ASPECT.
-            if (windowAspect < DYNAMIC_TARGET_ASPECT) {
-                // if the window is narrower than target (e.g., standard 16:9 monitor).
-                // Keep max width, shrink height. Flexbox will auto-center it, creating Top/Bottom black bars.
-                this.canvasHeight = window.innerWidth / DYNAMIC_TARGET_ASPECT;
-                console.log(this.canvasHeight)
-            }
+
+
+            this.canvasHeight = this.canvasHeight * 0.8
+
+            // 
 
             // 1. Lock the Three.js Camera frustum to the new mathematical ratio
-            this.camera.aspect = DYNAMIC_TARGET_ASPECT; // Update the camera to render at the new aspect ratio to match the canvas
+            this.camera.aspect = this.canvasWidth / this.canvasHeight; // Update the camera to render at the new aspect ratio to match the canvas
             this.camera.updateProjectionMatrix(); // compile the new aspect ratio into the core webGL math so the GPU can use it
             // after any modification to a camera propety we need to update projection matrix
             // since three.js doesn't need to update things  like FOV/AR each frame we need to update it manually
