@@ -455,6 +455,139 @@ canvas {
     );
 }
 
+.cube-scramble-button {
+    position: relative;
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
+    width: 100%;
+    padding: 9px 12px;
+
+    font-family: 'Audiowide', sans-serif;
+    font-size: 9px;
+    line-height: 1.2;
+    letter-spacing: 1.7px;
+    text-transform: uppercase;
+
+    color: #d8ffff;
+    background: rgba(0, 18, 24, 0.82);
+    border: 1px solid rgba(0, 255, 255, 0.42);
+
+    box-shadow:
+        inset 0 0 12px rgba(0, 255, 255, 0.06),
+        0 0 8px rgba(0, 255, 255, 0.12);
+
+    cursor: pointer;
+    pointer-events: none;
+
+    transition:
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease,
+        opacity 0.18s ease;
+}
+
+/**
+ * Only the button receives pointer input. The rest of the HUD remains
+ * transparent to the canvas so it does not create a large dead zone.
+ */
+.cube-controls-hint.visible .cube-scramble-button:not(:disabled) {
+    pointer-events: auto;
+}
+
+.cube-scramble-button:hover {
+    color: #ffffff;
+    background: rgba(0, 255, 255, 0.12);
+    border-color: rgba(0, 255, 255, 0.9);
+
+    box-shadow:
+        inset 0 0 16px rgba(0, 255, 255, 0.1),
+        0 0 13px rgba(0, 255, 255, 0.28);
+
+    transform: translateY(-1px);
+}
+
+.cube-scramble-button:active {
+    transform: translateY(0);
+}
+
+.cube-scramble-button:disabled {
+    cursor: default;
+    opacity: 0.48;
+}
+
+.scramble-status-light {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+
+    background: #00ffff;
+    box-shadow: 0 0 7px rgba(0, 255, 255, 0.9);
+}
+
+.cube-scramble-button.is-running {
+    color: #ffb27a;
+    background: rgba(36, 14, 2, 0.82);
+    border-color: rgba(255, 138, 61, 0.8);
+    opacity: 1;
+
+    box-shadow:
+        inset 0 0 14px rgba(255, 138, 61, 0.08),
+        0 0 11px rgba(255, 138, 61, 0.22);
+}
+
+.cube-scramble-button.is-running::before {
+    content: '';
+
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -45%;
+    width: 35%;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 138, 61, 0.22),
+        transparent
+    );
+
+    animation: scrambleSweep 0.7s linear infinite;
+}
+
+.cube-scramble-button.is-running .scramble-status-light {
+    background: #ff8a3d;
+    box-shadow: 0 0 8px rgba(255, 138, 61, 1);
+    animation: scrambleStatusPulse 0.7s ease-in-out infinite;
+}
+
+@keyframes scrambleSweep {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(430%);
+    }
+}
+
+@keyframes scrambleStatusPulse {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
 .social-links {
     position: fixed;
     right: 28px;

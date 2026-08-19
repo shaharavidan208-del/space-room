@@ -6,57 +6,42 @@ export default class SignalTraceLevelFour {
          * Level display info.
          * SignalTrace can use this text when drawing the terminal UI.
          */
-        this.title = "LEVEL 04 // ARCHIVE HANDSHAKE"
-        this.description = "Restore a basic signal route from SRC to ARC."
+        this.title = "LEVEL 04 // BRANCH PROTOCOL"
+this.description =
+    "Route the primary signal while maintaining the auxiliary relay link."
 
-        /**
-         * Board size for this level.
-         */
-        this.rows = 6
-        this.cols = 6
+this.rows = 6
+this.cols = 6
 
-        /**
-         * Fixed signal endpoints.
-         * SRC is the signal source.
-         * ARC is the archive target.
-         */
-        this.source = {
-            row: 0,
-            col: 0,
-            direction: "down"
-        }
+this.source = {
+    row: 0,
+    col: 0,
+    direction: "down"
+}
 
-        this.target = {
-            row: 5,
-            col: 3,
-            direction: "left"
-        }
+this.relay = {
+    row: 1,
+    col: 5,
+    direction: "down"
+}
 
-        this.relay = {
-            row: 1,
-            col: 3,
-            direction: "left"
-        }
+this.target = {
+    row: 5,
+    col: 5,
+    direction: "left"
+}
 
-        this.tile = {
-            row: 0,
-            col: 0,
-            pipe: null,
-            locked: false,
-            blocked: false
-        }
+this.pipeCount = {
+    vertical: 3,
+    horizontal: 3,
 
-        this.pipeCount = {
-            vertical: 8,
-            cornerUpLeft: 1,
-            cornerDownLeft: 1,
-            cornerUpRight: 2,
-            horizontal: 2,
-            cornerDownRight: 1,
-            splitDown: 0,
-            splitRight: 0,
-            splitUp: 1
-        }
+    cornerUpLeft: 2,
+    cornerDownLeft: 1,
+    cornerUpRight: 2,
+    cornerDownRight: 2,
+
+    splitUp: 1
+}
 
         this.sourcePipe = new Pipe(
             null,
@@ -100,6 +85,10 @@ export default class SignalTraceLevelFour {
             this.targetPipe
 
         grid[this.relay.row][this.relay.col].pipe = this.relayPipe
+
+        grid[2][3].locked = true
+grid[4][5].locked = true
+grid[5][3].locked = true
 
         return grid
     }

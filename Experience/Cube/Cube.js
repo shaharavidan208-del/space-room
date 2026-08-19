@@ -19,6 +19,15 @@ const STICKER_SCALE = 0.87;
 const STICKER_DEPTH = 0.01;
 const STICKER_COUNT = 54;
 
+// Default number of animated quarter-turns in one scramble.
+const SCRAMBLE_MOVE_COUNT = 20;
+
+// Duration of each individual scramble turn in seconds.
+const SCRAMBLE_TURN_DURATION = 0.14;
+
+// Standard scrambles rotate only the six outer faces.
+const SCRAMBLE_LAYERS = [-1, 1];
+
 
 
 
@@ -51,6 +60,12 @@ export default class Cube {
 
     this.rndAxisArr = ['x', 'y', 'z']
     this.faceName = null
+
+    // Stores the most recently completed sequence for future undo/reset work.
+    this.scrambleMoves = []
+
+    // Registered by CubeInput so scrambling can stop whole-cube inertia.
+    this.input = null
 
     this.scene = scene
 
@@ -232,6 +247,96 @@ buildCubies() {
      */
     this.syncStickerInstances(true)
 }
+
+    /**
+     * Gives the cube access to the input controller so an automatic
+     * animation can kill any remaining whole-cube inertia first.
+     *
+     * @param {CubeInput} input
+     */
+    registerInput(input) {
+        this.input = input
+    }
+
+    /**
+     * Builds a clean scramble without repeating the same axis on two
+     * consecutive moves.
+     *
+     * Only the six outer faces are used, matching a normal Rubik's Cube
+     * scramble rather than rotating middle slices.
+     *
+     * @param {number} moveCount
+     * @returns {{axis: string, layerIndex: number, direction: number}[]}
+     */
+    createScrambleMoves(moveCount) {
+        const moves = []
+        let previousAxis = null
+
+        for (let i = 0; i < moveCount; i++) {
+            const availableAxes = this.rndAxisArr.filter((axis) => {
+                return axis !== previousAxis
+            })
+
+            const axisIndex = Math.floor(
+                Math.random() * availableAxes.length
+            )
+
+            const layerIndexPosition = Math.floor(
+                Math.random() * SCRAMBLE_LAYERS.length
+            )
+
+            let direction = -1
+
+            if (Math.random() >= 0.5) {
+                direction = 1
+            }
+
+            const axis = availableAxes[axisIndex]
+
+            moves.push({
+                axis,
+                layerIndex: SCRAMBLE_LAYERS[layerIndexPosition],
+                direction
+            })
+
+            previousAxis = axis
+        }
+
+        return moves
+    }
+
+    /**
+     * Scrambles the cube with a fast sequence of animated quarter-turns.
+     * Manual cube input stays locked until the complete sequence finishes.
+     *
+     * @param {number} moveCount - Number of quarter-turns to generate.
+     * @returns {Promise<object[]>} The completed sequence, or an empty array
+     * if another layer operation was already active.
+     */
+    async scramble(moveCount = SCRAMBLE_MOVE_COUNT) {
+        if (this.rotator.isAnimating || this.rotator.isLayerActive) {
+            return []
+        }
+
+        if (this.input) {
+            this.input.stopInertia()
+        }
+
+        const moves = this.createScrambleMoves(moveCount)
+
+        const completed = await this.rotator.animateSequence(
+            moves,
+            SCRAMBLE_TURN_DURATION
+        )
+
+        if (!completed) {
+            return []
+        }
+
+        this.scrambleMoves = moves
+
+        return moves
+    }
 
     /**
      * get one layer

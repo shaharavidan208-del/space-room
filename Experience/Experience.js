@@ -26,7 +26,7 @@ import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js'
 import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShader.js'
-
+import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
 
 
 export default class Experience {
@@ -748,7 +748,7 @@ export default class Experience {
 
         this.objsToHide = [] // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load('/models/Untitled21.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled22.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -1175,8 +1175,9 @@ diffuseColor *=
             this.canvasWidth = window.innerWidth;
             this.canvasHeight = window.innerHeight;
 
+            if(!isPortrait)
+                this.canvasHeight = this.canvasHeight * heightShrink
 
-            this.canvasHeight = this.canvasHeight * heightShrink
 
             // 
 
@@ -1225,6 +1226,10 @@ diffuseColor *=
         const outputPass = new OutputPass()
         effectComposer.addPass(outputPass)
 
+        const fxaaPass = new FXAAPass()
+        fxaaPass.enabled = false
+
+        effectComposer.addPass(fxaaPass)
 
         const terminalGlitchTimeouts = []
 
@@ -1865,8 +1870,73 @@ diffuseColor *=
          * focus mode on cube
          */
         const cubeControlsHint = document.querySelector('#cube-controls-hint'); // UI for the cube controls 
+        const cubeScrambleButton = document.querySelector('#cube-scramble-button')
+        const cubeScrambleButtonLabel = document.querySelector('.scramble-button-label')
         const cubeHotspot = document.querySelector("#hotspot-cube")
         const terminalShaderGlitchTimeouts = []
+
+
+        /**
+         * Keeps the scramble button's label, disabled state and visual
+         * feedback synchronized with the cube's automatic animation.
+         *
+         * @param {boolean} isRunning
+         * @param {boolean} isEnabled
+         */
+        const setCubeScrambleButtonState = (isRunning, isEnabled) => {
+            cubeScrambleButton.classList.toggle(
+                'is-running',
+                isRunning
+            )
+
+            if (isRunning) {
+                cubeScrambleButtonLabel.textContent = 'SCRAMBLING'
+            }
+            else {
+                cubeScrambleButtonLabel.textContent = 'SCRAMBLE CUBE'
+            }
+
+            cubeScrambleButton.disabled = !isEnabled
+            cubeScrambleButton.setAttribute(
+                'aria-busy',
+                String(isRunning)
+            )
+        }
+
+
+        /**
+         * The HTML control owns only the request. Cube and Rotator still
+         * own scramble generation, animation locking and cubie movement.
+         */
+        cubeScrambleButton.addEventListener('click', async () => {
+            if (!this.isFocused) {
+                return
+            }
+
+            if (this.currPointName !== 'RubiksCube') {
+                return
+            }
+
+            if (this.cube.rotator.isAnimating || this.cube.rotator.isLayerActive) {
+                return
+            }
+
+            setCubeScrambleButtonState(true, false)
+
+            try {
+                await this.cube.scramble()
+            }
+            finally {
+                const cubeFocusIsStillActive =
+                    this.isFocused &&
+                    this.currPointName === 'RubiksCube'
+
+                setCubeScrambleButtonState(
+                    false,
+                    cubeFocusIsStillActive
+                )
+            }
+        })
 
 
         /**
@@ -1971,6 +2041,17 @@ diffuseColor *=
                 showItems(false, this.ceilingMeshes)
                 showItems(false, this.monitorMeshes)
 
+                fxaaPass.enabled = true
+
+                const cubeIsBusy =
+                    this.cube.rotator.isAnimating ||
+                    this.cube.rotator.isLayerActive
+
+                setCubeScrambleButtonState(
+                    cubeIsBusy,
+                    !cubeIsBusy
+                )
+
                 controls.enabled = true
                 controls.enableZoom = true
                 controls.enableRotate = false
@@ -2038,7 +2119,10 @@ diffuseColor *=
             showItems(true, this.ceilingMeshes) // unhide ceiling
             showItems(true, this.monitorMeshes)
             showItems(true, this.objsToHide)
+            fxaaPass.enabled = false
+
             cubeControlsHint.classList.remove('visible');
+            setCubeScrambleButtonState(false, false)
             isTransitioning = true;
 
             // Bring all UI hotspots back

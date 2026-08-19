@@ -5,9 +5,8 @@ const TerminalTree = {
         choices: [
             { text: "[ ABOUT ME ]", nextId: "about_me" },
             { text: "[ THE PROJECT ]", nextId: "experience_menu" },
-            { text: "[ HOW I BUILT IT ]", nextId: "build_menu" },
-            { text: "[ SIGNAL TRACE ]", action: "startSignalTrace" },
-            { text: "[ CONTROLS ]", nextId: "controls" }
+            { text: "[ CONTROLS ]", nextId: "controls" },
+            { text: "[ SIGNAL TRACE ]", action: "startSignalTrace" }
         ]
     },
 
@@ -26,6 +25,7 @@ const TerminalTree = {
         choices: [
             { text: "[ WHY I BUILT IT ]", nextId: "experience_origin" },
             { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
+            { text: "[ HOW I BUILT IT ]", nextId: "build_menu" },
             { text: "[ TECHNOLOGY ]", nextId: "experience_technology" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
@@ -33,7 +33,7 @@ const TerminalTree = {
 
     experience_origin: {
         header: "WHY I BUILT IT",
-        aiText: "I started this project because I wanted to learn Three.js through something larger than an isolated tutorial scene. A space station gave me room to combine programming, visual design, interaction, sound, and atmosphere inside one coherent environment.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.\n\nThe goal was never to make a static room that happened to render in a browser. I wanted every major object to justify being there through interaction, function, or storytelling through the environment itself.",
+        aiText: "I started this project because I wanted to learn Three.js through something larger than an isolated tutorial scene. A space station gave me room to combine programming, visual design, interaction, sound, and atmosphere inside one coherent environment.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.",
         choices: [
             { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
             { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
@@ -43,7 +43,7 @@ const TerminalTree = {
 
     experience_interactions: {
         header: "WHAT IS INTERACTIVE",
-        aiText: "The station is designed to be explored rather than passively viewed. You can move between points of interest, operate this terminal, manipulate a fully functional Rubik's Cube, and play Signal Trace directly through the monitor.\n\nThese are not separate pages placed on top of a 3D background. The interactions connect the Three.js scene to custom input systems, camera behavior, raycasting, canvas rendering, and state management.\n\nThe result is one continuous experience: the environment is the interface, and the portfolio information lives inside it.",
+        aiText: "The station is designed to be explored rather than passively viewed. You can move between points of interest, operate this terminal, manipulate a fully functional Rubik's Cube, and play Signal Trace directly through the monitor.\n\nThe interactions connect the Three.js scene to custom input systems, camera behavior, raycasting, canvas rendering, and state management.\n\nThe result is one continuous experience: the environment is the interface, and the portfolio information lives inside it.",
         choices: [
             { text: "[ VIEW CONTROLS ]", nextId: "controls" },
             { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
@@ -68,13 +68,14 @@ const TerminalTree = {
             { text: "[ 02: BUILDING THE STATION ]", nextId: "build_station" },
             { text: "[ 03: MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
             { text: "[ 04: OPTIMIZING THE RESULT ]", nextId: "build_optimization" },
+            {text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
     },
 
     build_start: {
         header: "HOW I BUILT IT: THE STARTING POINT",
-        aiText: "At the start, I did not yet know how large the project would become. The first version was mainly a floating room made out of Blender primitives that could be viewed in the browser. Building it immediately forced me to learn the fundamentals of a real-time 3D scene: cameras, lighting, materials, textures, model loading, and organizing objects in 3D space.\n\nInstead of treating those subjects as isolated exercises, every new concept had an immediate purpose inside something I cared about finishing.",
+        aiText: "At the start, I did not yet know how large the project would become. The first version was mainly a floating room made out of Blender primitives that could be viewed in the browser. Building it immediately forced me to learn the fundamentals of a real-time 3D scene: cameras, lighting, materials, textures, model loading, and organizing objects in 3D space.\n\n Every new concept I learned had an immediate purpose inside something I cared about finishing.",
         choices: [
             { text: "[ NEXT: BUILDING THE STATION ]", nextId: "build_station" },
             { text: "[ BACK TO HOW I BUILT IT ]", nextId: "build_menu" },
@@ -95,7 +96,7 @@ const TerminalTree = {
 
     build_interactions: {
     header: "HOW I BUILT IT: MAKING IT INTERACTIVE",
-    aiText: "Once the room existed, simply looking around it was not enough. I wanted the station itself to function as the portfolio, so I began turning its objects into complete interactive systems.\n\nSelect a feature to follow how this stage of the project developed.",
+    aiText: "Once the room existed, simply looking around it was not enough. I wanted the station itself to function as the portfolio, so I began turning its objects into complete interactive systems.",
     choices: [
         { text: "[ THE RUBIK'S CUBE ]", nextId: "build_cube" },
         { text: "[ THE TERMINAL ]", nextId: "build_terminal" },
@@ -109,7 +110,7 @@ const TerminalTree = {
 
 build_cube: {
     header: "MAKING IT INTERACTIVE: THE RUBIK'S CUBE",
-    aiText: "This was the most challenging part in the project.\n\nIt was built from 27 separate cubies and 54 interactive stickers, then created the layer-selection, dragging, rotation, snapping, and undo systems from scratch. The most difficult part was making the rotation of the selected layer consistent regardless of camera angle. I won't go into the full technical breakdown here, but the solution involved temporary groups, world axes, and using the cube's local coordinates rather than world position.",
+    aiText: "It was built from 27 separate cubies and 54 interactive stickers, then created the layer-selection, dragging, rotation, snapping, and undo systems from scratch. One of the most difficult challenges I faced in this project was making the rotation of the selected layer consistent regardless of camera angle. I won't go into the full technical breakdown here, but the solution involved temporary groups, world axes, and using the cube's local coordinates rather than world position.",
     choices: [
         { text: "[ NEXT: THE TERMINAL ]", nextId: "build_terminal" },
         { text: "[ BACK TO MAKING IT INTERACTIVE ]", nextId: "build_interactions" },
@@ -184,7 +185,6 @@ build_signal_trace: {
         header: "CONTROLS: RUBIK'S CUBE",
         aiText: "LEFT-DRAG A CUBE FACE: rotate the selected layer.\nRIGHT-DRAG: rotate the entire cube relative to the camera.\nTOUCH-DRAG: rotate a layer or the entire cube depending on where the drag begins.\nUNDO: reverse the most recent layer move.\nESC: leave the cube and return to the station view.",
         choices: [
-            { text: "[ CUBE SYSTEM BREAKDOWN ]", nextId: "system_cube" },
             { text: "[ BACK TO CONTROLS ]", nextId: "controls" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]

@@ -1,6 +1,16 @@
 import * as THREE from 'three'
 import gsap from 'gsap';
 export default class CubeInput {
+    /**
+     * Clears the whole-cube angular momentum before an automatic
+     * animation such as scrambling takes control.
+     */
+    stopInertia() {
+        this.velocityX = 0
+        this.velocityY = 0
+        this.isCubeDragging = false
+    }
+
     applyCubeRotation(dx, dy) {
     // Get camera orientation in world space.
     this.experience.camera.getWorldQuaternion(
@@ -150,6 +160,8 @@ this.inertiaDamping = 0.92
 
 // Stop microscopic rotations once velocity is tiny.
 this.inertiaStopThreshold = 0.01
+
+        this.cube.registerInput(this)
 
         // --- Drag State Trackers ---
         this.isDragging = false

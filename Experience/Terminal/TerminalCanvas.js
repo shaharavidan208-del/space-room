@@ -178,6 +178,265 @@ export default class TerminalCanvas {
         return currentBrushY + lineDropDistance;
     }
 
+    /**
+     * Draws Signal Trace as a dedicated game launcher instead of another
+     * generic dialogue row.
+     *
+     * The choice still uses the normal terminal selection index and action,
+     * so this changes only its visual hierarchy—not its navigation logic.
+     *
+     * @param {number} startX
+     * @param {number} panelWidth
+     * @param {boolean} isSelected
+     */
+    drawSignalTraceLauncher(startX, panelWidth, isSelected) {
+        const panelHeight = 300
+        const panelBottomMargin = 55
+        const panelTop =
+            this.canvas.height -
+            panelHeight -
+            panelBottomMargin
+
+        const panelRight = startX + panelWidth
+
+        const terminalGreen = '#00FF41'
+        const dimGreen = '#087A2C'
+        const terminalBlack = '#050505'
+        const signalAmber = '#FFB000'
+
+        let panelBackground = '#060D08'
+        let moduleGreen = dimGreen
+        let moduleTitleGreen = '#00C83A'
+        let moduleLineWidth = 2
+        let launchText = '[ INITIALIZE ]'
+        let footerText = 'GAME MODULE // STANDBY'
+        let footerColor = dimGreen
+
+        if (isSelected) {
+            panelBackground = '#071D0E'
+            moduleGreen = terminalGreen
+            moduleTitleGreen = terminalGreen
+            moduleLineWidth = 4
+            launchText = '> INITIALIZE <'
+            footerText = 'ENTER // LAUNCH GAME MODULE'
+            footerColor = signalAmber
+        }
+
+        this.ctx.save()
+
+        /**
+         * Section label and divider detach the game module from the normal
+         * dialogue choices above it.
+         */
+        this.ctx.fillStyle = dimGreen
+        this.ctx.font = '34px monospace'
+        this.ctx.fillText(
+            'AVAILABLE GAME MODULE',
+            startX,
+            panelTop - 32
+        )
+
+        this.ctx.fillRect(
+            startX + 395,
+            panelTop - 43,
+            panelWidth - 395,
+            3
+        )
+
+        /**
+         * Main game-module housing.
+         */
+        this.ctx.fillStyle = panelBackground
+
+        this.ctx.fillRect(
+            startX,
+            panelTop,
+            panelWidth,
+            panelHeight
+        )
+
+        this.ctx.strokeStyle = moduleGreen
+        this.ctx.lineWidth = moduleLineWidth
+
+        this.ctx.strokeRect(
+            startX,
+            panelTop,
+            panelWidth,
+            panelHeight
+        )
+
+        /**
+         * Solid left rail makes the module visually heavier than normal
+         * terminal choices even when it is not selected.
+         */
+        this.ctx.fillStyle = moduleGreen
+
+        this.ctx.fillRect(
+            startX,
+            panelTop,
+            10,
+            panelHeight
+        )
+
+        /**
+         * Module identification.
+         */
+        this.ctx.fillStyle = moduleTitleGreen
+
+        this.ctx.font = 'bold 55px monospace'
+        this.ctx.fillText(
+            'SIGNAL TRACE // ROUTING PROTOCOL',
+            startX + 42,
+            panelTop + 69
+        )
+
+        this.ctx.fillStyle = signalAmber
+        this.ctx.font = '38px monospace'
+        this.ctx.fillText(
+            'INTERACTIVE LOGIC SIMULATION',
+            startX + 44,
+            panelTop + 116
+        )
+
+        /**
+         * Draw a miniature source-to-target route. This previews the visual
+         * language of the game without trying to reproduce the entire board.
+         */
+        const routeY = panelTop + 210
+        const routeStartX = startX + 54
+        const routePoints = [
+            { x: routeStartX, y: routeY },
+            { x: routeStartX + 165, y: routeY },
+            { x: routeStartX + 165, y: routeY + 34 },
+            { x: routeStartX + 355, y: routeY + 34 },
+            { x: routeStartX + 355, y: routeY - 20 },
+            { x: routeStartX + 565, y: routeY - 20 }
+        ]
+
+        this.ctx.strokeStyle = moduleGreen
+
+        this.ctx.lineWidth = 5
+        this.ctx.beginPath()
+        this.ctx.moveTo(routePoints[0].x, routePoints[0].y)
+
+        for (let i = 1; i < routePoints.length; i++) {
+            this.ctx.lineTo(
+                routePoints[i].x,
+                routePoints[i].y
+            )
+        }
+
+        this.ctx.stroke()
+
+        for (let i = 0; i < routePoints.length; i++) {
+            const point = routePoints[i]
+
+            this.ctx.fillStyle = terminalBlack
+            this.ctx.strokeStyle = moduleGreen
+
+            this.ctx.lineWidth = 4
+            this.ctx.beginPath()
+            this.ctx.arc(point.x, point.y, 13, 0, Math.PI * 2)
+            this.ctx.fill()
+            this.ctx.stroke()
+        }
+
+        this.ctx.fillStyle = signalAmber
+        this.ctx.beginPath()
+        this.ctx.arc(
+            routePoints[0].x,
+            routePoints[0].y,
+            7,
+            0,
+            Math.PI * 2
+        )
+        this.ctx.fill()
+
+        const targetPoint = routePoints[routePoints.length - 1]
+
+        this.ctx.beginPath()
+        this.ctx.arc(
+            targetPoint.x,
+            targetPoint.y,
+            7,
+            0,
+            Math.PI * 2
+        )
+        this.ctx.fill()
+
+        /**
+         * Compact telemetry separates the launcher from ordinary prose.
+         */
+        const telemetryX = startX + 710
+
+        this.ctx.font = '38px monospace'
+        this.ctx.fillStyle = '#00C83A'
+        this.ctx.fillText(
+            'SYSTEM  ONLINE',
+            telemetryX,
+            panelTop + 194
+        )
+
+        this.ctx.fillText(
+            'MODE    PUZZLE',
+            telemetryX,
+            panelTop + 242
+        )
+
+        /**
+         * Launch control on the right side of the module.
+         */
+        const launchWidth = 470
+        const launchHeight = 108
+        const launchX = panelRight - launchWidth - 42
+        const launchY = panelTop + 78
+
+        this.ctx.lineWidth = 3
+        this.ctx.strokeStyle = moduleGreen
+
+        if (isSelected) {
+            this.ctx.fillStyle = terminalGreen
+            this.ctx.fillRect(
+                launchX,
+                launchY,
+                launchWidth,
+                launchHeight
+            )
+
+            this.ctx.fillStyle = terminalBlack
+        }
+        else {
+            this.ctx.strokeRect(
+                launchX,
+                launchY,
+                launchWidth,
+                launchHeight
+            )
+
+            this.ctx.fillStyle = moduleTitleGreen
+        }
+
+        this.ctx.font = 'bold 46px monospace'
+        this.ctx.textAlign = 'center'
+        this.ctx.fillText(
+            launchText,
+            launchX + launchWidth / 2,
+            launchY + 69
+        )
+
+        this.ctx.textAlign = 'left'
+        this.ctx.fillStyle = footerColor
+
+        this.ctx.font = '32px monospace'
+        this.ctx.fillText(
+            footerText,
+            launchX,
+            panelTop + 248
+        )
+
+        this.ctx.restore()
+    }
+
     // ==========================================
     // 6. RETURN TO ROOT MENU
     // ==========================================
@@ -401,12 +660,28 @@ export default class TerminalCanvas {
 
           // Only draw choices if this node actually has choices.
         if (node.choices && node.choices.length > 0) {
+            let hasSignalTraceLauncher = false
+            let isSignalTraceSelected = false
+
             for (let i = 0; i < node.choices.length; i++) {
                 const choice = node.choices[i]
+                const isSelected =
+                    i === this.dialogueSelectedIndex
+
+                /**
+                 * Signal Trace is a full game, so its action receives a
+                 * dedicated launch module instead of the generic text row.
+                 */
+                if (choice.action === 'startSignalTrace') {
+                    hasSignalTraceLauncher = true
+                    isSignalTraceSelected = isSelected
+
+                    continue
+                }
 
                 // If this choice is currently selected,
                 // draw a green highlight bar behind it.
-                if (i === this.dialogueSelectedIndex) {
+                if (isSelected) {
                     this.ctx.fillStyle = '#00FF41'
 
                     // Highlight rectangle.
@@ -428,6 +703,21 @@ export default class TerminalCanvas {
 
                 // Move down before drawing the next choice.
                 cursorY += choiceLineHeight
+            }
+
+            /**
+             * The game launcher is rendered after the normal dialogue list
+             * and anchored independently to the bottom of the terminal.
+             */
+            if (hasSignalTraceLauncher) {
+                const signalTracePanelWidth =
+                    this.canvas.width - paddingX * 2
+
+                this.drawSignalTraceLauncher(
+                    paddingX,
+                    signalTracePanelWidth,
+                    isSignalTraceSelected
+                )
             }
         }
 
