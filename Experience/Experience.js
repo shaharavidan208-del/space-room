@@ -1161,7 +1161,7 @@ diffuseColor *=
         let hotspotNeedUpdate = false
 
 
-
+        const heightShrink = 0.75
         window.addEventListener('resize', () => {
             hotspotNeedUpdate = true
             const windowAspect = window.innerWidth / window.innerHeight;
@@ -1176,7 +1176,7 @@ diffuseColor *=
             this.canvasHeight = window.innerHeight;
 
 
-            this.canvasHeight = this.canvasHeight * 0.8
+            this.canvasHeight = this.canvasHeight * heightShrink
 
             // 
 
