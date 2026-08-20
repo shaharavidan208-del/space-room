@@ -8,6 +8,50 @@
 </head>
 <body>
     <script type="module" src="./script.js"></script>
+
+    <div class="orientation-screen">
+        <main class="orientation-panel" role="status">
+            <div class="orientation-status">
+                <span class="orientation-status-light" aria-hidden="true"></span>
+                <span>DISPLAY ORIENTATION LOCK</span>
+            </div>
+
+            <div class="orientation-device" aria-hidden="true">
+                <div class="orientation-rotation-arrow"></div>
+                <div class="orientation-phone">
+                    <span></span>
+                </div>
+            </div>
+
+            <p class="orientation-code">ERR // PORTRAIT VIEWPORT DETECTED</p>
+            <h1>ROTATE DEVICE</h1>
+            <p class="orientation-message">
+                Station access requires a horizontal display.
+            </p>
+
+            <div class="orientation-readout">
+                <span>VIEWPORT ALIGNMENT</span>
+                <span>RECALIBRATION REQUIRED</span>
+            </div>
+        </main>
+    </div>
+
+    <!--
+        The existing terminal canvas is mounted inside this surface by JavaScript.
+        It remains the source of the Three.js CanvasTexture while also becoming
+        a direct fullscreen DOM interface.
+    -->
+    <div
+        id="terminal-fullscreen"
+        class="terminal-fullscreen"
+        aria-hidden="true"
+    >
+        <div
+            id="terminal-fullscreen-surface"
+            class="terminal-fullscreen-surface"
+        ></div>
+    </div>
+
     <div class="social-links">
     <a
         class="social-link"

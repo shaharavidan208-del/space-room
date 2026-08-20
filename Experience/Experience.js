@@ -27,13 +27,14 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js'
 import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShader.js'
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
-
+import TerminalFullscreen from './TerminalFullscreen.js'
 
 export default class Experience {
 
     loadAssets() {
         this.loadModel()
         this.loadEnvironmentMap()
+
     }
 
     setupLighting(renderer) {
@@ -1051,6 +1052,8 @@ diffuseColor *=
             this.scene.add(gltf.scene)
         })
 
+        this.assetsLoaded = true
+
     }
 
     loadEnvironmentMap() {
@@ -1104,7 +1107,15 @@ diffuseColor *=
 
                 onSceneReady: () => {
                     sceneReady = true
+                    this.terminalFullscreen = new TerminalFullscreen({
+    terminalCanvas: this.terminal.canvas,
+    terminalScreenMesh: this.monitorGlass,
+    camera: this.camera,
+    renderer
+})
                     playTerminalGlitch()
+                    
+                    
                 }
             })
 
@@ -1160,68 +1171,102 @@ diffuseColor *=
 
         let hotspotNeedUpdate = false
 
+    
+const heightShrink = 0.75
 
-        const heightShrink = 0.75
-        window.addEventListener('resize', () => {
-            hotspotNeedUpdate = true
-            const windowAspect = window.innerWidth / window.innerHeight;
+const resizeExperience = () => {
+    hotspotNeedUpdate = true
 
-            // [ MOBILE PORTRAIT DETECTION ]
-            // If the window is taller than it is wide (< 1.0), the user is on a vertical screen.
-            const isPortrait = windowAspect < 1.0;
-                    // 100% black bars - 1920x1080 - 22/9
+    // Start with the regular layout viewport as fallback.
+    let viewportWidth = window.innerWidth
+    let viewportHeight = window.innerHeight
 
-            // create two mutable variables and initially set them to fill 100% of the screen
-            this.canvasWidth = window.innerWidth;
-            this.canvasHeight = window.innerHeight;
+    // Read the CURRENT visual viewport dimensions on every resize.
+    if(window.visualViewport) {
+        viewportWidth = window.visualViewport.width
+        viewportHeight = window.visualViewport.height
+    }
 
-            if(!isPortrait)
-                this.canvasHeight = this.canvasHeight * heightShrink
+    const viewportAspect = viewportWidth / viewportHeight
+    const isPortrait = viewportAspect < 1.0
+
+    const isShortLandscape = !isPortrait && viewportHeight <= 500
+
+document.documentElement.classList.toggle(
+    'short-landscape',
+    isShortLandscape
+)
+
+    this.canvasWidth = viewportWidth
+    this.canvasHeight = viewportHeight
+
+    if(!isPortrait) {
+        this.canvasHeight *= heightShrink
+    }
+
+    this.camera.aspect = this.canvasWidth / this.canvasHeight
+    this.camera.updateProjectionMatrix()
+
+    renderer.setSize(this.canvasWidth, this.canvasHeight)
+    effectComposer.setSize(this.canvasWidth, this.canvasHeight)
+
+    if(this.supernova) {
+        const currentRatio = renderer.getPixelRatio()
+
+        this.supernova.uniforms.iResolution.value.set(
+            this.canvasWidth * currentRatio,
+            this.canvasHeight * currentRatio
+        )
+    }
 
 
-            // 
+document.documentElement.classList.toggle(
+    'short-landscape',
+    isShortLandscape
+)
 
-            // 1. Lock the Three.js Camera frustum to the new mathematical ratio
-            this.camera.aspect = this.canvasWidth / this.canvasHeight; // Update the camera to render at the new aspect ratio to match the canvas
-            this.camera.updateProjectionMatrix(); // compile the new aspect ratio into the core webGL math so the GPU can use it
-            // after any modification to a camera propety we need to update projection matrix
-            // since three.js doesn't need to update things  like FOV/AR each frame we need to update it manually
 
-            // 2. Physically resize the WebGL Canvas element in the DOM
-            renderer.setSize(this.canvasWidth, this.canvasHeight);
-            effectComposer.setSize(this.canvasWidth, this.canvasHeight)
-            // 3. Sync the Heavy Shader (Supernova)
-            // The shader requires the exact pixel count to calculate uv coordinates correctly.
-            // We multiply by devicePixelRatio to ensure it stays sharp on high-density displays (like retina/phones).
-            if (this.supernova) {
-                const currentRatio = renderer.getPixelRatio();
-                this.supernova.uniforms.iResolution.value.set(
-                    this.canvasWidth * currentRatio,
-                    this.canvasHeight * currentRatio
-                );
-            }
+    document.documentElement.style.setProperty(
+    '--viewport-width',
+    `${viewportWidth}px`
+)
+
+document.documentElement.style.setProperty(
+    '--viewport-height',
+    `${viewportHeight}px`
+)
+
+    this.canvasRect = renderer.domElement.getBoundingClientRect()
+}
+
+window.addEventListener('resize', resizeExperience)
+
+if(window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resizeExperience)
+}
+
 
             // [ DOM MEASUREMENT CACHE ]
             // measure the physical footprint of the canvas
             // This is required for raycasting and UI hotspots. 
             this.canvasRect = renderer.domElement.getBoundingClientRect();
-        });
-        const effectComposer = new EffectComposer(renderer)
+
+        const effectComposer = new EffectComposer(renderer)        
         console.log(this.canvasHeight, this.canvasWidth)
         effectComposer.setSize(this.canvasWidth, this.canvasHeight)
         effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        window.dispatchEvent(new Event('resize'));
+        resizeExperience()
         /**
  * Post processing
  */
 
+        
         const renderPass = new RenderPass(this.scene, this.camera)
         effectComposer.addPass(renderPass)
 
         const glitchPass = new GlitchPass()
         effectComposer.addPass(glitchPass)
-        glitchPass.enabled = false
-
+        glitchPass.enabled = true
 
         const outputPass = new OutputPass()
         effectComposer.addPass(outputPass)
@@ -1651,6 +1696,9 @@ diffuseColor *=
          */
 
 
+        
+
+
 
         /**
          * RECT AREA LIGHTS
@@ -2030,6 +2078,7 @@ diffuseColor *=
             trackballControls.enabled = false
             controls.enabled = false
             isTransitioning = true;
+            
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach(p => {
@@ -2041,7 +2090,6 @@ diffuseColor *=
                 showItems(false, this.ceilingMeshes)
                 showItems(false, this.monitorMeshes)
 
-                fxaaPass.enabled = true
 
                 const cubeIsBusy =
                     this.cube.rotator.isAnimating ||
@@ -2094,6 +2142,7 @@ diffuseColor *=
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
+                this.terminalFullscreen.toggle()
                 this.terminalGlitchUniforms.strength.value = 1
                 showItems(false, this.objsToHide)
                 showItems(false, this.ceilingMeshes)
@@ -2385,6 +2434,10 @@ diffuseColor *=
                 return null
             }
 
+            if(this.terminalFullscreen?.isOpen) {
+        return null
+    }
+            
             const rect = renderer.domElement.getBoundingClientRect()
 
             pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
@@ -2416,6 +2469,39 @@ diffuseColor *=
                 y: canvasY
             }
         }
+
+        const getTerminalCanvasPositionFromFullscreenEvent = (event) => {
+    if(!this.terminalFullscreen?.isOpen) {
+        return null
+    }
+
+    const canvas = this.terminal.canvas
+    const rect = canvas.getBoundingClientRect()
+
+    if(rect.width === 0 || rect.height === 0) {
+        return null
+    }
+
+    const pointerInsideCanvas =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+
+    if(!pointerInsideCanvas) {
+        return null
+    }
+
+    return {
+        x:
+            (event.clientX - rect.left) *
+            (canvas.width / rect.width),
+
+        y:
+            (event.clientY - rect.top) *
+            (canvas.height / rect.height)
+    }
+}
         /**
          * Handles pointer events on the monitor.
          * @param {*} event the pointer event (e.g., mouse click or touch) that occurred on the monitor.
@@ -2423,58 +2509,121 @@ diffuseColor *=
          * @returns the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
          */
         const handleMonitorPointerEvent = (event, type) => {
-            const signalTrace = getSignalTrace()
+    const signalTrace = getSignalTrace()
 
-            if (!signalTrace) {
-                return
-            }
+    if(!signalTrace) {
+        return
+    }
 
-            const canvasPosition = getTerminalCanvasPositionFromPointerEvent(event)
+    let canvasPosition
 
-            if (!canvasPosition) {
-                if (type === "up") {
-                    signalTrace.handlePointerCancel()
-                }
+    if(this.terminalFullscreen?.isOpen) {
+        canvasPosition =
+            getTerminalCanvasPositionFromFullscreenEvent(event)
+    }
+    else {
+        canvasPosition =
+            getTerminalCanvasPositionFromPointerEvent(event)
+    }
 
-                return
-            }
+    if(!canvasPosition) {
+        if(type === "up") {
+            signalTrace.handlePointerCancel()
 
-            if (type === "down") {
-                renderer.domElement.setPointerCapture(event.pointerId) // set pointer capture is critical for touch events, otherwise the pointerup event won't fire if the user drags outside the canvas
-                signalTrace.handlePointerDown(canvasPosition.x, canvasPosition.y)
-            }
-            else if (type === "move") {
-                signalTrace.handlePointerMove(canvasPosition.x, canvasPosition.y)
-            }
-            else if (type === "up") {
-                signalTrace.handlePointerUp(canvasPosition.x, canvasPosition.y)
-
-                if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-                    renderer.domElement.releasePointerCapture(event.pointerId)
-                }
+            if(
+                event.currentTarget.hasPointerCapture?.(
+                    event.pointerId
+                )
+            ) {
+                event.currentTarget.releasePointerCapture(
+                    event.pointerId
+                )
             }
         }
 
-        renderer.domElement.addEventListener("pointercancel", (event) => {
-            const signalTrace = getSignalTrace()
+        return
+    }
 
-            if (!signalTrace) {
-                return
-            }
+    if(type === "down") {
+        event.currentTarget.setPointerCapture(
+            event.pointerId
+        )
 
-            signalTrace.handlePointerCancel()
+        signalTrace.handlePointerDown(
+            canvasPosition.x,
+            canvasPosition.y
+        )
+    }
+    else if(type === "move") {
+        signalTrace.handlePointerMove(
+            canvasPosition.x,
+            canvasPosition.y
+        )
+    }
+    else if(type === "up") {
+        signalTrace.handlePointerUp(
+            canvasPosition.x,
+            canvasPosition.y
+        )
 
-            if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-                renderer.domElement.releasePointerCapture(event.pointerId)
-            }
-        })
+        if(
+            event.currentTarget.hasPointerCapture(
+                event.pointerId
+            )
+        ) {
+            event.currentTarget.releasePointerCapture(
+                event.pointerId
+            )
+        }
+    }
+}
 
 
-        renderer.domElement.addEventListener("pointerdown", (event) => inspectGlbObjectFromPointer(event, "down"))
-        renderer.domElement.addEventListener("pointerdown", (event) => handleMonitorPointerEvent(event, "down"))
-        renderer.domElement.addEventListener("pointermove", (event) => handleMonitorPointerEvent(event, "move"))
-        renderer.domElement.addEventListener("pointerup", (event) => handleMonitorPointerEvent(event, "up"))
 
+
+        const handlePointerDown = (event) => {
+    handleMonitorPointerEvent(event, "down")
+}
+
+const handlePointerMove = (event) => {
+    handleMonitorPointerEvent(event, "move")
+}
+
+const handlePointerUp = (event) => {
+    handleMonitorPointerEvent(event, "up")
+}
+
+// Normal 3D monitor input
+renderer.domElement.addEventListener(
+    "pointerdown",
+    handlePointerDown
+)
+
+renderer.domElement.addEventListener(
+    "pointermove",
+    handlePointerMove
+)
+
+renderer.domElement.addEventListener(
+    "pointerup",
+    handlePointerUp
+)
+
+// Fullscreen DOM canvas input
+this.terminal.canvas.addEventListener(
+    "pointerdown",
+    handlePointerDown
+)
+
+this.terminal.canvas.addEventListener(
+    "pointermove",
+    handlePointerMove
+)
+
+this.terminal.canvas.addEventListener(
+    "pointerup",
+    handlePointerUp
+)
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 
@@ -2510,6 +2659,21 @@ diffuseColor *=
 
             exportScene.name = 'PortfolioDecalExport'
             exportScene.add(decalToExport)
+
+
+            const panel = document.querySelector('.loading-panel')
+
+({
+    innerWidth,
+    innerHeight,
+    compactQuery: matchMedia(
+        '(orientation: landscape) and (max-height: 500px)'
+    ).matches,
+    panelHeight: panel.getBoundingClientRect().height,
+    panelPadding: getComputedStyle(panel).padding,
+    loadingScreenHeight:
+        document.querySelector('.loading-screen').getBoundingClientRect().height
+})
 
             try {
                 const glb = await exporter.parseAsync(
@@ -2593,6 +2757,19 @@ diffuseColor *=
         }
 
 
+        window.addEventListener('keydown', (event) => {
+    if(event.code !== 'KeyF') {
+        return
+    }
+
+    if(this.currPointName !== 'Terminal') {
+        return
+    }
+
+    this.terminalFullscreen.toggle()
+})
+
+
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
         // ---------------------------------------------------------
@@ -2620,7 +2797,16 @@ diffuseColor *=
 
         const tick = (timestamp) => {
             controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
+    if(!this.terminalFullscreen || !this.terminalFullscreen.shouldPauseScene) {
+        effectComposer.render()
+    }
+    else {
+        if(!this.terminalFullscreen.isOpen) {
             effectComposer.render()
+        }
+
+    }
+
 
             timer.update(timestamp)
             const elapsedTime = timer.getElapsed();
@@ -2647,7 +2833,6 @@ diffuseColor *=
                 this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
 
                 // Check if we've arrived (close enough)
-
                 if (this.camera.position.distanceTo(cameraTarget) < 0.01) { // Bumped to 0.01 to prevent micro-stutters at the end of the lerp
                     this.camera.position.copy(cameraTarget);
                     this.camera.fov = targetFov; // Snap exactly to target just in case

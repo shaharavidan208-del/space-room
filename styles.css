@@ -264,6 +264,20 @@ canvas {
     opacity: 1;
 }
 
+
+.loading-screen,
+.orientation-screen {
+    inset: auto;
+    top: 0;
+    left: 0;
+
+    width: var(--viewport-width, 100vw);
+    height: var(--viewport-height, 100dvh);
+}
+
+
+
+
 .loading-panel {
     position: relative;
     width: min(1180px, 92vw);
@@ -770,5 +784,481 @@ canvas {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* ---------------------------------------------------------
+   PORTRAIT ORIENTATION SCREEN
+   --------------------------------------------------------- */
+.orientation-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+
+    display: none;
+    place-items: center;
+    box-sizing: border-box;
+    padding:
+        max(18px, env(safe-area-inset-top))
+        max(18px, env(safe-area-inset-right))
+        max(18px, env(safe-area-inset-bottom))
+        max(18px, env(safe-area-inset-left));
+
+    overflow: hidden;
+    color: var(--cp-white);
+    background:
+        radial-gradient(circle at 50% 42%, rgba(0, 234, 255, 0.12), transparent 32%),
+        radial-gradient(circle at 15% 90%, rgba(255, 63, 142, 0.09), transparent 28%),
+        linear-gradient(155deg, #06121b 0%, #02070c 55%, #000204 100%);
+}
+
+.orientation-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(216, 255, 255, 0.035) 0,
+        rgba(216, 255, 255, 0.035) 1px,
+        transparent 1px,
+        transparent 5px
+    );
+}
+
+.orientation-screen::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    pointer-events: none;
+
+    border: 1px solid rgba(0, 234, 255, 0.34);
+    box-shadow:
+        0 0 22px rgba(0, 234, 255, 0.08),
+        inset 0 0 22px rgba(0, 234, 255, 0.04);
+}
+
+.orientation-panel {
+    position: relative;
+    z-index: 1;
+
+    width: min(100%, 430px);
+    box-sizing: border-box;
+    padding: clamp(30px, 7vh, 58px) clamp(24px, 7vw, 42px);
+
+    text-align: center;
+    font-family: 'Audiowide', sans-serif;
+    text-transform: uppercase;
+
+    background: rgba(0, 9, 14, 0.64);
+    border-top: 1px solid rgba(0, 234, 255, 0.6);
+    border-bottom: 1px solid rgba(0, 234, 255, 0.6);
+
+    box-shadow:
+        0 0 34px rgba(0, 234, 255, 0.08),
+        inset 0 0 28px rgba(0, 234, 255, 0.035);
+}
+
+.orientation-panel::before,
+.orientation-panel::after {
+    content: "";
+    position: absolute;
+    width: 42px;
+    height: 18px;
+    pointer-events: none;
+}
+
+.orientation-panel::before {
+    top: -1px;
+    left: 0;
+    border-top: 3px solid var(--cp-cyan);
+    border-left: 3px solid var(--cp-cyan);
+}
+
+.orientation-panel::after {
+    right: 0;
+    bottom: -1px;
+    border-right: 3px solid var(--cp-magenta);
+    border-bottom: 3px solid var(--cp-magenta);
+}
+
+.orientation-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    color: rgba(216, 255, 255, 0.68);
+    font-size: clamp(0.58rem, 2.5vw, 0.72rem);
+    letter-spacing: 0.19em;
+}
+
+.orientation-status-light {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+
+    background: var(--cp-magenta);
+    box-shadow: 0 0 10px rgba(255, 63, 142, 0.9);
+    animation: orientationStatusPulse 1.3s ease-in-out infinite;
+}
+
+.orientation-device {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin: clamp(28px, 6vh, 48px) auto 24px;
+
+    display: grid;
+    place-items: center;
+}
+
+.orientation-phone {
+    position: relative;
+    z-index: 1;
+
+    width: 43px;
+    height: 76px;
+    box-sizing: border-box;
+
+    border: 2px solid var(--cp-white);
+    border-radius: 7px;
+    background: rgba(0, 234, 255, 0.05);
+
+    box-shadow:
+        0 0 12px rgba(0, 234, 255, 0.35),
+        inset 0 0 10px rgba(0, 234, 255, 0.08);
+
+    animation: orientationPhoneRotate 2.4s ease-in-out infinite;
+}
+
+.orientation-phone::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+
+    width: 13px;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(242, 247, 255, 0.72);
+    transform: translateX(-50%);
+}
+
+.orientation-phone span {
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+
+    width: 4px;
+    height: 4px;
+    border: 1px solid rgba(242, 247, 255, 0.72);
+    border-radius: 50%;
+    transform: translateX(-50%);
+}
+
+.orientation-rotation-arrow {
+    position: absolute;
+    width: 104px;
+    height: 104px;
+    box-sizing: border-box;
+
+    border: 2px solid transparent;
+    border-top-color: var(--cp-cyan);
+    border-right-color: var(--cp-cyan);
+    border-radius: 50%;
+    transform: rotate(-25deg);
+
+    filter: drop-shadow(0 0 5px rgba(0, 234, 255, 0.55));
+}
+
+.orientation-rotation-arrow::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    bottom: 12px;
+
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--cp-cyan);
+    border-bottom: 2px solid var(--cp-cyan);
+    transform: rotate(22deg);
+}
+
+.orientation-code {
+    margin: 0 0 12px;
+
+    color: var(--cp-magenta);
+    font-size: clamp(0.55rem, 2.4vw, 0.68rem);
+    line-height: 1.6;
+    letter-spacing: 0.16em;
+
+    text-shadow: 0 0 8px rgba(255, 63, 142, 0.45);
+}
+
+.orientation-panel h1 {
+    margin: 0;
+
+    color: var(--cp-white);
+    font-size: clamp(1.65rem, 8vw, 2.55rem);
+    line-height: 1.18;
+    letter-spacing: 0.08em;
+
+    text-shadow:
+        2px 0 0 rgba(0, 234, 255, 0.5),
+        -2px 0 0 rgba(255, 63, 142, 0.28),
+        0 0 16px rgba(0, 234, 255, 0.2);
+}
+
+.orientation-message {
+    max-width: 320px;
+    margin: 16px auto 0;
+
+    color: rgba(216, 255, 255, 0.72);
+    font-size: clamp(0.64rem, 2.8vw, 0.8rem);
+    line-height: 1.8;
+    letter-spacing: 0.12em;
+}
+
+.orientation-readout {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+
+    margin-top: clamp(28px, 6vh, 44px);
+    padding-top: 12px;
+
+    color: rgba(216, 255, 255, 0.54);
+    border-top: 1px solid rgba(0, 234, 255, 0.26);
+    font-size: clamp(0.47rem, 2vw, 0.58rem);
+    line-height: 1.5;
+    letter-spacing: 0.12em;
+}
+
+.orientation-readout span:last-child {
+    color: var(--cp-cyan);
+    text-align: right;
+}
+
+@keyframes orientationPhoneRotate {
+    0%,
+    22% {
+        transform: rotate(0deg);
+    }
+
+    58%,
+    82% {
+        transform: rotate(90deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes orientationStatusPulse {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ---------------------------------------------------------
+   TERMINAL DOM FULLSCREEN TRANSITION
+   --------------------------------------------------------- */
+
+/**
+ * REQUIRED JAVASCRIPT INTEGRATION
+ *
+ * 1. Append the existing terminal HTMLCanvasElement to
+ *    #terminal-fullscreen-surface.
+ * 2. Before opening, set the four --terminal-start-* variables from the
+ *    projected monitor rectangle.
+ * 3. Add .is-visible, then add .is-expanded on the following animation frame.
+ * 4. Add .is-interactive after the expansion transition completes.
+ * 5. Reverse those classes in the opposite order when closing.
+ */
+.terminal-fullscreen {
+    --terminal-start-x: 50vw;
+    --terminal-start-y: 50vh;
+    --terminal-start-scale-x: 0.01;
+    --terminal-start-scale-y: 0.01;
+    --terminal-transition-duration: 520ms;
+
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+
+    width: var(--viewport-width, 100vw);
+    height: var(--viewport-height, 100dvh);
+    overflow: hidden;
+
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+
+    isolation: isolate;
+
+    transition:
+        opacity 120ms ease,
+        visibility 0s linear var(--terminal-transition-duration);
+}
+
+/* Darkens the 3D station as the terminal expands over it. */
+.terminal-fullscreen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+    background: #000;
+    opacity: 0;
+
+    transition: opacity 300ms ease;
+}
+
+.terminal-fullscreen.is-visible {
+    visibility: visible;
+    opacity: 1;
+
+    transition-delay: 0s;
+}
+
+.terminal-fullscreen.is-expanded::before {
+    opacity: 1;
+}
+
+.terminal-fullscreen.is-interactive {
+    pointer-events: auto;
+}
+
+.terminal-fullscreen-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    background: #00090e;
+    transform-origin: top left;
+    transform:
+        translate3d(
+            var(--terminal-start-x),
+            var(--terminal-start-y),
+            0
+        )
+        scale(
+            var(--terminal-start-scale-x),
+            var(--terminal-start-scale-y)
+        );
+
+    box-shadow:
+        0 0 0 1px rgba(0, 234, 255, 0.32),
+        0 0 28px rgba(0, 234, 255, 0.18);
+
+    backface-visibility: hidden;
+    will-change: transform;
+
+    transition:
+        transform var(--terminal-transition-duration)
+            cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 260ms ease;
+}
+
+.terminal-fullscreen.is-expanded .terminal-fullscreen-surface {
+    transform: translate3d(0, 0, 0) scale(1, 1);
+    box-shadow: none;
+}
+
+/*
+ * The global canvas rule uses !important to keep the WebGL canvas centered.
+ * This more-specific rule deliberately overrides it only for the terminal's
+ * DOM presentation.
+ */
+.terminal-fullscreen-surface > canvas {
+    position: absolute !important;
+    inset: 0 !important;
+
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    touch-action: none;
+}
+
+.short-landscape .loading-panel {
+    width: min(1180px, 94vw);
+    padding: 14px 30px 12px;
+}
+
+.short-landscape .loading-label {
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+}
+
+.short-landscape #loading-title {
+    min-height: 48px;
+    font-size: clamp(1.55rem, 7vh, 2.25rem);
+}
+
+.short-landscape .portfolio-identity {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.short-landscape .portfolio-name {
+    font-size: clamp(0.9rem, 4vh, 1.15rem);
+}
+
+.short-landscape .portfolio-role {
+    margin-top: 3px;
+    font-size: clamp(0.52rem, 2.5vh, 0.68rem);
+    letter-spacing: 0.12em;
+}
+
+.short-landscape .loading-info {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-size: 9px;
+}
+
+.short-landscape .loading-bar {
+    height: 3px;
+}
+
+.short-landscape #enter-button {
+    margin-top: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+}
+
+@media (orientation: portrait) {
+    .orientation-screen {
+        display: grid;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .orientation-phone,
+    .orientation-status-light {
+        animation: none;
+    }
+
+    .terminal-fullscreen,
+    .terminal-fullscreen::before,
+    .terminal-fullscreen-surface {
+        transition: none;
     }
 }
