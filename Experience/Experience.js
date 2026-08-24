@@ -29,8 +29,238 @@ import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShade
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
 import TerminalFullscreen from './TerminalFullscreen.js'
 
-export default class Experience {
 
+export default class Experience {
+/**
+ * Sets up the station security camera so it can rotate
+ * horizontally around the "camera base" mesh.
+ *
+ * @param {THREE.Object3D} root The loaded station model.
+ */
+setupSecurityCameraTracking(root) {
+    const securityCamera =
+        root.getObjectByName('camera')
+
+    const cameraBase =
+        root.getObjectByName('camera_base')
+
+    if (!securityCamera || !cameraBase) {
+        console.warn(
+            'Security camera or camera base not found.'
+        )
+
+        return
+    }
+
+    root.updateMatrixWorld(true)
+
+    const originalParent =
+        securityCamera.parent
+
+    /**
+     * Find the base/pivot position in world space.
+     */
+    const baseWorldPosition =
+        new THREE.Vector3()
+
+    cameraBase.getWorldPosition(
+        baseWorldPosition
+    )
+
+    /**
+     * Convert that position into the camera parent's
+     * local coordinate space.
+     */
+    const pivotPosition =
+        baseWorldPosition.clone()
+
+    originalParent.worldToLocal(
+        pivotPosition
+    )
+
+    const pivot =
+        new THREE.Group()
+
+    pivot.name =
+        'SecurityCameraPivot'
+
+    pivot.position.copy(
+        pivotPosition
+    )
+
+    originalParent.add(pivot)
+
+    /**
+     * Keep the camera exactly where it currently is
+     * while making it a child of the pivot.
+     */
+    pivot.attach(
+        securityCamera
+    )
+
+    /**
+     * Find the center of the camera body.
+     *
+     * This tells us which horizontal direction the camera
+     * is currently extending away from the base.
+     */
+    const cameraBounds =
+        new THREE.Box3()
+            .setFromObject(
+                securityCamera
+            )
+
+    const cameraCenterWorld =
+        new THREE.Vector3()
+
+    cameraBounds.getCenter(
+        cameraCenterWorld
+    )
+
+    const cameraCenterLocal =
+        cameraCenterWorld.clone()
+
+    originalParent.worldToLocal(
+        cameraCenterLocal
+    )
+
+    /**
+     * Horizontal angle of the camera's original pose.
+     *
+     * We use this as our zero/reference angle.
+     */
+    const cameraDirectionX =
+    cameraCenterLocal.x -
+    pivot.position.x
+
+const cameraDirectionY =
+    cameraCenterLocal.y -
+    pivot.position.y
+
+const initialDirection =
+    Math.atan2(
+        cameraDirectionY,
+        cameraDirectionX
+    )
+
+    this.securityCameraTracking = {
+        pivot,
+        initialDirection,
+        trackingSpeed: 4.5,
+
+        viewerWorldPosition:
+            new THREE.Vector3(),
+
+        viewerLocalPosition:
+            new THREE.Vector3()
+    }
+}
+
+/**
+ * Rotates the station security camera horizontally
+ * toward the user's current perspective.
+ *
+ * Only the Y axis is modified.
+ *
+ * @param {number} delta Seconds since the previous frame.
+ */
+updateSecurityCameraTracking(delta) {
+    const tracking =
+        this.securityCameraTracking
+
+    if (!tracking) {
+        return
+    }
+
+    const {
+        pivot,
+        initialDirection,
+        trackingSpeed,
+        viewerWorldPosition,
+        viewerLocalPosition
+    } = tracking
+
+    /**
+     * Get the user's camera position.
+     */
+    this.camera.getWorldPosition(
+        viewerWorldPosition
+    )
+
+    /**
+     * Convert it into the same coordinate space
+     * that the security-camera pivot uses.
+     */
+    viewerLocalPosition.copy(
+        viewerWorldPosition
+    )
+
+    pivot.parent.worldToLocal(
+        viewerLocalPosition
+    )
+
+    const directionX =
+    viewerLocalPosition.x -
+    pivot.position.x
+
+const directionY =
+    viewerLocalPosition.y -
+    pivot.position.y
+
+const targetDirection =
+    Math.atan2(
+        directionY,
+        directionX
+    )
+
+let targetRotationZ =
+    targetDirection -
+    initialDirection
+
+/**
+ * Normalize to -PI -> PI first.
+ */
+targetRotationZ =
+    Math.atan2(
+        Math.sin(targetRotationZ),
+        Math.cos(targetRotationZ)
+    )
+
+/**
+ * Mechanical limits: maximum 90 degrees
+ * in either direction.
+ */
+targetRotationZ =
+    THREE.MathUtils.clamp(
+        targetRotationZ,
+        -Math.PI / 2,
+        Math.PI / 2
+    )
+
+    
+
+const angleDifference =
+    Math.atan2(
+        Math.sin(
+            targetRotationZ -
+            pivot.rotation.z
+        ),
+        Math.cos(
+            targetRotationZ -
+            pivot.rotation.z
+        )
+    )
+
+const smoothing =
+    1 - Math.exp(
+        -trackingSpeed * delta
+    )
+
+pivot.rotation.z +=
+    angleDifference *
+    smoothing
+}
+    
     loadAssets() {
         this.loadModel()
         this.loadEnvironmentMap()
@@ -749,11 +979,14 @@ export default class Experience {
 
         this.objsToHide = [] // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load('/models/Untitled22.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled2.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
                 }
+
+                if(obj.name.includes("camera"))
+                    console.log("Camera mesh found:", obj.name, obj)
 
                 if (!obj.name.includes("Mesh043") && !obj.name.includes("Box00") && !obj.name.includes("Auto") && !obj.name.includes("Cube_Screen") && !obj.name.includes("Cube007") && !obj.name.includes("spaceship-window-side001") && !obj.name.includes("Occluder"))
                     this.objsToHide.push(obj)
@@ -1050,6 +1283,9 @@ diffuseColor *=
             ]);
             this.initHotspots();
             this.scene.add(gltf.scene)
+            this.setupSecurityCameraTracking(
+    gltf.scene
+)
         })
 
         this.assetsLoaded = true
@@ -2816,6 +3052,7 @@ this.terminal.canvas.addEventListener(
                     elapsedTime
             }
             const delta = timer.getDelta()
+            this.updateSecurityCameraTracking(delta)
             this.CubeInput.update(delta)
 
             this.loadingScreen.update(delta)
