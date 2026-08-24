@@ -5,7 +5,6 @@ import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import SupernovaRemnant from './SupernovaRemnant.js'
-import Particles from './Particles.js'
 import GUI from 'lil-gui';
 import Cube from './Cube/Cube.js'
 import CubeInput from './Cube/CubeInput.js'
@@ -16,16 +15,11 @@ import { Timer } from "three";
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import LoadingScreen from './LoadingScreen.js'
-import { createPortfolioWallDecal } from './createPortfolioWallDecal.js'
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
-import { DotScreenPass } from "three/addons/postprocessing/DotScreenPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js"
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js'
 import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js'
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
-import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js'
-import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShader.js'
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
 import TerminalFullscreen from './TerminalFullscreen.js'
 
@@ -1408,7 +1402,7 @@ diffuseColor *=
         let hotspotNeedUpdate = false
 
     
-const heightShrink = 0.75
+const heightShrink = 1
 
 const resizeExperience = () => {
     hotspotNeedUpdate = true
@@ -1653,7 +1647,6 @@ if(window.visualViewport) {
         )
 
         bedBackLight.lookAt(bedBackLightTarget)
-        this.gu.hide()
         this.scene.add(bedBackLight)
         /**
          * Re-aim the light after changing either its position
@@ -2097,11 +2090,7 @@ if(window.visualViewport) {
 
 
         const cam = this.gu.addFolder('Camera')
-        // (min, max, increments), change supernova position 
-        // cam.add(this.camera.position, 'x', -25, 25, 0.1).name('Position X')
-        // cam.add(this.camera.position, 'y', -25, 25, 0.1).name('Position Y')
-        // cam.add(this.camera.position, 'z', -25, 25, 0.1).name('Position Z')
-
+        
         // Controls
         const trackballControls = new TrackballControls(this.camera, canvas)
         trackballControls.noRotate = true
@@ -2144,6 +2133,115 @@ if(window.visualViewport) {
         // --- NEW FOV VARIABLES ---
         const homeFov = this.camera.fov;
         let targetFov = homeFov; // We will lerp toward this value
+
+        /**
+ * CAMERA DEBUG GUI
+ *
+ * Directly edits the live camera while keeping OrbitControls and
+ * TrackballControls active. Use this to find the terminal close-up pose.
+ */
+const updateCameraFromGUI = () => {
+    /**
+     * Stop the focus lerp from immediately overwriting values changed
+     * through the GUI.
+     */
+    isTransitioning = false
+
+    /**
+     * Preserve the edited pose as the current transition target too.
+     */
+    cameraTarget.copy(this.camera.position)
+    lookTarget.copy(controls.target)
+    targetFov = this.camera.fov
+
+    this.camera.updateProjectionMatrix()
+
+    controls.update()
+
+    trackballControls.target.copy(controls.target)
+    trackballControls.update()
+
+    hotspotNeedUpdate = true
+}
+
+const cameraPositionFolder =
+    cam.addFolder('Position')
+
+cameraPositionFolder
+    .add(this.camera.position, 'x', -20, 20, 0.01)
+    .name('X')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+cameraPositionFolder
+    .add(this.camera.position, 'y', -20, 20, 0.01)
+    .name('Y')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+cameraPositionFolder
+    .add(this.camera.position, 'z', -20, 20, 0.01)
+    .name('Z')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+cam
+    .add(this.camera, 'fov', 5, 500, 0.1)
+    .name('FOV')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+const cameraLookTargetFolder =
+    cam.addFolder('Look Target')
+
+cameraLookTargetFolder
+    .add(controls.target, 'x', -20, 20, 0.01)
+    .name('X')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+cameraLookTargetFolder
+    .add(controls.target, 'y', -20, 20, 0.01)
+    .name('Y')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+cameraLookTargetFolder
+    .add(controls.target, 'z', -20, 20, 0.01)
+    .name('Z')
+    .onChange(updateCameraFromGUI)
+    .listen()
+
+const cameraDebugActions = {
+    printTerminalPose: () => {
+        const position = this.camera.position
+        const target = controls.target
+
+        console.log(`
+cameraTarget.set(
+    ${position.x.toFixed(4)},
+    ${position.y.toFixed(4)},
+    ${position.z.toFixed(4)}
+)
+
+lookTarget.set(
+    ${target.x.toFixed(4)},
+    ${target.y.toFixed(4)},
+    ${target.z.toFixed(4)}
+)
+
+targetFov = ${this.camera.fov.toFixed(2)}
+        `)
+    }
+}
+
+cam
+    .add(cameraDebugActions, 'printTerminalPose')
+    .name('Print Terminal Pose')
+
+cameraPositionFolder.open()
+cameraLookTargetFolder.open()
+cam.open()
 
         function showItems(visibility, meshArray) {
             meshArray.forEach((ceilingMesh) => {
@@ -2311,8 +2409,6 @@ if(window.visualViewport) {
         }
         const enterFocusMode = (activePoint) => {
             this.isFocused = true;
-            trackballControls.enabled = false
-            controls.enabled = false
             isTransitioning = true;
             
 
@@ -2378,7 +2474,6 @@ if(window.visualViewport) {
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
-                this.terminalFullscreen.toggle()
                 this.terminalGlitchUniforms.strength.value = 1
                 showItems(false, this.objsToHide)
                 showItems(false, this.ceilingMeshes)

@@ -12,7 +12,7 @@ const TerminalTree = {
 
     about_me: {
         header: "ABOUT ME",
-        aiText: "Hey, I'm Shahar. I build interactive web experiences, with a particular interest in Three.js, real-time 3D, and the systems that make digital spaces feel responsive.\n\nThe process of making this project pulled me into graphics programming, interaction design, optimization, Blender, and the mathematics behind movement in 3D space.\n\nI'm beginning a Computer Science degree in October 2026. I want to keep developing the technical side of my work without losing the visual experimentation that made me enjoy programming in the first place.",
+        aiText: "Hey, I'm Shahar. I build interactive web experiences, with a particular interest in Three.js, real-time 3D, and I'm beginning a Computer Science degree in October 2026. .\n\nThe process of making this project pulled me into programming, interaction design, optimization, and the mathematics behind movement in 3D space.",
         choices: [
             { text: "[ THE PROJECT ]", nextId: "experience_menu" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
@@ -33,7 +33,7 @@ const TerminalTree = {
 
     experience_origin: {
         header: "WHY I BUILT IT",
-        aiText: "I started this project because I wanted to learn Three.js through something larger than an isolated tutorial scene. A space station gave me room to combine programming, visual design, interaction, sound, and atmosphere inside one coherent environment.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.",
+        aiText: "I wanted to show off my work in something more than a simple webpage. Telling my story using a 3D scene was the perfect way to showcase both my skills and my hobbies in life.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.",
         choices: [
             { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
             { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
