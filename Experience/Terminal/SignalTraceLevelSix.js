@@ -42,10 +42,9 @@ export default class SignalTraceLevelSix {
             vertical: 2,
             cornerUpLeft: 1,
             cornerDownLeft: 1,
-            cornerUpRight: 2,
+            cornerUpRight: 3,
             horizontal: 2,
             cornerDownRight: 1,
-            splitDown: 1,
             splitRight: 1
         }
 

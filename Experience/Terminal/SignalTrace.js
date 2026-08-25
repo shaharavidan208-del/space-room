@@ -38,6 +38,20 @@ export default class SignalTrace {
         this.controlsFontSize = 28
         this.nodeLabelFontSize = 32
 
+        /**
+         * Colors used when drawing archive targets.
+         *
+         * A level can provide up to four targets through a `targets` array.
+         * The original single `target` property is still supported so the
+         * existing levels do not need to be changed immediately.
+         */
+        this.targetColors = [
+            "#ff8a3d",
+            "#ff4fa3",
+            "#ffe066",
+            "#8c7dff"
+        ]
+
 
         this.tile = {
             pipe: null,
@@ -216,6 +230,14 @@ export default class SignalTrace {
          * Center the board horizontally on the terminal canvas.
          */
         this.boardStartX = (this.canvas.width - boardWidth) / 2 - 400 // change to this because now I'll have access to it anywhere in the class
+
+        /**
+         * Resolve the current level's targets once before drawing the grid.
+         * This supports both the original `target` object and the new
+         * `targets` array.
+         */
+        const targets = this.getTargets()
+
         /**
          * Draw every tile in the grid.
          */
@@ -247,8 +269,18 @@ export default class SignalTrace {
                     this.drawNode(x, y, "#00ff99", "SRC")
                 }
 
-                if (row === this.target.row && col === this.target.col) {
-                    this.drawNode(x, y, "#ff8a3d", "ARC")
+                for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+                    const target = targets[targetIndex]
+
+                    if (row === target.row && col === target.col) {
+                        const targetColor = this.getTargetColor(target, targetIndex)
+                        const targetLabel = this.getTargetLabel(
+                            target,
+                            targetIndex,
+                            targets.length
+                        )
+                        this.drawNode(x, y, targetColor, targetLabel)
+                    }
                 }
 
                 if (this.relay && row === this.relay.row && col === this.relay.col) {
@@ -535,14 +567,112 @@ handlePointerCancel() {
      * @returns {boolean} true if the position is the target, false otherwise
      */
     isTargetPosition(row, col) {
-        /**
-         * Check whether a row/col position is the archive target.
-         */
-        if (row === this.target.row && col === this.target.col) {
-            return true
+        const targets = this.getTargets()
+
+        for (const target of targets) {
+            if (row === target.row && col === target.col) {
+                return true
+            }
         }
 
         return false
+    }
+
+    /**
+     * Return every archive target used by the current level.
+     *
+     * New levels can define:
+     *
+     * this.targets = [targetOne, targetTwo, targetThree, targetFour]
+     *
+     * Existing levels that only define `this.target` continue to work.
+     * SignalTraceLevelManager may either copy `targets` onto SignalTrace or
+     * expose the active level through `this.level`.
+     *
+     * @returns {Array<Object>}
+     * The active target endpoint objects.
+     */
+    getTargets() {
+        if (this.level) {
+            if (
+                Array.isArray(this.level.targets) &&
+                this.level.targets.length > 0
+            ) {
+                return this.level.targets
+            }
+        }
+
+        if (Array.isArray(this.targets) && this.targets.length > 0) {
+            return this.targets
+        }
+
+        if (this.level) {
+            if (this.level.target) {
+                return [this.level.target]
+            }
+        }
+
+        if (this.target) {
+            return [this.target]
+        }
+
+        return []
+    }
+
+    /**
+     * Return the drawing color for one archive target.
+     *
+     * A target can optionally provide its own `color`. Otherwise its index
+     * selects one of the four default archive colors.
+     *
+     * @param {Object} target
+     * The target endpoint being drawn.
+     *
+     * @param {number} targetIndex
+     * The target's index inside the active targets array.
+     *
+     * @returns {String}
+     * The color used by drawNode.
+     */
+    getTargetColor(target, targetIndex) {
+        if (target.color) {
+            return target.color
+        }
+
+        const colorIndex = targetIndex % this.targetColors.length
+        return this.targetColors[colorIndex]
+    }
+
+    /**
+     * Return the label displayed under one archive target.
+     *
+     * A target can provide a custom `label` in its level definition.
+     * A single unnamed target keeps the original ARC label. Multiple unnamed
+     * targets are numbered ARC-1, ARC-2, ARC-3, and ARC-4 so each endpoint is
+     * identifiable even without relying on color.
+     *
+     * @param {Object} target
+     * The target endpoint being drawn.
+     *
+     * @param {number} targetIndex
+     * The target's index inside the active targets array.
+     *
+     * @param {number} targetCount
+     * The total number of targets in the current level.
+     *
+     * @returns {String}
+     * The target label passed to drawNode.
+     */
+    getTargetLabel(target, targetIndex, targetCount) {
+        if (target.label) {
+            return target.label
+        }
+
+        if (targetCount === 1) {
+            return "ARC"
+        }
+
+        return `ARC-${targetIndex + 1}`
     }
 
     /**
@@ -722,15 +852,21 @@ handlePointerCancel() {
  *
  * Levels with a relay require:
  * 1. Source to relay
- * 2. Relay to target
+ * 2. Relay to every target
  *
  * Levels without a relay require:
- * 1. Source to target
+ * 1. Source to every target
  *
  * @returns {boolean}
  * True when all required paths exist.
  */
     checkSignalPath() {
+        const targets = this.getTargets()
+
+        if (targets.length === 0) {
+            return false
+        }
+
         if (this.relay) {
             const sourceReachesRelay = this.canReachEndpoint(
                 this.source,
@@ -741,21 +877,32 @@ handlePointerCancel() {
                 return false
             }
 
-            const relayReachesTarget = this.canReachEndpoint(
-                this.relay,
-                this.target
-            )
+            for (const target of targets) {
+                const relayReachesTarget = this.canReachEndpoint(
+                    this.relay,
+                    target
+                )
 
-            if (!relayReachesTarget) {
-                return false
+                if (!relayReachesTarget) {
+                    return false
+                }
             }
+
             return true
         }
 
-        return this.canReachEndpoint(
-            this.source,
-            this.target
-        )
+        for (const target of targets) {
+            const sourceReachesTarget = this.canReachEndpoint(
+                this.source,
+                target
+            )
+
+            if (!sourceReachesTarget) {
+                return false
+            }
+        }
+
+        return true
     }
 
     /**
@@ -886,22 +1033,5 @@ handlePointerCancel() {
 
         return false
     }
-
-
-
-
-
-
-    isSourcePosition(row, col) {
-        if (row === this.source.row && col === this.source.col) {
-            return true
-        }
-
-        return false
-    }
-
-
-
-
 
 }

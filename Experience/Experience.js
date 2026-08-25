@@ -973,7 +973,7 @@ pivot.rotation.z +=
 
         this.objsToHide = [] // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load('/models/Untitled2.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled3.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -997,6 +997,13 @@ pivot.rotation.z +=
                     // Ensure it falls back to standard, cheap transparency
                     obj.material.transparent = true;
                     obj.material.needsUpdate = true;
+                }
+
+                if(obj.name === "glass") {
+                    obj.material.transparent = true;
+                        obj.material.opacity = 0.08;
+                        obj.material.depthWrite = false;
+                        obj.material.side = THREE.DoubleSide;
                 }
                 if (obj.isMesh) {
 
@@ -1402,7 +1409,7 @@ diffuseColor *=
         let hotspotNeedUpdate = false
 
     
-const heightShrink = 1
+const heightShrink = 0.75
 
 const resizeExperience = () => {
     hotspotNeedUpdate = true
@@ -2410,7 +2417,8 @@ cam.open()
         const enterFocusMode = (activePoint) => {
             this.isFocused = true;
             isTransitioning = true;
-            
+            controls.enabled = false
+            trackballControls.enabled = false
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach(p => {

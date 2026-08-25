@@ -21,10 +21,9 @@ const TerminalTree = {
 
     experience_menu: {
         header: "THE PROJECT",
-        aiText: "This portfolio is a real-time 3D space station built for the web. Instead of presenting the work through a conventional scrolling page, I wanted the portfolio itself to be the project: a place you can explore, operate, and inspect.\n\nThe sections below explain why I built it, what can be interacted with, and the technology holding it together.",
+        aiText: "This portfolio is a real-time 3D space station built for the web. I wanted the portfolio itself to be the project: a place you can explore, operate, and inspect.\n\nThe sections below explain why I built it, what can be interacted with, and the systems holding it together.",
         choices: [
             { text: "[ WHY I BUILT IT ]", nextId: "experience_origin" },
-            { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
             { text: "[ HOW I BUILT IT ]", nextId: "build_menu" },
             { text: "[ TECHNOLOGY ]", nextId: "experience_technology" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
@@ -33,19 +32,9 @@ const TerminalTree = {
 
     experience_origin: {
         header: "WHY I BUILT IT",
-        aiText: "I wanted to show off my work in something more than a simple webpage. Telling my story using a 3D scene was the perfect way to showcase both my skills and my hobbies in life.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.",
+        aiText: "I wanted to show off my work in something more memorable than a simple webpage. Building it as a 3D scene allowed me to tell my story while bringing together my skills, interests, and personality.\n\nThe original idea was much smaller. Every feature exposed a new problem worth solving, so the station gradually became a complete interactive portfolio and the main project through which I learned real-time 3D development.",
         choices: [
-            { text: "[ WHAT IS INTERACTIVE ]", nextId: "experience_interactions" },
-            { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
-            { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
-        ]
-    },
-
-    experience_interactions: {
-        header: "WHAT IS INTERACTIVE",
-        aiText: "The station is designed to be explored rather than passively viewed. You can move between points of interest, operate this terminal, manipulate a fully functional Rubik's Cube, and play Signal Trace directly through the monitor.\n\nThe interactions connect the Three.js scene to custom input systems, camera behavior, raycasting, canvas rendering, and state management.\n\nThe result is one continuous experience: the environment is the interface, and the portfolio information lives inside it.",
-        choices: [
-            { text: "[ VIEW CONTROLS ]", nextId: "controls" },
+            { text: "[ HOW I BUILT IT ]", nextId: "build_menu" },
             { text: "[ BACK TO EXPERIENCE OVERVIEW ]", nextId: "experience_menu" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }
         ]
