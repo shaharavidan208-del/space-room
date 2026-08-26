@@ -70,9 +70,23 @@ export default class TerminalCanvas {
         // 0 = first choice
         // 1 = second choice
         this.dialogueSelectedIndex = 0;
+
+        /**
+         * Rebuilt by draw() from the exact rectangles used to render choices.
+         * Pointer input reads these areas instead of duplicating layout math.
+         */
+        this.dialogueHitAreas = []
+
+        // Fullscreen DOM input belongs to the terminal canvas itself. The
+        // normal monitor still reaches these methods through Experience's
+        // raycast path, but the mobile canvas no longer depends on Experience
+        // forwarding DOM events back into it.
+        this.domPointerId = null
+
         this.signalTrace = new SignalTrace(this);
         // Set up keyboard input and draw the first frame immediately.
         this.setupHiddenInput();
+        this.setupCanvasPointerInput();
         this.draw();
     }
 
@@ -124,6 +138,138 @@ export default class TerminalCanvas {
         // This means arrow keys / Enter can control the terminal
         // even though the terminal itself is just a canvas texture.
         window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    }
+
+    /**
+     * Handles the canvas while it is mounted directly inside the mobile
+     * fullscreen surface. Dialogue uses a normal click, while Signal Trace
+     * keeps pointer down/move/up so dragging continues to work.
+     */
+    setupCanvasPointerInput() {
+        this.canvas.addEventListener('click', (event) => {
+            if (this.mode !== 'dialogue') {
+                return
+            }
+
+            const canvasPosition =
+                this.getCanvasPositionFromDOMEvent(event)
+
+            if (!canvasPosition) {
+                return
+            }
+
+            event.preventDefault()
+
+            this.activateDialogueChoiceAt(
+                canvasPosition.x,
+                canvasPosition.y
+            )
+        })
+
+        this.canvas.addEventListener('pointerdown', (event) => {
+            if (this.mode !== 'signalTrace') {
+                return
+            }
+
+            const canvasPosition =
+                this.getCanvasPositionFromDOMEvent(event)
+
+            if (!canvasPosition) {
+                return
+            }
+
+            event.preventDefault()
+            this.domPointerId = event.pointerId
+            this.canvas.setPointerCapture?.(event.pointerId)
+
+            this.signalTrace.handlePointerDown(
+                canvasPosition.x,
+                canvasPosition.y
+            )
+        })
+
+        this.canvas.addEventListener('pointermove', (event) => {
+            if (
+                this.mode !== 'signalTrace' ||
+                event.pointerId !== this.domPointerId
+            ) {
+                return
+            }
+
+            const canvasPosition =
+                this.getCanvasPositionFromDOMEvent(event)
+
+            if (!canvasPosition) {
+                return
+            }
+
+            event.preventDefault()
+
+            this.signalTrace.handlePointerMove(
+                canvasPosition.x,
+                canvasPosition.y
+            )
+        })
+
+        this.canvas.addEventListener('pointerup', (event) => {
+            if (
+                this.mode !== 'signalTrace' ||
+                event.pointerId !== this.domPointerId
+            ) {
+                return
+            }
+
+            const canvasPosition =
+                this.getCanvasPositionFromDOMEvent(event)
+
+            if (canvasPosition) {
+                this.signalTrace.handlePointerUp(
+                    canvasPosition.x,
+                    canvasPosition.y
+                )
+            }
+            else {
+                this.signalTrace.handlePointerCancel()
+            }
+
+            this.releaseDOMPointer(event.pointerId)
+        })
+
+        this.canvas.addEventListener('pointercancel', (event) => {
+            if (event.pointerId !== this.domPointerId) {
+                return
+            }
+
+            this.signalTrace.handlePointerCancel()
+            this.releaseDOMPointer(event.pointerId)
+        })
+    }
+
+    /** Convert a DOM event on the displayed canvas into drawing-buffer pixels. */
+    getCanvasPositionFromDOMEvent(event) {
+        const rect = this.canvas.getBoundingClientRect()
+
+        if (rect.width === 0 || rect.height === 0) {
+            return null
+        }
+
+        return {
+            x:
+                (event.clientX - rect.left) *
+                (this.canvas.width / rect.width),
+            y:
+                (event.clientY - rect.top) *
+                (this.canvas.height / rect.height)
+        }
+    }
+
+    /** Release Signal Trace's active DOM pointer after up or cancellation. */
+    releaseDOMPointer(pointerId) {
+        if (this.canvas.hasPointerCapture?.(pointerId)) {
+            this.canvas.releasePointerCapture(pointerId)
+        }
+
+        this.domPointerId = null
     }
 
     // ==========================================
@@ -435,6 +581,13 @@ export default class TerminalCanvas {
         )
 
         this.ctx.restore()
+
+        return {
+            x: startX,
+            y: panelTop,
+            width: panelWidth,
+            height: panelHeight
+        }
     }
 
     // ==========================================
@@ -442,11 +595,154 @@ export default class TerminalCanvas {
     // ==========================================
 
 
-        returnToMainMenu() {
-    this.currentNodeId = 'start';
-    this.dialogueSelectedIndex = 0;
-    this.draw();
-}
+    returnToMainMenu() {
+        this.currentNodeId = 'start'
+        this.dialogueSelectedIndex = 0
+        this.draw()
+    }
+
+    /** Keep the external mobile Back control synchronized with terminal state. */
+    syncTouchBackButton() {
+        const backButton = document.querySelector(
+            '#terminal-fullscreen-back'
+        )
+
+        if (!backButton) {
+            return
+        }
+
+        const canGoBack =
+            this.mode === 'signalTrace' ||
+            this.currentNodeId !== 'start'
+
+        backButton.hidden = !canGoBack
+        backButton.disabled = !canGoBack
+    }
+
+    /**
+     * Performs the terminal's existing Left Arrow behavior for touch controls.
+     * Signal Trace returns to dialogue; dialogue pages return to the root.
+     */
+    goBack() {
+        if (this.mode === 'signalTrace') {
+            this.mode = 'dialogue'
+            this.signalTrace.isRunning = false
+            this.returnToMainMenu()
+            return true
+        }
+
+        if (this.currentNodeId === 'start') {
+            return false
+        }
+
+        this.returnToMainMenu()
+        return true
+    }
+
+    /**
+     * Activates one dialogue choice. Keyboard Enter and direct pointer taps use
+     * this same method so both input paths always produce identical state.
+     */
+    activateDialogueChoice(choiceIndex = this.dialogueSelectedIndex) {
+        const currentNode = TerminalTree[this.currentNodeId]
+
+        if (!currentNode) {
+            this.draw()
+            return false
+        }
+
+        const choices = currentNode.choices || []
+        const selectedChoice = choices[choiceIndex]
+
+        if (!selectedChoice) {
+            return false
+        }
+
+        this.dialogueSelectedIndex = choiceIndex
+
+        if (selectedChoice.action === 'startSignalTrace') {
+            this.dialogueSelectedIndex = 0
+            this.signalTrace.startSignalTrace()
+            this.syncTouchBackButton()
+            return true
+        }
+
+        if (!selectedChoice.nextId) {
+            return false
+        }
+
+        this.currentNodeId = selectedChoice.nextId
+        this.dialogueSelectedIndex = 0
+        this.draw()
+
+        return true
+    }
+
+    /** Whether one canvas-space point lies inside a recorded choice rectangle. */
+    isPointInsideHitArea(canvasX, canvasY, hitArea) {
+        return (
+            canvasX >= hitArea.x &&
+            canvasX <= hitArea.x + hitArea.width &&
+            canvasY >= hitArea.y &&
+            canvasY <= hitArea.y + hitArea.height
+        )
+    }
+
+    /** Activate the dialogue option drawn beneath one canvas-space point. */
+    activateDialogueChoiceAt(canvasX, canvasY) {
+        for (const hitArea of this.dialogueHitAreas) {
+            if (
+                this.isPointInsideHitArea(
+                    canvasX,
+                    canvasY,
+                    hitArea
+                )
+            ) {
+                return this.activateDialogueChoice(
+                    hitArea.choiceIndex
+                )
+            }
+        }
+
+        return false
+    }
+
+    /** Routes a pointer press to dialogue choices or Signal Trace. */
+    handlePointerDown(canvasX, canvasY) {
+        if (this.mode === 'signalTrace') {
+            this.signalTrace.handlePointerDown(canvasX, canvasY)
+            return true
+        }
+
+        return this.activateDialogueChoiceAt(canvasX, canvasY)
+    }
+
+    /** Signal Trace alone needs continuous pointer movement. */
+    handlePointerMove(canvasX, canvasY) {
+        if (this.mode !== 'signalTrace') {
+            return
+        }
+
+        this.signalTrace.handlePointerMove(canvasX, canvasY)
+    }
+
+    /** Signal Trace alone needs pointer release coordinates. */
+    handlePointerUp(canvasX, canvasY) {
+        if (this.mode !== 'signalTrace') {
+            return
+        }
+
+        this.signalTrace.handlePointerUp(canvasX, canvasY)
+    }
+
+    /** Cancel an active Signal Trace drag when pointer capture is lost. */
+    handlePointerCancel() {
+        if (this.mode !== 'signalTrace') {
+            return
+        }
+
+        this.signalTrace.handlePointerCancel()
+    }
     
 
     // ==========================================
@@ -474,8 +770,7 @@ export default class TerminalCanvas {
     }
     if (this.mode === "signalTrace") {
         if(event.key === "ArrowLeft") {
-            this.mode = "dialogue"
-            this.returnToMainMenu()
+            this.goBack()
         }
         return
 }
@@ -503,7 +798,7 @@ export default class TerminalCanvas {
     // Universal escape key.
     // No matter where the user is in the terminal tree, Escape returns to the root menu.
     if (event.key === 'ArrowLeft') {
-        this.returnToMainMenu();
+        this.goBack();
         return;
     }
 
@@ -527,24 +822,7 @@ export default class TerminalCanvas {
     }
 
     else if (event.key === 'Enter') {
-        // Get the currently highlighted choice.
-        const selectedChoice = choices[this.dialogueSelectedIndex];
-        if(selectedChoice.action === "startSignalTrace") // If the current highlighted choice is Signal Trace then we initiate the game
-        {
-            this.dialogueSelectedIndex = 0 // temporary, because for now we're not in the dialogue tree anymore
-            this.signalTrace.startSignalTrace()
-            return
-        }
-
-        // If the selected choice has a nextId, move to that node.
-        if (selectedChoice.nextId) {
-            this.currentNodeId = selectedChoice.nextId;
-
-            // Reset cursor to the first option of the new node.
-            this.dialogueSelectedIndex = 0;
-
-            this.draw();
-        }
+        this.activateDialogueChoice()
     }
 }
 
@@ -562,6 +840,9 @@ export default class TerminalCanvas {
     // 7. Tell Three.js: “upload this new canvas to the monitor texture.”
 
     draw() {
+        this.dialogueHitAreas = []
+        this.syncTouchBackButton()
+
         // ------------------------------------------
         // 1. CLEAR THE PREVIOUS FRAME
         // ------------------------------------------
@@ -662,6 +943,7 @@ export default class TerminalCanvas {
         if (node.choices && node.choices.length > 0) {
             let hasSignalTraceLauncher = false
             let isSignalTraceSelected = false
+            let signalTraceChoiceIndex = -1
 
             for (let i = 0; i < node.choices.length; i++) {
                 const choice = node.choices[i]
@@ -675,9 +957,18 @@ export default class TerminalCanvas {
                 if (choice.action === 'startSignalTrace') {
                     hasSignalTraceLauncher = true
                     isSignalTraceSelected = isSelected
+                    signalTraceChoiceIndex = i
 
                     continue
                 }
+
+                this.dialogueHitAreas.push({
+                    choiceIndex: i,
+                    x: paddingX - 25,
+                    y: cursorY - 50,
+                    width: 1200,
+                    height: choiceLineHeight
+                })
 
                 // If this choice is currently selected,
                 // draw a green highlight bar behind it.
@@ -713,11 +1004,19 @@ export default class TerminalCanvas {
                 const signalTracePanelWidth =
                     this.canvas.width - paddingX * 2
 
-                this.drawSignalTraceLauncher(
+                const signalTraceBounds = this.drawSignalTraceLauncher(
                     paddingX,
                     signalTracePanelWidth,
                     isSignalTraceSelected
                 )
+
+                this.dialogueHitAreas.push({
+                    choiceIndex: signalTraceChoiceIndex,
+                    x: signalTraceBounds.x,
+                    y: signalTraceBounds.y,
+                    width: signalTraceBounds.width,
+                    height: signalTraceBounds.height
+                })
             }
         }
 

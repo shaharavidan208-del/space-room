@@ -1,7 +1,7 @@
 const TerminalTree = {
     start: {
         header: "PORTFOLIO TERMINAL",
-        aiText: "Welcome. This terminal contains information about me, the experience you are currently exploring, and the systems running behind it.\n\nUse UP / DOWN to navigate. Press ENTER to select. Press LEFT ARROW to return to this directory.",
+        aiText: "Welcome. This terminal contains information about me, the experience you are currently exploring, and the systems running behind it.\n\nKEYBOARD: UP / DOWN, ENTER, LEFT ARROW. TOUCH: TAP AN OPTION; USE BACK TO RETURN.",
         choices: [
             { text: "[ ABOUT ME ]", nextId: "about_me" },
             { text: "[ THE PROJECT ]", nextId: "experience_menu" },
@@ -163,7 +163,7 @@ build_signal_trace: {
 
     controls_terminal: {
         header: "CONTROLS: TERMINAL",
-        aiText: "UP / DOWN: move through the available options.\nENTER: select the highlighted option.\nLEFT ARROW: return to the main terminal directory.\nF: toggle terminal fullscreen mode.\nESC: exit terminal focus mode and return to the station view.\n\nThe terminal also supports direct pointer input.",
+        aiText: "KEYBOARD\nUP / DOWN: move through the available options.\nENTER: select the highlighted option.\nLEFT ARROW: return to the main terminal directory.\nESC: exit terminal focus mode and return to the station view.\n\nTOUCH\nTap any terminal option directly. Use BACK to return to the main directory or leave Signal Trace. Use EXIT to return to the station.",
         choices: [
             { text: "[ BACK TO CONTROLS ]", nextId: "controls" },
             { text: "[ RETURN TO MAIN DIRECTORY ]", nextId: "start" }

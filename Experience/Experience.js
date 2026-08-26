@@ -25,240 +25,239 @@ import TerminalFullscreen from './TerminalFullscreen.js'
 
 
 export default class Experience {
-/**
- * Sets up the station security camera so it can rotate
- * horizontally around the "camera base" mesh.
- *
- * @param {THREE.Object3D} root The loaded station model.
- */
-setupSecurityCameraTracking(root) {
-    const securityCamera =
-        root.getObjectByName('camera')
-
-    const cameraBase =
-        root.getObjectByName('camera_base')
-
-    if (!securityCamera || !cameraBase) {
-        console.warn(
-            'Security camera or camera base not found.'
-        )
-
-        return
-    }
-
-    root.updateMatrixWorld(true)
-
-    const originalParent =
-        securityCamera.parent
-
     /**
-     * Find the base/pivot position in world space.
-     */
-    const baseWorldPosition =
-        new THREE.Vector3()
-
-    cameraBase.getWorldPosition(
-        baseWorldPosition
-    )
-
-    /**
-     * Convert that position into the camera parent's
-     * local coordinate space.
-     */
-    const pivotPosition =
-        baseWorldPosition.clone()
-
-    originalParent.worldToLocal(
-        pivotPosition
-    )
-
-    const pivot =
-        new THREE.Group()
-
-    pivot.name =
-        'SecurityCameraPivot'
-
-    pivot.position.copy(
-        pivotPosition
-    )
-
-    originalParent.add(pivot)
-
-    /**
-     * Keep the camera exactly where it currently is
-     * while making it a child of the pivot.
-     */
-    pivot.attach(
-        securityCamera
-    )
-
-    /**
-     * Find the center of the camera body.
+     * Sets up the station security camera so it can rotate
+     * horizontally around the "camera base" mesh.
      *
-     * This tells us which horizontal direction the camera
-     * is currently extending away from the base.
+     * @param {THREE.Object3D} root The loaded station model.
      */
-    const cameraBounds =
-        new THREE.Box3()
-            .setFromObject(
-                securityCamera
+    setupSecurityCameraTracking(root) {
+        const securityCamera =
+            root.getObjectByName('camera')
+
+        const cameraBase =
+            root.getObjectByName('camera_base')
+
+        if (!securityCamera || !cameraBase) {
+            console.warn(
+                'Security camera or camera base not found.'
             )
 
-    const cameraCenterWorld =
-        new THREE.Vector3()
+            return
+        }
 
-    cameraBounds.getCenter(
-        cameraCenterWorld
-    )
+        root.updateMatrixWorld(true)
 
-    const cameraCenterLocal =
-        cameraCenterWorld.clone()
+        const originalParent =
+            securityCamera.parent
 
-    originalParent.worldToLocal(
-        cameraCenterLocal
-    )
-
-    /**
-     * Horizontal angle of the camera's original pose.
-     *
-     * We use this as our zero/reference angle.
-     */
-    const cameraDirectionX =
-    cameraCenterLocal.x -
-    pivot.position.x
-
-const cameraDirectionY =
-    cameraCenterLocal.y -
-    pivot.position.y
-
-const initialDirection =
-    Math.atan2(
-        cameraDirectionY,
-        cameraDirectionX
-    )
-
-    this.securityCameraTracking = {
-        pivot,
-        initialDirection,
-        trackingSpeed: 4.5,
-
-        viewerWorldPosition:
-            new THREE.Vector3(),
-
-        viewerLocalPosition:
+        /**
+         * Find the base/pivot position in world space.
+         */
+        const baseWorldPosition =
             new THREE.Vector3()
-    }
-}
 
-/**
- * Rotates the station security camera horizontally
- * toward the user's current perspective.
- *
- * Only the Y axis is modified.
- *
- * @param {number} delta Seconds since the previous frame.
- */
-updateSecurityCameraTracking(delta) {
-    const tracking =
-        this.securityCameraTracking
-
-    if (!tracking) {
-        return
-    }
-
-    const {
-        pivot,
-        initialDirection,
-        trackingSpeed,
-        viewerWorldPosition,
-        viewerLocalPosition
-    } = tracking
-
-    /**
-     * Get the user's camera position.
-     */
-    this.camera.getWorldPosition(
-        viewerWorldPosition
-    )
-
-    /**
-     * Convert it into the same coordinate space
-     * that the security-camera pivot uses.
-     */
-    viewerLocalPosition.copy(
-        viewerWorldPosition
-    )
-
-    pivot.parent.worldToLocal(
-        viewerLocalPosition
-    )
-
-    const directionX =
-    viewerLocalPosition.x -
-    pivot.position.x
-
-const directionY =
-    viewerLocalPosition.y -
-    pivot.position.y
-
-const targetDirection =
-    Math.atan2(
-        directionY,
-        directionX
-    )
-
-let targetRotationZ =
-    targetDirection -
-    initialDirection
-
-/**
- * Normalize to -PI -> PI first.
- */
-targetRotationZ =
-    Math.atan2(
-        Math.sin(targetRotationZ),
-        Math.cos(targetRotationZ)
-    )
-
-/**
- * Mechanical limits: maximum 90 degrees
- * in either direction.
- */
-targetRotationZ =
-    THREE.MathUtils.clamp(
-        targetRotationZ,
-        -Math.PI / 2,
-        Math.PI / 2
-    )
-
-    
-
-const angleDifference =
-    Math.atan2(
-        Math.sin(
-            targetRotationZ -
-            pivot.rotation.z
-        ),
-        Math.cos(
-            targetRotationZ -
-            pivot.rotation.z
+        cameraBase.getWorldPosition(
+            baseWorldPosition
         )
-    )
 
-const smoothing =
-    1 - Math.exp(
-        -trackingSpeed * delta
-    )
+        /**
+         * Convert that position into the camera parent's
+         * local coordinate space.
+         */
+        const pivotPosition =
+            baseWorldPosition.clone()
 
-pivot.rotation.z +=
-    angleDifference *
-    smoothing
-}
-    
-    loadAssets() {
-        this.loadModel()
+        originalParent.worldToLocal(
+            pivotPosition
+        )
+
+        const pivot =
+            new THREE.Group()
+
+        pivot.name =
+            'SecurityCameraPivot'
+
+        pivot.position.copy(
+            pivotPosition
+        )
+
+        originalParent.add(pivot)
+
+        /**
+         * Keep the camera exactly where it currently is
+         * while making it a child of the pivot.
+         */
+        pivot.attach(
+            securityCamera
+        )
+
+        /**
+         * Find the center of the camera body.
+         *
+         * This tells us which horizontal direction the camera
+         * is currently extending away from the base.
+         */
+        const cameraBounds =
+            new THREE.Box3()
+                .setFromObject(
+                    securityCamera
+                )
+
+        const cameraCenterWorld =
+            new THREE.Vector3()
+
+        cameraBounds.getCenter(
+            cameraCenterWorld
+        )
+
+        const cameraCenterLocal =
+            cameraCenterWorld.clone()
+
+        originalParent.worldToLocal(
+            cameraCenterLocal
+        )
+
+        /**
+         * Horizontal angle of the camera's original pose.
+         *
+         * We use this as our zero/reference angle.
+         */
+        const cameraDirectionX =
+            cameraCenterLocal.x -
+            pivot.position.x
+
+        const cameraDirectionY =
+            cameraCenterLocal.y -
+            pivot.position.y
+
+        const initialDirection =
+            Math.atan2(
+                cameraDirectionY,
+                cameraDirectionX
+            )
+
+        this.securityCameraTracking = {
+            pivot,
+            initialDirection,
+            trackingSpeed: 4.5,
+
+            viewerWorldPosition:
+                new THREE.Vector3(),
+
+            viewerLocalPosition:
+                new THREE.Vector3()
+        }
+    }
+
+    /**
+     * Rotates the station security camera horizontally
+     * toward the user's current perspective.
+     *
+     * Only the Y axis is modified.
+     *
+     * @param {number} delta Seconds since the previous frame.
+     */
+    updateSecurityCameraTracking(delta) {
+        const tracking =
+            this.securityCameraTracking
+
+        if (!tracking) {
+            return
+        }
+
+        const {
+            pivot,
+            initialDirection,
+            trackingSpeed,
+            viewerWorldPosition,
+            viewerLocalPosition
+        } = tracking
+
+        /**
+         * Get the user's camera position.
+         */
+        this.camera.getWorldPosition(
+            viewerWorldPosition
+        )
+
+        /**
+         * Convert it into the same coordinate space
+         * that the security-camera pivot uses.
+         */
+        viewerLocalPosition.copy(
+            viewerWorldPosition
+        )
+
+        pivot.parent.worldToLocal(
+            viewerLocalPosition
+        )
+
+        const directionX =
+            viewerLocalPosition.x -
+            pivot.position.x
+
+        const directionY =
+            viewerLocalPosition.y -
+            pivot.position.y
+
+        const targetDirection =
+            Math.atan2(
+                directionY,
+                directionX
+            )
+
+        let targetRotationZ =
+            targetDirection -
+            initialDirection
+
+        /**
+         * Normalize to -PI -> PI first.
+         */
+        targetRotationZ =
+            Math.atan2(
+                Math.sin(targetRotationZ),
+                Math.cos(targetRotationZ)
+            )
+
+        /**
+         * Mechanical limits: maximum 90 degrees
+         * in either direction.
+         */
+        targetRotationZ =
+            THREE.MathUtils.clamp(
+                targetRotationZ,
+                -Math.PI / 2,
+                Math.PI / 2
+            )
+
+
+
+        const angleDifference =
+            Math.atan2(
+                Math.sin(
+                    targetRotationZ -
+                    pivot.rotation.z
+                ),
+                Math.cos(
+                    targetRotationZ -
+                    pivot.rotation.z
+                )
+            )
+
+        const smoothing =
+            1 - Math.exp(
+                -trackingSpeed * delta
+            )
+
+        pivot.rotation.z +=
+            angleDifference *
+            smoothing
+    }
+
+    loadAssets(renderer) {
+        this.loadModel(renderer)
         this.loadEnvironmentMap()
-
     }
 
     setupLighting(renderer) {
@@ -475,7 +474,6 @@ pivot.rotation.z +=
         stationMainLight.shadow.bias = 0
 
         stationMainLight.shadow.radius = 1
-
         stationMainLight.shadow.camera
             .updateProjectionMatrix()
 
@@ -921,7 +919,7 @@ pivot.rotation.z +=
         root.updateMatrixWorld(true);
     }
 
-    loadModel() {
+    loadModel(renderer) {
         const hotspotOccluderNames = new Set([
             "Cylinder002",
             "Cylinder003",
@@ -979,7 +977,7 @@ pivot.rotation.z +=
                     return;
                 }
 
-                if(obj.name.includes("camera"))
+                if (obj.name.includes("camera"))
                     console.log("Camera mesh found:", obj.name, obj)
 
                 if (!obj.name.includes("Mesh043") && !obj.name.includes("Box00") && !obj.name.includes("Auto") && !obj.name.includes("Cube_Screen") && !obj.name.includes("Cube007") && !obj.name.includes("spaceship-window-side001") && !obj.name.includes("Occluder"))
@@ -999,11 +997,11 @@ pivot.rotation.z +=
                     obj.material.needsUpdate = true;
                 }
 
-                if(obj.name === "glass") {
+                if (obj.name === "glass") {
                     obj.material.transparent = true;
-                        obj.material.opacity = 0.08;
-                        obj.material.depthWrite = false;
-                        obj.material.side = THREE.DoubleSide;
+                    obj.material.opacity = 0.08;
+                    obj.material.depthWrite = false;
+                    obj.material.side = THREE.DoubleSide;
                 }
                 if (obj.isMesh) {
 
@@ -1285,11 +1283,13 @@ diffuseColor *=
             this.initHotspots();
             this.scene.add(gltf.scene)
             this.setupSecurityCameraTracking(
-    gltf.scene
-)
+                gltf.scene
+            )
         })
 
+
         this.assetsLoaded = true
+
 
     }
 
@@ -1328,6 +1328,15 @@ diffuseColor *=
         let sceneReady = false
         this.scene = new THREE.Scene()
 
+        this.terminalFullscreen = null
+
+
+const isTouchDevice =
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia('(any-pointer: coarse)').matches
+
+const usesMobileTerminalFullscreen = isTouchDevice
+
         /**
  * Loading screen
  *
@@ -1339,22 +1348,26 @@ diffuseColor *=
                 scene: this.scene,
 
                 onAnimationFinished: () => {
-                    this.loadAssets()
+                    this.loadAssets(renderer)
                 },
 
                 onSceneReady: () => {
                     sceneReady = true
-                    this.terminalFullscreen = new TerminalFullscreen({
-    terminalCanvas: this.terminal.canvas,
-    terminalScreenMesh: this.monitorGlass,
-    camera: this.camera,
-    renderer
-})
+                    if (usesMobileTerminalFullscreen) {
+                        this.terminalFullscreen = new TerminalFullscreen({
+                            terminalCanvas: this.terminal.canvas
+                        })
+                    }
                     playTerminalGlitch()
-                    
-                    
+                    renderer.shadowMap.autoUpdate = false
+                    trackballControls.enabled = true
+                    controls.enabled = true
+
+
                 }
             })
+
+
 
         /**
          * Keep a local reference so the existing loaders do not
@@ -1399,8 +1412,6 @@ diffuseColor *=
         renderer.shadowMap.type = THREE.PCFShadowMap
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        console.log("Pixel Ratio: ", window.devicePixelRatio)
-
         renderer.toneMapping =
             THREE.ACESFilmicToneMapping
 
@@ -1408,88 +1419,89 @@ diffuseColor *=
 
         let hotspotNeedUpdate = false
 
-    
-const heightShrink = 0.75
 
-const resizeExperience = () => {
-    hotspotNeedUpdate = true
+        const heightShrink = 0.75
 
-    // Start with the regular layout viewport as fallback.
-    let viewportWidth = window.innerWidth
-    let viewportHeight = window.innerHeight
+        const resizeExperience = () => {
+            hotspotNeedUpdate = true
 
-    // Read the CURRENT visual viewport dimensions on every resize.
-    if(window.visualViewport) {
-        viewportWidth = window.visualViewport.width
-        viewportHeight = window.visualViewport.height
-    }
+            // Start with the regular layout viewport as fallback.
+            let viewportWidth = window.innerWidth
+            let viewportHeight = window.innerHeight
 
-    const viewportAspect = viewportWidth / viewportHeight
-    const isPortrait = viewportAspect < 1.0
+            // Read the CURRENT visual viewport dimensions on every resize.
+            if (window.visualViewport) {
+                viewportWidth = window.visualViewport.width
+                viewportHeight = window.visualViewport.height
+            }
 
-    const isShortLandscape = !isPortrait && viewportHeight <= 500
+            const viewportAspect = viewportWidth / viewportHeight
+            const isPortrait = viewportAspect < 1.0
 
-document.documentElement.classList.toggle(
-    'short-landscape',
-    isShortLandscape
-)
+            const isShortLandscape = !isPortrait && viewportHeight <= 500
 
-    this.canvasWidth = viewportWidth
-    this.canvasHeight = viewportHeight
+            document.documentElement.classList.toggle(
+                'short-landscape',
+                isShortLandscape
+            )
 
-    if(!isPortrait) {
-        this.canvasHeight *= heightShrink
-    }
-
-    this.camera.aspect = this.canvasWidth / this.canvasHeight
-    this.camera.updateProjectionMatrix()
-
-    renderer.setSize(this.canvasWidth, this.canvasHeight)
-    effectComposer.setSize(this.canvasWidth, this.canvasHeight)
-
-    if(this.supernova) {
-        const currentRatio = renderer.getPixelRatio()
-
-        this.supernova.uniforms.iResolution.value.set(
-            this.canvasWidth * currentRatio,
-            this.canvasHeight * currentRatio
-        )
-    }
+            this.canvasWidth = viewportWidth
+            this.canvasHeight = viewportHeight
 
 
-document.documentElement.classList.toggle(
-    'short-landscape',
-    isShortLandscape
-)
 
-
-    document.documentElement.style.setProperty(
-    '--viewport-width',
-    `${viewportWidth}px`
-)
-
-document.documentElement.style.setProperty(
-    '--viewport-height',
-    `${viewportHeight}px`
-)
-
-    this.canvasRect = renderer.domElement.getBoundingClientRect()
+if (!isPortrait && !isTouchDevice) {
+    this.canvasHeight *= heightShrink
 }
 
-window.addEventListener('resize', resizeExperience)
+            this.camera.aspect = this.canvasWidth / this.canvasHeight
+            this.camera.updateProjectionMatrix()
 
-if(window.visualViewport) {
-    window.visualViewport.addEventListener('resize', resizeExperience)
-}
+            renderer.setSize(this.canvasWidth, this.canvasHeight)
+            effectComposer.setSize(this.canvasWidth, this.canvasHeight)
+
+            if (this.supernova) {
+                const currentRatio = renderer.getPixelRatio()
+
+                this.supernova.uniforms.iResolution.value.set(
+                    this.canvasWidth * currentRatio,
+                    this.canvasHeight * currentRatio
+                )
+            }
 
 
-            // [ DOM MEASUREMENT CACHE ]
-            // measure the physical footprint of the canvas
-            // This is required for raycasting and UI hotspots. 
-            this.canvasRect = renderer.domElement.getBoundingClientRect();
+            document.documentElement.classList.toggle(
+                'short-landscape',
+                isShortLandscape
+            )
 
-        const effectComposer = new EffectComposer(renderer)        
-        console.log(this.canvasHeight, this.canvasWidth)
+
+            document.documentElement.style.setProperty(
+                '--viewport-width',
+                `${viewportWidth}px`
+            )
+
+            document.documentElement.style.setProperty(
+                '--viewport-height',
+                `${viewportHeight}px`
+            )
+
+            this.canvasRect = renderer.domElement.getBoundingClientRect()
+        }
+
+        window.addEventListener('resize', resizeExperience)
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', resizeExperience)
+        }
+
+
+        // [ DOM MEASUREMENT CACHE ]
+        // measure the physical footprint of the canvas
+        // This is required for raycasting and UI hotspots. 
+        this.canvasRect = renderer.domElement.getBoundingClientRect();
+
+        const effectComposer = new EffectComposer(renderer)
         effectComposer.setSize(this.canvasWidth, this.canvasHeight)
         effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         resizeExperience()
@@ -1497,7 +1509,7 @@ if(window.visualViewport) {
  * Post processing
  */
 
-        
+
         const renderPass = new RenderPass(this.scene, this.camera)
         effectComposer.addPass(renderPass)
 
@@ -1932,7 +1944,7 @@ if(window.visualViewport) {
          */
 
 
-        
+
 
 
 
@@ -2097,7 +2109,7 @@ if(window.visualViewport) {
 
 
         const cam = this.gu.addFolder('Camera')
-        
+
         // Controls
         const trackballControls = new TrackballControls(this.camera, canvas)
         trackballControls.noRotate = true
@@ -2112,6 +2124,9 @@ if(window.visualViewport) {
         controls.dampingFactor = 0.12
         controls.minDistance = 0
         let isTransitioning = false;
+
+        trackballControls.enabled = false
+        controls.enabled = false
 
         // Hot spot variables
         this.isFocused = false;
@@ -2147,84 +2162,84 @@ if(window.visualViewport) {
  * Directly edits the live camera while keeping OrbitControls and
  * TrackballControls active. Use this to find the terminal close-up pose.
  */
-const updateCameraFromGUI = () => {
-    /**
-     * Stop the focus lerp from immediately overwriting values changed
-     * through the GUI.
-     */
-    isTransitioning = false
+        const updateCameraFromGUI = () => {
+            /**
+             * Stop the focus lerp from immediately overwriting values changed
+             * through the GUI.
+             */
+            isTransitioning = false
 
-    /**
-     * Preserve the edited pose as the current transition target too.
-     */
-    cameraTarget.copy(this.camera.position)
-    lookTarget.copy(controls.target)
-    targetFov = this.camera.fov
+            /**
+             * Preserve the edited pose as the current transition target too.
+             */
+            cameraTarget.copy(this.camera.position)
+            lookTarget.copy(controls.target)
+            targetFov = this.camera.fov
 
-    this.camera.updateProjectionMatrix()
+            this.camera.updateProjectionMatrix()
 
-    controls.update()
+            controls.update()
 
-    trackballControls.target.copy(controls.target)
-    trackballControls.update()
+            trackballControls.target.copy(controls.target)
+            trackballControls.update()
 
-    hotspotNeedUpdate = true
-}
+            hotspotNeedUpdate = true
+        }
 
-const cameraPositionFolder =
-    cam.addFolder('Position')
+        const cameraPositionFolder =
+            cam.addFolder('Position')
 
-cameraPositionFolder
-    .add(this.camera.position, 'x', -20, 20, 0.01)
-    .name('X')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraPositionFolder
+            .add(this.camera.position, 'x', -20, 20, 0.01)
+            .name('X')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-cameraPositionFolder
-    .add(this.camera.position, 'y', -20, 20, 0.01)
-    .name('Y')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraPositionFolder
+            .add(this.camera.position, 'y', -20, 20, 0.01)
+            .name('Y')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-cameraPositionFolder
-    .add(this.camera.position, 'z', -20, 20, 0.01)
-    .name('Z')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraPositionFolder
+            .add(this.camera.position, 'z', -20, 20, 0.01)
+            .name('Z')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-cam
-    .add(this.camera, 'fov', 5, 500, 0.1)
-    .name('FOV')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cam
+            .add(this.camera, 'fov', 5, 500, 0.1)
+            .name('FOV')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-const cameraLookTargetFolder =
-    cam.addFolder('Look Target')
+        const cameraLookTargetFolder =
+            cam.addFolder('Look Target')
 
-cameraLookTargetFolder
-    .add(controls.target, 'x', -20, 20, 0.01)
-    .name('X')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraLookTargetFolder
+            .add(controls.target, 'x', -20, 20, 0.01)
+            .name('X')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-cameraLookTargetFolder
-    .add(controls.target, 'y', -20, 20, 0.01)
-    .name('Y')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraLookTargetFolder
+            .add(controls.target, 'y', -20, 20, 0.01)
+            .name('Y')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-cameraLookTargetFolder
-    .add(controls.target, 'z', -20, 20, 0.01)
-    .name('Z')
-    .onChange(updateCameraFromGUI)
-    .listen()
+        cameraLookTargetFolder
+            .add(controls.target, 'z', -20, 20, 0.01)
+            .name('Z')
+            .onChange(updateCameraFromGUI)
+            .listen()
 
-const cameraDebugActions = {
-    printTerminalPose: () => {
-        const position = this.camera.position
-        const target = controls.target
+        const cameraDebugActions = {
+            printTerminalPose: () => {
+                const position = this.camera.position
+                const target = controls.target
 
-        console.log(`
+                console.log(`
 cameraTarget.set(
     ${position.x.toFixed(4)},
     ${position.y.toFixed(4)},
@@ -2239,16 +2254,16 @@ lookTarget.set(
 
 targetFov = ${this.camera.fov.toFixed(2)}
         `)
-    }
-}
+            }
+        }
 
-cam
-    .add(cameraDebugActions, 'printTerminalPose')
-    .name('Print Terminal Pose')
+        cam
+            .add(cameraDebugActions, 'printTerminalPose')
+            .name('Print Terminal Pose')
 
-cameraPositionFolder.open()
-cameraLookTargetFolder.open()
-cam.open()
+        cameraPositionFolder.open()
+        cameraLookTargetFolder.open()
+        cam.open()
 
         function showItems(visibility, meshArray) {
             meshArray.forEach((ceilingMesh) => {
@@ -2526,14 +2541,57 @@ cam.open()
 
         };
 
+        const closeTerminalFullscreen = async () => {
+    if (
+        !this.terminalFullscreen?.isOpen ||
+        this.terminalFullscreen.isTransitioning
+    ) {
+        return
+    }
+
+    await this.terminalFullscreen.close()
+
+    if (this.currPointName === 'Terminal') {
+        exitFocusMode()
+
+        this.isFocused = false
+        this.currPointName = ''
+    }
+}
+
+document
+    .querySelector('#terminal-fullscreen-close')
+    ?.addEventListener(
+        'click',
+        closeTerminalFullscreen
+    )
+
+document
+    .querySelector('#terminal-fullscreen-back')
+    ?.addEventListener(
+        'click',
+        () => {
+            this.terminal.goBack()
+        }
+    )
+
         // Escape key exits
-        window.addEventListener('keydown', (input) => {
-            if (input.key === 'Escape' && this.isFocused) {
-                exitFocusMode();
-                this.isFocused = false
-                this.currPointName = ""
-            }
-        });
+        window.addEventListener('keydown', async (input) => {
+    if (input.key !== 'Escape') {
+        return
+    }
+
+    if (this.terminalFullscreen?.isOpen) {
+        await closeTerminalFullscreen()
+        return
+    }
+
+    if (this.isFocused) {
+        exitFocusMode()
+        this.isFocused = false
+        this.currPointName = ''
+    }
+})
 
 
 
@@ -2713,20 +2771,16 @@ cam.open()
             console.table(hitTable);
         };
 
-        const getSignalTrace = () => {
+        const getActiveTerminal = () => {
             if (this.currPointName !== "Terminal") {
                 return null
             }
 
-            if (this.terminal.mode !== "signalTrace") {
+            if (!this.terminal) {
                 return null
             }
 
-            if (!this.terminal.signalTrace) {
-                return null
-            }
-
-            return this.terminal.signalTrace
+            return this.terminal
         }
 
 
@@ -2773,10 +2827,10 @@ cam.open()
                 return null
             }
 
-            if(this.terminalFullscreen?.isOpen) {
-        return null
-    }
-            
+            if (this.terminalFullscreen?.isOpen) {
+                return null
+            }
+
             const rect = renderer.domElement.getBoundingClientRect()
 
             pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
@@ -2809,38 +2863,6 @@ cam.open()
             }
         }
 
-        const getTerminalCanvasPositionFromFullscreenEvent = (event) => {
-    if(!this.terminalFullscreen?.isOpen) {
-        return null
-    }
-
-    const canvas = this.terminal.canvas
-    const rect = canvas.getBoundingClientRect()
-
-    if(rect.width === 0 || rect.height === 0) {
-        return null
-    }
-
-    const pointerInsideCanvas =
-        event.clientX >= rect.left &&
-        event.clientX <= rect.right &&
-        event.clientY >= rect.top &&
-        event.clientY <= rect.bottom
-
-    if(!pointerInsideCanvas) {
-        return null
-    }
-
-    return {
-        x:
-            (event.clientX - rect.left) *
-            (canvas.width / rect.width),
-
-        y:
-            (event.clientY - rect.top) *
-            (canvas.height / rect.height)
-    }
-}
         /**
          * Handles pointer events on the monitor.
          * @param {*} event the pointer event (e.g., mouse click or touch) that occurred on the monitor.
@@ -2848,28 +2870,92 @@ cam.open()
          * @returns the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
          */
         const handleMonitorPointerEvent = (event, type) => {
-    const signalTrace = getSignalTrace()
+            const terminal = getActiveTerminal()
 
-    if(!signalTrace) {
-        return
-    }
+            if (!terminal) {
+                return
+            }
 
-    let canvasPosition
+            const canvasPosition =
+                getTerminalCanvasPositionFromPointerEvent(event)
 
-    if(this.terminalFullscreen?.isOpen) {
-        canvasPosition =
-            getTerminalCanvasPositionFromFullscreenEvent(event)
-    }
-    else {
-        canvasPosition =
-            getTerminalCanvasPositionFromPointerEvent(event)
-    }
+            if (!canvasPosition) {
+                if (type === "up") {
+                    terminal.handlePointerCancel()
 
-    if(!canvasPosition) {
-        if(type === "up") {
-            signalTrace.handlePointerCancel()
+                    if (
+                        event.currentTarget.hasPointerCapture?.(
+                            event.pointerId
+                        )
+                    ) {
+                        event.currentTarget.releasePointerCapture(
+                            event.pointerId
+                        )
+                    }
+                }
 
-            if(
+                return
+            }
+
+            if (type === "down") {
+                const handled = terminal.handlePointerDown(
+                    canvasPosition.x,
+                    canvasPosition.y
+                )
+
+                if (handled) {
+                    event.currentTarget.setPointerCapture(
+                        event.pointerId
+                    )
+                }
+            }
+            else if (type === "move") {
+                terminal.handlePointerMove(
+                    canvasPosition.x,
+                    canvasPosition.y
+                )
+            }
+            else if (type === "up") {
+                terminal.handlePointerUp(
+                    canvasPosition.x,
+                    canvasPosition.y
+                )
+
+                if (
+                    event.currentTarget.hasPointerCapture(
+                        event.pointerId
+                    )
+                ) {
+                    event.currentTarget.releasePointerCapture(
+                        event.pointerId
+                    )
+                }
+            }
+        }
+
+
+
+
+        const handlePointerDown = (event) => {
+            handleMonitorPointerEvent(event, "down")
+        }
+
+        const handlePointerMove = (event) => {
+            handleMonitorPointerEvent(event, "move")
+        }
+
+        const handlePointerUp = (event) => {
+            handleMonitorPointerEvent(event, "up")
+        }
+
+        const handlePointerCancel = (event) => {
+            const terminal = getActiveTerminal()
+
+            if (terminal) {
+                terminal.handlePointerCancel()
+            }
+
+            if (
                 event.currentTarget.hasPointerCapture?.(
                     event.pointerId
                 )
@@ -2880,89 +2966,27 @@ cam.open()
             }
         }
 
-        return
-    }
-
-    if(type === "down") {
-        event.currentTarget.setPointerCapture(
-            event.pointerId
+        // Normal 3D monitor input
+        renderer.domElement.addEventListener(
+            "pointerdown",
+            handlePointerDown
         )
 
-        signalTrace.handlePointerDown(
-            canvasPosition.x,
-            canvasPosition.y
-        )
-    }
-    else if(type === "move") {
-        signalTrace.handlePointerMove(
-            canvasPosition.x,
-            canvasPosition.y
-        )
-    }
-    else if(type === "up") {
-        signalTrace.handlePointerUp(
-            canvasPosition.x,
-            canvasPosition.y
+        renderer.domElement.addEventListener(
+            "pointermove",
+            handlePointerMove
         )
 
-        if(
-            event.currentTarget.hasPointerCapture(
-                event.pointerId
-            )
-        ) {
-            event.currentTarget.releasePointerCapture(
-                event.pointerId
-            )
-        }
-    }
-}
+        renderer.domElement.addEventListener(
+            "pointerup",
+            handlePointerUp
+        )
 
+        renderer.domElement.addEventListener(
+            "pointercancel",
+            handlePointerCancel
+        )
 
-
-
-        const handlePointerDown = (event) => {
-    handleMonitorPointerEvent(event, "down")
-}
-
-const handlePointerMove = (event) => {
-    handleMonitorPointerEvent(event, "move")
-}
-
-const handlePointerUp = (event) => {
-    handleMonitorPointerEvent(event, "up")
-}
-
-// Normal 3D monitor input
-renderer.domElement.addEventListener(
-    "pointerdown",
-    handlePointerDown
-)
-
-renderer.domElement.addEventListener(
-    "pointermove",
-    handlePointerMove
-)
-
-renderer.domElement.addEventListener(
-    "pointerup",
-    handlePointerUp
-)
-
-// Fullscreen DOM canvas input
-this.terminal.canvas.addEventListener(
-    "pointerdown",
-    handlePointerDown
-)
-
-this.terminal.canvas.addEventListener(
-    "pointermove",
-    handlePointerMove
-)
-
-this.terminal.canvas.addEventListener(
-    "pointerup",
-    handlePointerUp
-)
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this)
 
@@ -3002,17 +3026,17 @@ this.terminal.canvas.addEventListener(
 
             const panel = document.querySelector('.loading-panel')
 
-({
-    innerWidth,
-    innerHeight,
-    compactQuery: matchMedia(
-        '(orientation: landscape) and (max-height: 500px)'
-    ).matches,
-    panelHeight: panel.getBoundingClientRect().height,
-    panelPadding: getComputedStyle(panel).padding,
-    loadingScreenHeight:
-        document.querySelector('.loading-screen').getBoundingClientRect().height
-})
+                ({
+                    innerWidth,
+                    innerHeight,
+                    compactQuery: matchMedia(
+                        '(orientation: landscape) and (max-height: 500px)'
+                    ).matches,
+                    panelHeight: panel.getBoundingClientRect().height,
+                    panelPadding: getComputedStyle(panel).padding,
+                    loadingScreenHeight:
+                        document.querySelector('.loading-screen').getBoundingClientRect().height
+                })
 
             try {
                 const glb = await exporter.parseAsync(
@@ -3087,26 +3111,21 @@ this.terminal.canvas.addEventListener(
             this.points.forEach((point) => {
                 point.element.addEventListener('click', () => {
                     if (!this.isFocused && !isTransitioning) {
+                        this.currPointName = point.name
+
                         // Pass the specific point we clicked into the focus function
                         enterFocusMode(point);
-                        this.currPointName = point.name
+
+                        if (
+                            point.name === 'Terminal' &&
+                            this.terminalFullscreen
+                        ) {
+                            this.terminalFullscreen.open()
+                        }
                     }
                 });
             });
         }
-
-
-        window.addEventListener('keydown', (event) => {
-    if(event.code !== 'KeyF') {
-        return
-    }
-
-    if(this.currPointName !== 'Terminal') {
-        return
-    }
-
-    this.terminalFullscreen.toggle()
-})
 
 
         // ---------------------------------------------------------
@@ -3136,15 +3155,9 @@ this.terminal.canvas.addEventListener(
 
         const tick = (timestamp) => {
             controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
-    if(!this.terminalFullscreen || !this.terminalFullscreen.shouldPauseScene) {
-        effectComposer.render()
-    }
-    else {
-        if(!this.terminalFullscreen.isOpen) {
-            effectComposer.render()
-        }
-
-    }
+            if (!this.terminalFullscreen?.shouldPauseScene) {
+    effectComposer.render()
+}
 
 
             timer.update(timestamp)
