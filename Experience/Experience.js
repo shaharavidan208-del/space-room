@@ -1331,6 +1331,27 @@ diffuseColor *=
         this.terminalFullscreen = null
 
 
+        const preventLoadingScreenPinch = (event) => {
+    const loadingScreen =
+        document.querySelector('.loading-screen')
+
+    if (
+        loadingScreen?.contains(event.target) &&
+        event.touches.length > 1
+    ) {
+        event.preventDefault()
+    }
+}
+
+document.addEventListener(
+    'touchmove',
+    preventLoadingScreenPinch,
+    {
+        passive: false,
+        capture: true
+    }
+)
+
 const isTouchDevice =
     navigator.maxTouchPoints > 0 ||
     window.matchMedia('(any-pointer: coarse)').matches
@@ -1355,8 +1376,22 @@ const usesMobileTerminalFullscreen = isTouchDevice
                     sceneReady = true
                     if (usesMobileTerminalFullscreen) {
                         this.terminalFullscreen = new TerminalFullscreen({
-                            terminalCanvas: this.terminal.canvas
+                            terminalCanvas: this.terminal.canvas,
+                            dialogueCanvas: this.terminal.mobileCanvas,
+                            onDialogueResize: (
+                                displayedWidth,
+                                displayedHeight
+                            ) => {
+                                this.terminal.resizeMobileCanvas(
+                                    displayedWidth,
+                                    displayedHeight
+                                )
+                            }
                         })
+
+                        this.terminal.setFullscreenController(
+                            this.terminalFullscreen
+                        )
                     }
                     playTerminalGlitch()
                     renderer.shadowMap.autoUpdate = false
@@ -2019,9 +2054,6 @@ if (!isPortrait && !isTouchDevice) {
 
         this.setupLighting(renderer)
 
-        // FPS counter 
-        const stats = new Stats();
-        document.body.appendChild(stats.dom);
 
 
 
@@ -2550,6 +2582,7 @@ targetFov = ${this.camera.fov.toFixed(2)}
     }
 
     await this.terminalFullscreen.close()
+    this.terminal.restoreAfterMobileSignalTraceExit()
 
     if (this.currPointName === 'Terminal') {
         exitFocusMode()
@@ -3173,7 +3206,6 @@ document
 
             this.loadingScreen.update(delta)
 
-            stats.begin()
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true
@@ -3270,7 +3302,6 @@ document
             trackballControls.target.set(target.x, target.y, target.z)
             trackballControls.update()
             // Go through each points 
-            stats.end();
             requestAnimationFrame(tick);
         };
         tick()

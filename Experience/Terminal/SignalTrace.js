@@ -229,7 +229,20 @@ export default class SignalTrace {
         /**
          * Center the board horizontally on the terminal canvas.
          */
-        this.boardStartX = (this.canvas.width - boardWidth) / 2 - 400 // change to this because now I'll have access to it anywhere in the class
+        /**
+         * Fullscreen mobile widens the surrounding Signal Trace canvas, but
+         * the inventory intentionally keeps its original game-space position.
+         * Keep the board centered inside the same 1920px gameplay layout so
+         * widening the outer frame cannot push the board into the inventory.
+         */
+        let gameplayLayoutWidth = this.canvas.width
+
+        if (this.terminal.signalTraceUsesMobileAspect) {
+            gameplayLayoutWidth = this.terminal.monitorCanvasWidth
+        }
+
+        this.boardStartX =
+            (gameplayLayoutWidth - boardWidth) / 2 - 400
 
         /**
          * Resolve the current level's targets once before drawing the grid.

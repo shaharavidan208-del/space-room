@@ -1,7 +1,7 @@
 /**
- * Presents the terminal's existing HTMLCanvasElement as a fullscreen DOM
- * interface on mobile while keeping that same canvas available to the
- * THREE.CanvasTexture used by the normal 3D terminal.
+ * Presents either the wide mobile dialogue canvas or the original terminal
+ * canvas as a fullscreen DOM interface. The original canvas remains the
+ * THREE.CanvasTexture source and is used unchanged by Signal Trace.
  *
  * Mobile-only availability should be decided by the owner before creating
  * this class. This class only manages the fullscreen DOM presentation.
@@ -19,16 +19,22 @@ export default class TerminalFullscreen {
     /**
      * @param {Object} options
      * @param {HTMLCanvasElement} options.terminalCanvas The canvas on which the
-     * terminal UI is drawn. The same element is used both as the source of the
-     * Three.js CanvasTexture and as the directly displayed fullscreen DOM canvas.
+     * monitor UI and Signal Trace are drawn.
+     * @param {HTMLCanvasElement} options.dialogueCanvas Wide mobile dialogue UI.
+     * @param {Function|null} [options.onDialogueResize=null] Receives the exact
+     * displayed size before the mobile dialogue canvas is fitted.
      * @param {Function|null} [options.onStateChange=null] Optional callback fired
      * after fullscreen has completely opened or closed.
      */
     constructor({
         terminalCanvas,
+        dialogueCanvas,
+        onDialogueResize = null,
         onStateChange = null
     }) {
         this.terminalCanvas = terminalCanvas
+        this.dialogueCanvas = dialogueCanvas
+        this.onDialogueResize = onDialogueResize
         this.onStateChange = onStateChange
 
         /**
@@ -54,9 +60,12 @@ export default class TerminalFullscreen {
             )
         }
 
-        if (!(this.terminalCanvas instanceof HTMLCanvasElement)) {
+        if (
+            !(this.terminalCanvas instanceof HTMLCanvasElement) ||
+            !(this.dialogueCanvas instanceof HTMLCanvasElement)
+        ) {
             throw new Error(
-                'TerminalFullscreen requires the terminal HTMLCanvasElement.'
+                'TerminalFullscreen requires terminal and dialogue canvases.'
             )
         }
 
@@ -67,30 +76,32 @@ export default class TerminalFullscreen {
         // covers the scene and resume it before the overlay closes.
         this.pauseScene = false
 
-        /**
-         * Remember where the canvas originally lived so destroy() can restore it.
-         * An unattached canvas simply has a null originalParent.
-         */
-        this.originalParent = this.terminalCanvas.parentNode
-        this.originalNextSibling = this.terminalCanvas.nextSibling
+        /** Preserve the DOM position and inline size of both canvases. */
+        this.canvasStates = new Map()
 
-        // Preserve any pre-existing inline sizing so destroy() can restore the
-        // canvas without leaving fullscreen-only dimensions behind.
-        this.originalCanvasWidth =
-            this.terminalCanvas.style.getPropertyValue('width')
-        this.originalCanvasWidthPriority =
-            this.terminalCanvas.style.getPropertyPriority('width')
-        this.originalCanvasHeight =
-            this.terminalCanvas.style.getPropertyValue('height')
-        this.originalCanvasHeightPriority =
-            this.terminalCanvas.style.getPropertyPriority('height')
+        for (const canvas of [
+            this.terminalCanvas,
+            this.dialogueCanvas
+        ]) {
+            this.canvasStates.set(canvas, {
+                parent: canvas.parentNode,
+                nextSibling: canvas.nextSibling,
+                width: canvas.style.getPropertyValue('width'),
+                widthPriority:
+                    canvas.style.getPropertyPriority('width'),
+                height: canvas.style.getPropertyValue('height'),
+                heightPriority:
+                    canvas.style.getPropertyPriority('height')
+            })
+        }
 
         /**
          * CSS controls only the canvas's displayed size. Its internal drawing
          * buffer remains unchanged, and the same element remains a valid source
          * for the terminal's Three.js CanvasTexture.
          */
-        this.surface.appendChild(this.terminalCanvas)
+        this.activeCanvas = this.dialogueCanvas
+        this.surface.appendChild(this.activeCanvas)
 
         /**
          * Browser UI appearing or disappearing changes visualViewport without
@@ -129,6 +140,35 @@ export default class TerminalFullscreen {
     /** Whether the owner of this class should pause the normal 3D scene. */
     get shouldPauseScene() {
         return this.pauseScene
+    }
+
+    /**
+     * Swap the DOM presentation without touching either drawing buffer.
+     * Dialogue supplies its own wide canvas; Signal Trace supplies the original
+     * 1920x1200 terminal canvas.
+     */
+    setActiveCanvas(canvas) {
+        if (
+            canvas !== this.dialogueCanvas &&
+            canvas !== this.terminalCanvas
+        ) {
+            return
+        }
+
+        if (canvas === this.activeCanvas) {
+            if (this.opened || this.transitioning) {
+                this.fitCanvasToSurface()
+            }
+            return
+        }
+
+        this.activeCanvas.remove()
+        this.activeCanvas = canvas
+        this.surface.appendChild(this.activeCanvas)
+
+        if (this.opened || this.transitioning) {
+            this.fitCanvasToSurface()
+        }
     }
 
     /** Opens or closes fullscreen mode according to its completed state. */
@@ -228,7 +268,7 @@ export default class TerminalFullscreen {
      * coordinates. The normal 3D terminal can continue using raycast UVs.
      */
     getCanvasCoordinates(event) {
-        const rect = this.terminalCanvas.getBoundingClientRect()
+        const rect = this.activeCanvas.getBoundingClientRect()
 
         if (rect.width === 0 || rect.height === 0) {
             return null
@@ -237,11 +277,11 @@ export default class TerminalFullscreen {
         return {
             x:
                 (event.clientX - rect.left) *
-                (this.terminalCanvas.width / rect.width),
+                (this.activeCanvas.width / rect.width),
 
             y:
                 (event.clientY - rect.top) *
-                (this.terminalCanvas.height / rect.height)
+                (this.activeCanvas.height / rect.height)
         }
     }
 
@@ -256,28 +296,33 @@ export default class TerminalFullscreen {
      * avoids that browser-dependent sizing path.
      */
     fitCanvasToSurface() {
-        const surfaceStyle = getComputedStyle(this.surface)
-
-        const horizontalPadding =
-            Number.parseFloat(surfaceStyle.paddingLeft) +
-            Number.parseFloat(surfaceStyle.paddingRight)
-
-        const verticalPadding =
-            Number.parseFloat(surfaceStyle.paddingTop) +
-            Number.parseFloat(surfaceStyle.paddingBottom)
-
+        /**
+         * Size from the complete overlay, not the surface's content box.
+         * EXIT and BACK are overlays inside this same area; they must never
+         * reserve a separate column or reduce the terminal canvas width.
+         */
         const availableWidth = Math.max(
             0,
-            this.surface.clientWidth - horizontalPadding
+            this.overlay.clientWidth
         )
 
         const availableHeight = Math.max(
             0,
-            this.surface.clientHeight - verticalPadding
+            this.overlay.clientHeight
         )
 
-        const bufferWidth = this.terminalCanvas.width
-        const bufferHeight = this.terminalCanvas.height
+        if (
+            this.activeCanvas === this.dialogueCanvas &&
+            this.onDialogueResize
+        ) {
+            this.onDialogueResize(
+                availableWidth,
+                availableHeight
+            )
+        }
+
+        const bufferWidth = this.activeCanvas.width
+        const bufferHeight = this.activeCanvas.height
 
         if (
             availableWidth === 0 ||
@@ -296,13 +341,13 @@ export default class TerminalFullscreen {
         const displayedWidth = bufferWidth * scale
         const displayedHeight = bufferHeight * scale
 
-        this.terminalCanvas.style.setProperty(
+        this.activeCanvas.style.setProperty(
             'width',
             `${displayedWidth}px`,
             'important'
         )
 
-        this.terminalCanvas.style.setProperty(
+        this.activeCanvas.style.setProperty(
             'height',
             `${displayedHeight}px`,
             'important'
@@ -406,27 +451,29 @@ export default class TerminalFullscreen {
 
         this.overlay.setAttribute('aria-hidden', 'true')
 
-        if (this.originalParent) {
-            this.originalParent.insertBefore(
-                this.terminalCanvas,
-                this.originalNextSibling
+        for (const [canvas, state] of this.canvasStates) {
+            if (state.parent) {
+                state.parent.insertBefore(
+                    canvas,
+                    state.nextSibling
+                )
+            }
+            else {
+                canvas.remove()
+            }
+
+            canvas.style.setProperty(
+                'width',
+                state.width,
+                state.widthPriority
+            )
+
+            canvas.style.setProperty(
+                'height',
+                state.height,
+                state.heightPriority
             )
         }
-        else {
-            this.terminalCanvas.remove()
-        }
-
-        this.terminalCanvas.style.setProperty(
-            'width',
-            this.originalCanvasWidth,
-            this.originalCanvasWidthPriority
-        )
-
-        this.terminalCanvas.style.setProperty(
-            'height',
-            this.originalCanvasHeight,
-            this.originalCanvasHeightPriority
-        )
 
         this.opened = false
         this.transitioning = false

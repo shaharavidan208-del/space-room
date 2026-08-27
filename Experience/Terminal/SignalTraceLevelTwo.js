@@ -21,48 +21,24 @@ export default class SignalTraceLevelTwo {
          * ARC is the archive target.
          */
         this.source = {
-            row: 1,
-            col: 1,
-            direction: "left"
+            row: 0,
+            col: 0,
+            direction: "down"
         }
 
         this.target = {
-            row: 0,
-            col: 5,
+            row: 1,
+            col: 3,
             direction: "left"
         }
 
 
 this.secondTarget = {
-            row: 1,
-            col: 4,
-            direction: "right"
-        }
-        
-
-        this.thirdTarget = {
-            row: 2,
-            col: 2,
-            direction: "right"
-        }
-
-        this.fourthTarget = {
-            row: 3,
+            row: 4,
             col: 3,
             direction: "left"
         }
-
-         this.fifthTarget = {
-            row: 4,
-            col: 4,
-            direction: "right"
-        }
-
-         this.sixthTarget = {
-            row: 5,
-            col: 5,
-            direction: "left"
-        }
+        
 
         
 
@@ -71,10 +47,6 @@ this.secondTarget = {
         this.targets = [
         { row: this.target.row, col: this.target.col, direction: this.target.direction  },
         {  row: this.secondTarget.row, col: this.secondTarget.col, direction: this.secondTarget.direction },
-        { row: this.thirdTarget.row, col: this.thirdTarget.col, direction: this.thirdTarget.direction  },
-        {  row: this.fourthTarget.row, col: this.fourthTarget.col, direction: this.fourthTarget.direction },
-        { row: this.fifthTarget.row, col: this.fifthTarget.col, direction: this.fifthTarget.direction  },
-        {  row: this.sixthTarget.row, col: this.sixthTarget.col, direction: this.sixthTarget.direction }
         
 ]
 
@@ -87,15 +59,10 @@ this.secondTarget = {
         }
 
         this.pipeCount = {
-            vertical: 5,
-            cornerUpLeft: 1,
-            cornerDownLeft: 2,
-            cornerUpRight: 3,
-            horizontal: 1,
-            cornerDownRight: 1,
-            splitDown: 1,
+            vertical: 2,
+            cornerUpRight: 1,
+            horizontal: 4,
             splitRight: 1,
-            splitUp: 1
         }
 
         
@@ -115,22 +82,7 @@ this.secondTarget = {
             [this.secondTarget.direction]
         )
 
-        this.thirdTargetPipe = new Pipe(
-            null,
-            [this.thirdTarget.direction]
-        )
-        this.fourthTargetPipe = new Pipe(
-            null,
-            [this.fourthTarget.direction]
-        )
-        this.fifthTargetPipe = new Pipe(
-            null,
-            [this.fifthTarget.direction]
-        )
-        this.sixthTargetPipe = new Pipe(
-            null,
-            [this.sixthTarget.direction]
-        )
+      
     }
 
     createGrid() {
@@ -161,17 +113,6 @@ this.secondTarget = {
         grid[this.secondTarget.row][this.secondTarget.col].pipe =
             this.secondTargetPipe
 
-        grid[this.thirdTarget.row][this.thirdTarget.col].pipe =
-            this.thirdTargetPipe
-        
-        grid[this.fourthTarget.row][this.fourthTarget.col].pipe =
-            this.fourthTargetPipe
-
-        grid[this.fifthTarget.row][this.fifthTarget.col].pipe =
-            this.fifthTargetPipe
-
-        grid[this.sixthTarget.row][this.sixthTarget.col].pipe =
-            this.sixthTargetPipe
 
 
 

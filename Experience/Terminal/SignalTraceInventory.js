@@ -75,10 +75,11 @@ export default class SignalTraceInventory {
          */
         this.slotSize = signalTrace.tileSize
 
-        /**
-         * Vertical gap between inventory slots.
-         */
-        this.slotGap = 26
+
+
+        this.slotGap = 70
+
+        this.columnGap = this.slotSize + this.slotGap + 40
 
         /**
          * Right-side inventory panel layout.
@@ -87,10 +88,9 @@ export default class SignalTraceInventory {
          * They control where the module cache appears on the terminal screen.
          */
         this.panelX = 1280
-        this.panelY = 350
-        this.panelWidth = 500
+        this.panelY = signalTrace.boardStartY
         this.rightSideInventoryCnt = -1
-        this.columnGap = 60
+        this.panelWidth = 500
 
         if(this.items)
             this.shouldDrawSlot()
@@ -103,12 +103,12 @@ export default class SignalTraceInventory {
     }
 
     shouldDrawSlot() {
-        let slotCount = 0
+        this.slotCount = 0
         for(let i = 0; i < this.items.length; i++) {
             if(this.items[i].count > 0) {
                 this.items[i].drawPipe = true
-                this.items[i].slotPosition = slotCount
-                slotCount++
+                this.items[i].slotPosition = this.slotCount
+                this.slotCount++
             }
             else {
                 this.items[i].drawPipe = false
@@ -149,16 +149,21 @@ export default class SignalTraceInventory {
      */
     drawPanelBackground() {
         const ctx = this.ctx
-        this.panelHeight = (this.signalTrace.tileSize + this.signalTrace.tileGap) * this.signalTrace.rows
+        this.rows = 4
+        this.panelHeight = (this.slotSize + this.slotGap) * this.rows
 
         ctx.save()
-
+        this.columns = Math.ceil(this.slotCount / 4)
+        console.log("this.columns: ", this.columns)
+        console.log("this.columnGap ", this.columnGap)
+        console.log("this.slotsize ", this.slotSize)
+        this.panelWidth = (this.slotSize + this.slotGap) * this.columns + 15
         ctx.fillStyle = "rgba(0, 255, 65, 0.025)"
-        ctx.fillRect(this.panelX - 30, this.panelY - 80, this.panelWidth, this.panelHeight)
+        ctx.fillRect(this.panelX - 30, this.panelY, this.panelWidth, this.panelHeight)
 
         ctx.strokeStyle = "rgba(0, 255, 65, 0.16)"
         ctx.lineWidth = 4
-        ctx.strokeRect(this.panelX - 30, this.panelY - 80, this.panelWidth, this.panelHeight)
+        ctx.strokeRect(this.panelX - 30, this.panelY, this.panelWidth, this.panelHeight)
 
         ctx.restore()
     }
@@ -227,8 +232,8 @@ export default class SignalTraceInventory {
          * Draw remaining module count.
          */
         ctx.fillStyle = "rgba(216, 255, 220, 0.78)"
-        ctx.font = "30px monospace"
-        ctx.fillText("x" + this.items[index].count, x + this.slotSize + 24, y + 88)
+        ctx.font = "40px monospace"
+        ctx.fillText("x" + this.items[index].count, x + this.slotSize + 32, y + 88)
 
         ctx.restore()
     }
@@ -258,13 +263,10 @@ export default class SignalTraceInventory {
         // The row resets back to 0 whenever a new column begins.
         const row = index % slotsPerColumn
 
-        // Horizontal distance between the beginning of one column
-        // and the beginning of the next column.
-        const columnGap = this.slotSize + this.slotGap + 40
 
         // Convert the slot's row and column into canvas coordinates.
         return {
-            x: this.panelX + column * columnGap,
+            x: this.panelX + column * (this.slotSize + this.slotGap),
             y: this.panelY + row * (this.slotSize + this.slotGap)
         }
     }

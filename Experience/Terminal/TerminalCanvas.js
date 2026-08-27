@@ -25,12 +25,25 @@ export default class TerminalCanvas {
         // Set the internal pixel resolution of the canvas.
         // This is not the CSS size. This is the actual texture resolution.
         // Higher resolution = sharper text when the 3D camera zooms into the monitor.
-        this.canvas.width = 1920;
-        this.canvas.height = 1200;
+        this.monitorCanvasWidth = 1920
+        this.monitorCanvasHeight = 1200
+
+        this.canvas.width = this.monitorCanvasWidth;
+        this.canvas.height = this.monitorCanvasHeight;
 
         // Get the 2D drawing context.
         // This is the "brush" we use to draw text, rectangles, highlights, etc.
         this.ctx = this.canvas.getContext('2d');
+
+        /**
+         * Mobile dialogue uses a separate, viewport-shaped drawing surface.
+         * The original 1920x1200 canvas remains the monitor texture and the
+         * Signal Trace canvas, so neither of those layouts is resized.
+         */
+        this.mobileCanvas = document.createElement('canvas')
+        this.mobileCanvas.width = 1920
+        this.mobileCanvas.height = 864
+        this.mobileCtx = this.mobileCanvas.getContext('2d')
 
         // ==========================================
         // 2. CANVAS → THREE.JS TEXTURE BRIDGE
@@ -77,6 +90,14 @@ export default class TerminalCanvas {
          */
         this.dialogueHitAreas = []
 
+        /** Exact hit rectangles drawn on the wide mobile dialogue canvas. */
+        this.mobileDialogueHitAreas = []
+
+        this.mobilePressedChoiceIndex = -1
+        this.mobilePointerId = null
+        this.fullscreenController = null
+        this.signalTraceUsesMobileAspect = false
+
         // Fullscreen DOM input belongs to the terminal canvas itself. The
         // normal monitor still reaches these methods through Experience's
         // raycast path, but the mobile canvas no longer depends on Experience
@@ -87,6 +108,7 @@ export default class TerminalCanvas {
         // Set up keyboard input and draw the first frame immediately.
         this.setupHiddenInput();
         this.setupCanvasPointerInput();
+        this.setupMobileCanvasPointerInput()
         this.draw();
     }
 
@@ -270,6 +292,282 @@ export default class TerminalCanvas {
         }
 
         this.domPointerId = null
+    }
+
+    /**
+     * Direct input for the wide mobile dialogue canvas. A press is shown
+     * immediately, but navigation only happens when that same pointer is
+     * released over the same card.
+     */
+    setupMobileCanvasPointerInput() {
+        this.mobileCanvas.addEventListener('pointerdown', (event) => {
+            if (this.mode !== 'dialogue') {
+                return
+            }
+
+            const canvasPosition =
+                this.getCanvasPositionFromElementEvent(
+                    event,
+                    this.mobileCanvas
+                )
+
+            const hitArea = this.getMobileDialogueHitAreaAt(
+                canvasPosition?.x,
+                canvasPosition?.y
+            )
+
+            if (!hitArea) {
+                return
+            }
+
+            event.preventDefault()
+
+            this.mobilePointerId = event.pointerId
+            this.mobilePressedChoiceIndex = hitArea.choiceIndex
+
+            this.mobileCanvas.setPointerCapture?.(event.pointerId)
+            this.drawMobileDialogue()
+        })
+
+        this.mobileCanvas.addEventListener('pointerup', (event) => {
+            if (event.pointerId !== this.mobilePointerId) {
+                return
+            }
+
+            const pressedChoiceIndex =
+                this.mobilePressedChoiceIndex
+
+            const canvasPosition =
+                this.getCanvasPositionFromElementEvent(
+                    event,
+                    this.mobileCanvas
+                )
+
+            const hitArea = this.getMobileDialogueHitAreaAt(
+                canvasPosition?.x,
+                canvasPosition?.y
+            )
+
+            this.releaseMobilePointer(event.pointerId)
+
+            if (
+                hitArea &&
+                hitArea.choiceIndex === pressedChoiceIndex
+            ) {
+                this.activateDialogueChoice(pressedChoiceIndex)
+                return
+            }
+
+            this.drawMobileDialogue()
+        })
+
+        this.mobileCanvas.addEventListener('pointercancel', (event) => {
+            if (event.pointerId !== this.mobilePointerId) {
+                return
+            }
+
+            this.releaseMobilePointer(event.pointerId)
+            this.drawMobileDialogue()
+        })
+    }
+
+    /** Convert a DOM event into pixels belonging to one displayed canvas. */
+    getCanvasPositionFromElementEvent(event, canvas) {
+        const rect = canvas.getBoundingClientRect()
+
+        if (
+            rect.width === 0 ||
+            rect.height === 0 ||
+            event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom
+        ) {
+            return null
+        }
+
+        return {
+            x:
+                (event.clientX - rect.left) *
+                (canvas.width / rect.width),
+            y:
+                (event.clientY - rect.top) *
+                (canvas.height / rect.height)
+        }
+    }
+
+    /** Find the mobile card beneath one canvas-space point. */
+    getMobileDialogueHitAreaAt(canvasX, canvasY) {
+        if (
+            !Number.isFinite(canvasX) ||
+            !Number.isFinite(canvasY)
+        ) {
+            return null
+        }
+
+        for (const hitArea of this.mobileDialogueHitAreas) {
+            if (
+                this.isPointInsideHitArea(
+                    canvasX,
+                    canvasY,
+                    hitArea
+                )
+            ) {
+                return hitArea
+            }
+        }
+
+        return null
+    }
+
+    /** Clear the visual press state and release pointer capture safely. */
+    releaseMobilePointer(pointerId) {
+        if (this.mobileCanvas.hasPointerCapture?.(pointerId)) {
+            this.mobileCanvas.releasePointerCapture(pointerId)
+        }
+
+        this.mobilePointerId = null
+        this.mobilePressedChoiceIndex = -1
+    }
+
+    /** Connect the terminal state to the mobile fullscreen canvas switcher. */
+    setFullscreenController(fullscreenController) {
+        this.fullscreenController = fullscreenController
+        this.syncFullscreenCanvas()
+    }
+
+    /** Display dialogue or Signal Trace without changing either canvas layout. */
+    syncFullscreenCanvas() {
+        if (!this.fullscreenController) {
+            return
+        }
+
+        if (this.mode === 'signalTrace') {
+            this.fullscreenController.setActiveCanvas(this.canvas)
+            return
+        }
+
+        this.fullscreenController.setActiveCanvas(this.mobileCanvas)
+    }
+
+    /**
+     * Match the mobile drawing buffer to the fullscreen viewport. CSS pixels
+     * are multiplied by a capped DPR so text remains sharp without allocating
+     * an unnecessarily huge phone canvas.
+     */
+    resizeMobileCanvas(displayedWidth, displayedHeight) {
+        if (displayedWidth <= 0 || displayedHeight <= 0) {
+            return
+        }
+
+        const pixelRatio = Math.min(
+            window.devicePixelRatio || 1,
+            2
+        )
+
+        const bufferWidth = Math.max(
+            1,
+            Math.round(displayedWidth * pixelRatio)
+        )
+
+        const bufferHeight = Math.max(
+            1,
+            Math.round(displayedHeight * pixelRatio)
+        )
+
+        if (
+            this.mobileCanvas.width === bufferWidth &&
+            this.mobileCanvas.height === bufferHeight
+        ) {
+            return
+        }
+
+        this.mobileCanvas.width = bufferWidth
+        this.mobileCanvas.height = bufferHeight
+        this.mobileCtx = this.mobileCanvas.getContext('2d')
+
+        this.drawMobileDialogue()
+    }
+
+    /**
+     * Widen the real Signal Trace drawing buffer to the phone viewport before
+     * the game draws its first screen. Height and all game-space measurements
+     * stay unchanged, so tiles, type, and line work keep their exact styling.
+     */
+    prepareSignalTraceCanvasForFullscreen() {
+        if (!this.fullscreenController) {
+            return
+        }
+
+        const mobileAspect =
+            this.mobileCanvas.width / this.mobileCanvas.height
+
+        if (!Number.isFinite(mobileAspect) || mobileAspect <= 0) {
+            return
+        }
+
+        const signalTraceWidth = Math.round(
+            this.monitorCanvasHeight * mobileAspect
+        )
+
+        if (
+            this.canvas.width === signalTraceWidth &&
+            this.canvas.height === this.monitorCanvasHeight
+        ) {
+            this.signalTraceUsesMobileAspect = true
+            return
+        }
+
+        this.canvas.width = signalTraceWidth
+        this.canvas.height = this.monitorCanvasHeight
+        this.ctx = this.canvas.getContext('2d')
+
+        this.syncSignalTraceDrawingContext()
+        this.signalTraceUsesMobileAspect = true
+        this.texture.needsUpdate = true
+    }
+
+    /** Keep Signal Trace's renderer helpers attached after a canvas resize. */
+    syncSignalTraceDrawingContext() {
+        this.signalTrace.ctx = this.ctx
+
+        if (this.signalTrace.tileRenderer) {
+            this.signalTrace.tileRenderer.ctx = this.ctx
+        }
+
+        if (this.signalTrace.pipeRenderer) {
+            this.signalTrace.pipeRenderer.ctx = this.ctx
+        }
+    }
+
+    /** Restore the monitor texture's original 16:10 drawing buffer. */
+    restoreMonitorCanvasSize() {
+        if (!this.signalTraceUsesMobileAspect) {
+            return
+        }
+
+        this.canvas.width = this.monitorCanvasWidth
+        this.canvas.height = this.monitorCanvasHeight
+        this.ctx = this.canvas.getContext('2d')
+
+        this.syncSignalTraceDrawingContext()
+        this.signalTraceUsesMobileAspect = false
+        this.texture.needsUpdate = true
+    }
+
+    /**
+     * EXIT can leave fullscreen directly from Signal Trace. Restore the normal
+     * monitor canvas before the 3D station becomes visible again.
+     */
+    restoreAfterMobileSignalTraceExit() {
+        if (!this.signalTraceUsesMobileAspect) {
+            return
+        }
+
+        this.mode = 'dialogue'
+        this.signalTrace.isRunning = false
+        this.restoreMonitorCanvasSize()
+        this.returnToMainMenu()
     }
 
     // ==========================================
@@ -590,6 +888,551 @@ export default class TerminalCanvas {
         }
     }
 
+    /**
+     * Draw wrapped text with explicit paragraph breaks for the wide mobile UI.
+     * Rendering stops cleanly at maxY instead of spilling beneath the launcher.
+     */
+    drawMobileWrappedText(
+        ctx,
+        text,
+        startX,
+        startY,
+        maxWidth,
+        lineHeight,
+        maxY
+    ) {
+        const paragraphs = text.split('\n')
+        let currentY = startY
+
+        for (let paragraphIndex = 0;
+            paragraphIndex < paragraphs.length;
+            paragraphIndex++
+        ) {
+            const paragraph = paragraphs[paragraphIndex].trim()
+
+            if (paragraph.length === 0) {
+                currentY += lineHeight * 0.65
+                continue
+            }
+
+            const words = paragraph.split(/\s+/)
+            let line = ''
+
+            for (let wordIndex = 0;
+                wordIndex < words.length;
+                wordIndex++
+            ) {
+                const nextLine = line + words[wordIndex] + ' '
+
+                if (
+                    ctx.measureText(nextLine).width > maxWidth &&
+                    line.length > 0
+                ) {
+                    if (currentY + lineHeight > maxY) {
+                        ctx.fillText('...', startX, currentY)
+                        return currentY
+                    }
+
+                    ctx.fillText(line.trimEnd(), startX, currentY)
+                    line = words[wordIndex] + ' '
+                    currentY += lineHeight
+                }
+                else {
+                    line = nextLine
+                }
+            }
+
+            if (currentY + lineHeight > maxY) {
+                ctx.fillText('...', startX, currentY)
+                return currentY
+            }
+
+            ctx.fillText(line.trimEnd(), startX, currentY)
+            currentY += lineHeight
+        }
+
+        return currentY
+    }
+
+    /** Remove desktop-only keyboard help from the touch presentation. */
+    getMobileDialogueText(node) {
+        let mobileText = node.aiText || ''
+
+        if (this.currentNodeId === 'start') {
+            const keyboardInstructionsStart =
+                mobileText.indexOf('\n\nKEYBOARD:')
+
+            if (keyboardInstructionsStart !== -1) {
+                mobileText = mobileText.slice(
+                    0,
+                    keyboardInstructionsStart
+                )
+            }
+        }
+
+        if (this.currentNodeId === 'controls_terminal') {
+            const touchInstructionsStart =
+                mobileText.indexOf('TOUCH\n')
+
+            if (touchInstructionsStart !== -1) {
+                mobileText = mobileText.slice(
+                    touchInstructionsStart + 'TOUCH\n'.length
+                )
+            }
+        }
+
+        return mobileText
+    }
+
+    /** Reduce one mobile label only when its card is too narrow. */
+    setMobileFittedFont(
+        ctx,
+        text,
+        maxWidth,
+        preferredSize,
+        minimumSize,
+        fontWeight = ''
+    ) {
+        let fontSize = preferredSize
+
+        while (fontSize > minimumSize) {
+            ctx.font = `${fontWeight}${fontSize}px monospace`
+
+            if (ctx.measureText(text).width <= maxWidth) {
+                return fontSize
+            }
+
+            fontSize -= 1
+        }
+
+        ctx.font = `${fontWeight}${minimumSize}px monospace`
+        return minimumSize
+    }
+
+    /** Draw one clearly tappable, restrained mobile dialogue card. */
+    drawMobileDialogueCard(
+        choice,
+        choiceIndex,
+        x,
+        y,
+        width,
+        height,
+        scale
+    ) {
+        const ctx = this.mobileCtx
+        const isKeyboardSelected =
+            choiceIndex === this.dialogueSelectedIndex
+        const isPressed =
+            choiceIndex === this.mobilePressedChoiceIndex
+
+        let background = '#061008'
+        let border = '#087A2C'
+        let textColor = '#00C83A'
+        let railColor = '#087A2C'
+        let lineWidth = Math.max(2, 2 * scale)
+
+        if (isKeyboardSelected) {
+            background = '#07170B'
+            border = '#00C83A'
+            textColor = '#00FF41'
+            railColor = '#00FF41'
+        }
+
+        if (isPressed) {
+            background = '#0B2111'
+            border = '#FFB000'
+            textColor = '#E7FFE9'
+            railColor = '#FFB000'
+            lineWidth = Math.max(3, 3 * scale)
+        }
+
+        ctx.fillStyle = background
+        ctx.fillRect(x, y, width, height)
+
+        ctx.strokeStyle = border
+        ctx.lineWidth = lineWidth
+        ctx.strokeRect(x, y, width, height)
+
+        ctx.fillStyle = railColor
+        ctx.fillRect(x, y, Math.max(5, 6 * scale), height)
+
+        const numberWidth = 54 * scale
+        const numberX = x + 24 * scale
+        const centerY = y + height / 2
+
+        ctx.fillStyle = '#087A2C'
+        ctx.font = `${18 * scale}px monospace`
+        ctx.textBaseline = 'middle'
+        ctx.fillText(
+            String(choiceIndex + 1).padStart(2, '0'),
+            numberX,
+            centerY
+        )
+
+        ctx.fillStyle = textColor
+
+        const labelX = x + numberWidth + 28 * scale
+        const actionWidth = 80 * scale
+        const labelWidth =
+            width - (labelX - x) - actionWidth - 22 * scale
+
+        this.setMobileFittedFont(
+            ctx,
+            choice.text,
+            labelWidth,
+            28 * scale,
+            18 * scale,
+            'bold '
+        )
+
+        ctx.fillText(choice.text, labelX, centerY)
+
+        ctx.fillStyle = '#FFB000'
+        ctx.font = `${15 * scale}px monospace`
+        ctx.textAlign = 'right'
+        ctx.fillText('OPEN >', x + width - 20 * scale, centerY)
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'alphabetic'
+
+        this.mobileDialogueHitAreas.push({
+            choiceIndex,
+            x,
+            y,
+            width,
+            height
+        })
+    }
+
+    /**
+     * Mobile version of the Signal Trace launcher. This changes only the
+     * directory card; the actual Signal Trace renderer remains untouched.
+     */
+    drawMobileSignalTraceLauncher(
+        choiceIndex,
+        x,
+        y,
+        width,
+        height,
+        scale
+    ) {
+        const ctx = this.mobileCtx
+        const isSelected =
+            choiceIndex === this.dialogueSelectedIndex
+        const isPressed =
+            choiceIndex === this.mobilePressedChoiceIndex
+
+        let panelBackground = '#060D08'
+        let moduleGreen = '#087A2C'
+        let launchColor = '#00C83A'
+
+        if (isSelected) {
+            panelBackground = '#07170B'
+            moduleGreen = '#00C83A'
+            launchColor = '#00FF41'
+        }
+
+        if (isPressed) {
+            panelBackground = '#0B2111'
+            moduleGreen = '#FFB000'
+            launchColor = '#FFFFFF'
+        }
+
+        ctx.fillStyle = '#087A2C'
+        ctx.font = `${17 * scale}px monospace`
+        ctx.fillText('AVAILABLE GAME MODULE', x, y - 12 * scale)
+
+        const labelWidth = 250 * scale
+        ctx.fillRect(
+            x + labelWidth,
+            y - 18 * scale,
+            width - labelWidth,
+            Math.max(2, 2 * scale)
+        )
+
+        ctx.fillStyle = panelBackground
+        ctx.fillRect(x, y, width, height)
+
+        ctx.strokeStyle = moduleGreen
+        ctx.lineWidth = Math.max(2, 2 * scale)
+        ctx.strokeRect(x, y, width, height)
+
+        ctx.fillStyle = moduleGreen
+        ctx.fillRect(x, y, Math.max(6, 8 * scale), height)
+
+        const titleX = x + 34 * scale
+        const titleY = y + 52 * scale
+
+        ctx.fillStyle = launchColor
+        this.setMobileFittedFont(
+            ctx,
+            'SIGNAL TRACE // ROUTING PROTOCOL',
+            width * 0.5,
+            34 * scale,
+            22 * scale,
+            'bold '
+        )
+        ctx.fillText(
+            'SIGNAL TRACE // ROUTING PROTOCOL',
+            titleX,
+            titleY
+        )
+
+        ctx.fillStyle = '#FFB000'
+        ctx.font = `${19 * scale}px monospace`
+        ctx.fillText(
+            'INTERACTIVE LOGIC SIMULATION',
+            titleX,
+            titleY + 32 * scale
+        )
+
+        const routeY = y + height - 48 * scale
+        const routeStartX = titleX
+        const routeWidth = Math.min(width * 0.4, 470 * scale)
+
+        ctx.strokeStyle = moduleGreen
+        ctx.lineWidth = Math.max(3, 4 * scale)
+        ctx.beginPath()
+        ctx.moveTo(routeStartX, routeY)
+        ctx.lineTo(routeStartX + routeWidth * 0.28, routeY)
+        ctx.lineTo(
+            routeStartX + routeWidth * 0.28,
+            routeY - 26 * scale
+        )
+        ctx.lineTo(
+            routeStartX + routeWidth * 0.62,
+            routeY - 26 * scale
+        )
+        ctx.lineTo(
+            routeStartX + routeWidth * 0.62,
+            routeY + 10 * scale
+        )
+        ctx.lineTo(routeStartX + routeWidth, routeY + 10 * scale)
+        ctx.stroke()
+
+        const launchWidth = Math.min(390 * scale, width * 0.28)
+        const launchHeight = Math.min(90 * scale, height * 0.52)
+        const launchX = x + width - launchWidth - 30 * scale
+        const launchY = y + (height - launchHeight) / 2
+
+        ctx.strokeStyle = moduleGreen
+        ctx.lineWidth = Math.max(2, 2 * scale)
+        ctx.strokeRect(
+            launchX,
+            launchY,
+            launchWidth,
+            launchHeight
+        )
+
+        ctx.fillStyle = launchColor
+        ctx.font = `bold ${27 * scale}px monospace`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(
+            'TAP TO INITIALIZE',
+            launchX + launchWidth / 2,
+            launchY + launchHeight / 2
+        )
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'alphabetic'
+
+        this.mobileDialogueHitAreas.push({
+            choiceIndex,
+            x,
+            y,
+            width,
+            height
+        })
+    }
+
+    /**
+     * Purpose-built wide terminal directory for phone landscape. Styling is
+     * shared with the monitor UI, but the layout uses the full phone aspect:
+     * readable content on the left and explicit touch cards on the right.
+     */
+    drawMobileDialogue() {
+        if (this.mode !== 'dialogue') {
+            return
+        }
+
+        const ctx = this.mobileCtx
+        const width = this.mobileCanvas.width
+        const height = this.mobileCanvas.height
+
+        if (!ctx || width === 0 || height === 0) {
+            return
+        }
+
+        this.mobileDialogueHitAreas = []
+
+        const node = TerminalTree[this.currentNodeId]
+        const scale = height / 800
+        const marginX = 42 * scale
+        const topMargin = 30 * scale
+
+        ctx.fillStyle = '#050505'
+        ctx.fillRect(0, 0, width, height)
+
+        const ambientGradient = ctx.createRadialGradient(
+            width * 0.18,
+            height * 0.35,
+            0,
+            width * 0.18,
+            height * 0.35,
+            width * 0.72
+        )
+
+        ambientGradient.addColorStop(0, '#06120B')
+        ambientGradient.addColorStop(1, '#050505')
+        ctx.fillStyle = ambientGradient
+        ctx.fillRect(0, 0, width, height)
+
+        if (!node) {
+            ctx.fillStyle = '#00FF41'
+            ctx.font = `${32 * scale}px monospace`
+            ctx.fillText('ERROR: NODE NOT FOUND', marginX, 90 * scale)
+            return
+        }
+
+        ctx.fillStyle = '#00FF41'
+
+        const headerText = node.header || 'TERMINAL'
+        this.setMobileFittedFont(
+            ctx,
+            headerText,
+            width - marginX * 2 - 340 * scale,
+            43 * scale,
+            28 * scale,
+            'bold '
+        )
+        ctx.fillText(headerText, marginX, topMargin + 43 * scale)
+
+        const dividerY = topMargin + 65 * scale
+        ctx.fillStyle = '#00C83A'
+        ctx.fillRect(
+            marginX,
+            dividerY,
+            width - marginX * 2,
+            Math.max(2, 2 * scale)
+        )
+
+        const choices = node.choices || []
+        const mobileDialogueText = this.getMobileDialogueText(node)
+        const signalTraceChoiceIndex = choices.findIndex(
+            (choice) => choice.action === 'startSignalTrace'
+        )
+        const hasSignalTraceLauncher = signalTraceChoiceIndex !== -1
+
+        const contentTop = dividerY + 42 * scale
+        let contentBottom = height - 30 * scale
+
+        let launcherHeight = 0
+        let launcherY = 0
+
+        if (hasSignalTraceLauncher) {
+            launcherHeight = 182 * scale
+            launcherY = height - 28 * scale - launcherHeight
+            contentBottom = launcherY - 40 * scale
+        }
+
+        const availableContentWidth = width - marginX * 2
+        const columnGap = 48 * scale
+        const leftColumnWidth = availableContentWidth * 0.54
+        const rightColumnX =
+            marginX + leftColumnWidth + columnGap
+        const rightColumnWidth =
+            width - marginX - rightColumnX
+
+        ctx.fillStyle = '#087A2C'
+        ctx.font = `${15 * scale}px monospace`
+        ctx.fillText('TERMINAL RECORD', marginX, contentTop)
+        ctx.fillText(
+            'SELECT DESTINATION',
+            rightColumnX,
+            contentTop
+        )
+
+        const sectionTop = contentTop + 30 * scale
+
+        ctx.fillStyle = '#00C83A'
+
+        let bodyFontSize = 26 * scale
+        if (mobileDialogueText.length > 520) {
+            bodyFontSize = 23 * scale
+        }
+        if (mobileDialogueText.length > 760) {
+            bodyFontSize = 20 * scale
+        }
+
+        ctx.font = `${bodyFontSize}px monospace`
+
+        if (mobileDialogueText) {
+            this.drawMobileWrappedText(
+                ctx,
+                mobileDialogueText,
+                marginX,
+                sectionTop + bodyFontSize,
+                leftColumnWidth,
+                bodyFontSize * 1.38,
+                contentBottom
+            )
+        }
+
+        const normalChoices = []
+
+        for (let choiceIndex = 0;
+            choiceIndex < choices.length;
+            choiceIndex++
+        ) {
+            if (choiceIndex === signalTraceChoiceIndex) {
+                continue
+            }
+
+            normalChoices.push({
+                choice: choices[choiceIndex],
+                choiceIndex
+            })
+        }
+
+        if (normalChoices.length > 0) {
+            const cardGap = 10 * scale
+            const cardsHeight = contentBottom - sectionTop
+            const cardHeight =
+                (cardsHeight -
+                    cardGap * (normalChoices.length - 1)) /
+                normalChoices.length
+
+            for (let index = 0;
+                index < normalChoices.length;
+                index++
+            ) {
+                const entry = normalChoices[index]
+                const cardY =
+                    sectionTop + index * (cardHeight + cardGap)
+
+                this.drawMobileDialogueCard(
+                    entry.choice,
+                    entry.choiceIndex,
+                    rightColumnX,
+                    cardY,
+                    rightColumnWidth,
+                    cardHeight,
+                    scale
+                )
+            }
+        }
+
+        if (hasSignalTraceLauncher) {
+            this.drawMobileSignalTraceLauncher(
+                signalTraceChoiceIndex,
+                marginX,
+                launcherY,
+                width - marginX * 2,
+                launcherHeight,
+                scale
+            )
+        }
+    }
+
     // ==========================================
     // 6. RETURN TO ROOT MENU
     // ==========================================
@@ -627,6 +1470,8 @@ export default class TerminalCanvas {
         if (this.mode === 'signalTrace') {
             this.mode = 'dialogue'
             this.signalTrace.isRunning = false
+            this.restoreMonitorCanvasSize()
+            this.syncFullscreenCanvas()
             this.returnToMainMenu()
             return true
         }
@@ -662,7 +1507,9 @@ export default class TerminalCanvas {
 
         if (selectedChoice.action === 'startSignalTrace') {
             this.dialogueSelectedIndex = 0
+            this.prepareSignalTraceCanvasForFullscreen()
             this.signalTrace.startSignalTrace()
+            this.syncFullscreenCanvas()
             this.syncTouchBackButton()
             return true
         }
@@ -879,6 +1726,7 @@ export default class TerminalCanvas {
 
             // Tell Three.js to update the monitor texture.
             this.texture.needsUpdate = true;
+            this.drawMobileDialogue()
             return;
         }
 
@@ -1030,6 +1878,7 @@ export default class TerminalCanvas {
         // This flag tells Three.js:
         // "The texture changed. Upload the new canvas pixels before rendering."
         this.texture.needsUpdate = true;
+        this.drawMobileDialogue()
     }
 }
 
