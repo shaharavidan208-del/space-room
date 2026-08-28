@@ -138,7 +138,6 @@ export default class SignalTraceDragController {
         // Recalculate the signal because removing the pipe may break a path.
         this.signalTrace.updateSignalState()
 
-        console.log("tile in board position: ", this.tile)
         // Immediately redraw so the removed tile appears under the pointer.
         this.signalTrace.drawBootScreen()
 
@@ -299,7 +298,6 @@ export default class SignalTraceDragController {
      * Otherwise returns false
      */
     dropTileAtInventory(canvasX, canvasY) {
-        console.log("Entered canDropTileAtInventory")
         if (this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY) !== null) {
             const index = this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY).index
             const inventoryPipe = this.signalTrace.inventory.createPipeFromSlot(index)

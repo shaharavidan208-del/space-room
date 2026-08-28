@@ -991,12 +991,8 @@ export default class Experience {
 
 
                 // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
-                if (obj.material && obj.material.transmission > 0) {
-                    console.log("Transmission obj: ")
-                    // Force transmission to 0 to cancel the background render pass
+                if (obj.material.transmission > 0) {
                     obj.material.transmission = 0;
-                    // Ensure it falls back to standard, cheap transparency
-                    obj.material.transparent = true;
                     obj.material.needsUpdate = true;
                 }
 
@@ -1024,10 +1020,7 @@ export default class Experience {
 
 
                     if (obj.name === "Mesh043_2") { // windows
-                        obj.material.transparent = true;
-                        obj.material.opacity = 0.08;
-                        obj.material.depthWrite = false;
-                        obj.material.side = THREE.DoubleSide;
+                        obj.visible = false
                     }
 
                     if (obj.name.includes("Mesh0")) { // floor 
@@ -2174,13 +2167,6 @@ if (!isPortrait && !isTouchDevice) {
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
         const isometricDistance = 1.8
 
-        /**
-         * The old camera was offset by 1.8 on X, Y and Z.
-         * This preserves approximately the same total camera distance
-         * while switching to a straight-on view.
-         */
-        const frontDistance =
-            isometricDistance * Math.sqrt(3)
 
         const cameraTarget = new THREE.Vector3(
             lookTarget.x + isometricDistance,
@@ -2469,11 +2455,12 @@ targetFov = ${this.camera.fov.toFixed(2)}
             setStrength(2050, 0)
         }
         const enterFocusMode = (activePoint) => {
+             showItems(false, this.objsToHide)
+              showItems(false, this.floorMeshes)
             this.isFocused = true;
             isTransitioning = true;
-            showItems(false, this.floorMeshes)
-            // controls.enabled = false
-            // trackballControls.enabled = false
+            controls.enabled = false
+            trackballControls.enabled = false
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach(p => {
@@ -2482,8 +2469,12 @@ targetFov = ${this.camera.fov.toFixed(2)}
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === 'RubiksCube') {
+                
                 showItems(false, this.ceilingMeshes)
                 showItems(false, this.monitorMeshes)
+                for(let i = 0; i < this.floorMeshes.length; i++) {
+                    this.floorMeshes[i].receiveShadow = false
+                }
 
                 const cubeIsBusy =
                     this.cube.rotator.isAnimating ||
@@ -2528,7 +2519,7 @@ targetFov = ${this.camera.fov.toFixed(2)}
                  * This creates a straight-on front view.
                  */
                 cameraTarget.set(
-                    lookTarget.x + dynamicDistance,
+                    lookTarget.x - dynamicDistance,
                     lookTarget.y + dynamicDistance,
                     lookTarget.z + dynamicDistance
                 )
@@ -2537,7 +2528,6 @@ targetFov = ${this.camera.fov.toFixed(2)}
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === 'Terminal') {
                 this.terminalGlitchUniforms.strength.value = 1
-                showItems(false, this.objsToHide)
                 showItems(false, this.ceilingMeshes)
                 playTerminalShaderGlitch()
                 lookTarget.copy(activePoint.position.clone());
@@ -3167,6 +3157,11 @@ document
             });
         }
 
+        // stats
+        const stats = new Stats()
+        stats.showPanel(0)
+        document.body.appendChild(stats.dom)
+
 
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
@@ -3211,6 +3206,8 @@ document
             const delta = timer.getDelta()
             this.updateSecurityCameraTracking(delta)
             this.CubeInput.update(delta)
+
+            stats.update()
 
             this.loadingScreen.update(delta)
 

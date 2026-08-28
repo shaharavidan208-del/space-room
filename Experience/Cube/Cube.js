@@ -35,12 +35,12 @@ const SCRAMBLE_LAYERS = [-1, 1];
 // Color palette
 // Green replaced with purple, standard red/orange shifted for better distinction.
 const colorMap = {
-    'right': 0xD50032, // strong red
-    'left': 0xFFFFFF, // white
-    'top': 0xFFD500, // yellow
-    'bottom': 0x0033A0, // deep blue
-    'front': 0xE45C00, // strong orange
-    'back': 0x6E1F7A, // purple (replaces green)
+    'right': 0x00A651, // green
+    'left': 0x0033A0, // deep blue
+    'top': 0xD50032, // red
+    'bottom': 0xE45C00, // strong orange
+    'front': 0xFFFFFF, // white   
+    'back': 0xFFD500, // yellow
 };
 
 

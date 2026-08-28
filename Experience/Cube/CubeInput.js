@@ -441,8 +441,6 @@ if (this.dragMode === "cube") {
 
                 // Calculate the exact X, Y, and Z distances the mouse moved in Local Space
                 this.dragDelta = this.currentDragLocal.clone().sub(this.startDragLocal)
-                console.log("drag delta: ", this.dragDelta)
-                console.log("local normal: ", this.hitLocalNormal)
                 const dragDistance = this.dragDelta.length();
 
                 /* The Cross Product: 
@@ -451,7 +449,6 @@ if (this.dragMode === "cube") {
                    3. Result: A Vector3 pointing perpendicular to both, containing the exact 
                       drag distance inside one of its axes (x, y, or z). */
                 const rotationVector = this.hitLocalNormal.clone().cross(this.dragDelta);
-                console.log("rotation vector: ", rotationVector)
                 // Phase 1: Determine Rotation Intent (Which layer are we spinning?)
                 if (!this.axisLocked && dragDistance > 0.03) {
                     this.dragMode = "layer"
@@ -461,7 +458,6 @@ if (this.dragMode === "cube") {
                     this.rotationAxis = axes.reduce((champion, challenger) => {
                         return Math.abs(rotationVector[champion]) > Math.abs(rotationVector[challenger]) ? champion : challenger;
                     });
-                    console.log("rotation axis: ", this.rotationAxis)
 
                     this.direction = Math.sign(rotationVector[this.rotationAxis]); // using the rotation axis that we determined, check if the direction is positive or negative
                     this.layerIndex = Math.round(this.hitCubie.position[this.rotationAxis] / this.cube.pieceSize)
@@ -484,7 +480,6 @@ if (this.dragMode === "cube") {
 
                     // 2. DIRECTION: Use 3D cross product exclusively for logic sign (1 or -1)
                     const frameSign = Math.sign(frameRotationVector[this.rotationAxis]); // Math.sign() returns 1 for positive numbers, -1 for negative numbers, and 0 for zero. This gives us the direction of rotation based on the cross product.
-                    console.log("frame sign: ", frameSign)
                     // 3. SYNTHESIS: Speed driven by 2D, Direction driven by 3D
                     const rotationAmount = screenDistance * frameSign * 0.010;
 

@@ -114,7 +114,6 @@ export default class SignalTraceInventory {
                 this.items[i].drawPipe = false
             }
         }
-        console.log(this.items)
     }
 
 
@@ -135,7 +134,6 @@ export default class SignalTraceInventory {
         this.drawPanelTitle()
         for (let i = 0; i < this.items.length; i++) {
                 if(this.items[i].drawPipe) {
-                    console.log(this.items[i])
                     this.drawSlot(i)
                 }
     }
@@ -154,9 +152,6 @@ export default class SignalTraceInventory {
 
         ctx.save()
         this.columns = Math.ceil(this.slotCount / 4)
-        console.log("this.columns: ", this.columns)
-        console.log("this.columnGap ", this.columnGap)
-        console.log("this.slotsize ", this.slotSize)
         this.panelWidth = (this.slotSize + this.slotGap) * this.columns + 15
         ctx.fillStyle = "rgba(0, 255, 65, 0.025)"
         ctx.fillRect(this.panelX - 30, this.panelY, this.panelWidth, this.panelHeight)
@@ -208,7 +203,6 @@ export default class SignalTraceInventory {
          * The slot still exists, but the player cannot pick it up.
          */
         if (this.items[index].count <= 0) {
-            console.log()
             ctx.globalAlpha = 0.28
         }
 
@@ -225,7 +219,6 @@ export default class SignalTraceInventory {
         ctx.lineWidth = 5
         ctx.strokeRect(x, y, this.slotSize, this.slotSize)
 
-        console.log("item connections before drawing it : " , this.items[index].pipe.connections)
         this.signalTrace.pipeRenderer.drawPipe(x, y, this.items[index].pipe.connections)
 
         /**
@@ -383,7 +376,6 @@ export default class SignalTraceInventory {
      * The index of the slot to decrease.
      */
     changeSlotCount(index, change) {
-        console.log("index and change: ", index, change)
         this.items[index].count += change
     }
 }

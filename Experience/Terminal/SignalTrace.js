@@ -92,9 +92,6 @@ export default class SignalTrace {
         * Whether the current pipe layout creates
         * a valid signal path from SRC to ARC.
         */
-        console.log("SignalTrace object ", this)
-        console.log("Level object ", this.level)
-        console.log("Drag controller object ", this.dragController)
         this.signalConnected;
 
         /**
@@ -271,7 +268,6 @@ export default class SignalTrace {
                  */
                 if (tile.pipe) {
                     if (tile.pipe.connections) {
-                        console.log("tile in placehloder: ", tile)
                         this.pipeRenderer.drawPipe(x, y, tile.pipe.connections)
                     }
                 }

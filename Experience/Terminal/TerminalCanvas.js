@@ -1626,7 +1626,6 @@ export default class TerminalCanvas {
     // Get the current node from the terminal tree.
     // currentNodeId is the "address" of the current terminal screen.
     const currentNode = TerminalTree[this.currentNodeId];
-    console.log(currentNode)
     // Safety check.
     // If currentNodeId points to a missing node, redraw will show the error screen.
     // We return here so key input doesn't crash when trying to read choices.
