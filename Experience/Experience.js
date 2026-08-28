@@ -974,7 +974,7 @@ export default class Experience {
 
         this.objsToHide = [] // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load('/models/Untitled3.glb', (gltf) => {
+        gltfLoader.load('/models/Untitled4.glb', (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
