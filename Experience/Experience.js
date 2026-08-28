@@ -873,9 +873,11 @@ export default class Experience {
              * This controls whether the bed contributes to the
              * directional light's shadow map.
              */
+            instancedMesh.visible = sourceMesh.visible
             instancedMesh.castShadow = false
             instancedMesh.receiveShadow =
                 sourceMesh.receiveShadow
+
 
 
             const instanceMatrix = new THREE.Matrix4();
@@ -905,6 +907,7 @@ export default class Experience {
             instancedMesh.computeBoundingSphere();
 
             root.add(instancedMesh);
+            this.floorMeshes.push(instancedMesh)
 
             for (const mesh of matches) {
                 mesh.removeFromParent();
@@ -954,7 +957,7 @@ export default class Experience {
         this.monitorMeshes = []
         this.ceilingMeshes = [];
         this.glbDebugMeshes = [];
-
+        this.floorMeshes = [];
         let walls;
         this.monitorGlass;
         let monitorFrame;
@@ -1032,9 +1035,11 @@ export default class Experience {
                     }
 
 
+
                     if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Machine") || obj.name.includes("Shelf") || obj.name.includes("Cube007")) {
                         obj.castShadow = true
                     }
+                    
 
                     if (obj.name === "Sci-fi_Bed2") {
                         obj.receiveShadow = true
@@ -1397,7 +1402,8 @@ const usesMobileTerminalFullscreen = isTouchDevice
                     renderer.shadowMap.autoUpdate = false
                     trackballControls.enabled = true
                     controls.enabled = true
-
+                    renderer.info.autoReset = false;
+                    console.log("renderer: ", renderer.info)
 
                 }
             })
@@ -2037,6 +2043,7 @@ if (!isPortrait && !isTouchDevice) {
 
 
 
+
         console.log({
             forcedColors:
                 window.matchMedia('(forced-colors: active)').matches,
@@ -2464,8 +2471,9 @@ targetFov = ${this.camera.fov.toFixed(2)}
         const enterFocusMode = (activePoint) => {
             this.isFocused = true;
             isTransitioning = true;
-            controls.enabled = false
-            trackballControls.enabled = false
+            showItems(false, this.floorMeshes)
+            // controls.enabled = false
+            // trackballControls.enabled = false
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach(p => {
@@ -2476,7 +2484,6 @@ targetFov = ${this.camera.fov.toFixed(2)}
             if (activePoint.name === 'RubiksCube') {
                 showItems(false, this.ceilingMeshes)
                 showItems(false, this.monitorMeshes)
-
 
                 const cubeIsBusy =
                     this.cube.rotator.isAnimating ||
@@ -3187,6 +3194,7 @@ document
         });
 
         const tick = (timestamp) => {
+            renderer.info.reset();
             controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
             if (!this.terminalFullscreen?.shouldPauseScene) {
     effectComposer.render()

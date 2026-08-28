@@ -150,7 +150,7 @@ export default class SignalTraceInventory {
     drawPanelBackground() {
         const ctx = this.ctx
         this.rows = 4
-        this.panelHeight = (this.slotSize + this.slotGap) * this.rows
+        this.panelHeight = (this.slotSize + this.slotGap) * 4.25
 
         ctx.save()
         this.columns = Math.ceil(this.slotCount / 4)
@@ -315,6 +315,8 @@ export default class SignalTraceInventory {
         // The pointer was not inside any inventory slot.
         return null
     }
+
+    
 
     /**
      * Checks whether an inventory slot can be picked up.
