@@ -1,416 +1,32 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import Stats from 'three/examples/jsm/libs/stats.module.js';
-import SupernovaRemnant from './SupernovaRemnant.js'
-import GUI from 'lil-gui';
-import Cube from './Cube/Cube.js'
-import CubeInput from './Cube/CubeInput.js'
-import gsap from 'gsap'
-import TerminalCanvas from './Terminal/TerminalCanvas.js';
-import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { Timer } from "three";
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import LoadingScreen from './LoadingScreen.js'
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js"
-import { EXRLoader } from 'three/addons/loaders/EXRLoader.js'
-import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js'
-import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
-import TerminalFullscreen from './TerminalFullscreen.js'
-
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
+import SupernovaRemnant from "./SupernovaRemnant.js";
+import Cube from "./Cube/Cube.js";
+import CubeInput from "./Cube/CubeInput.js";
+import TerminalCanvas from "./Terminal/TerminalCanvas.js";
+import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import LoadingScreen from "./LoadingScreen.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { EXRLoader } from "three/addons/loaders/EXRLoader.js";
+import { FXAAPass } from "three/addons/postprocessing/FXAAPass.js";
+import TerminalFullscreen from "./TerminalFullscreen.js";
 
 export default class Experience {
-    /**
-     * Sets up the station security camera so it can rotate
-     * horizontally around the "camera base" mesh.
-     *
-     * @param {THREE.Object3D} root The loaded station model.
-     */
-    setupSecurityCameraTracking(root) {
-        const securityCamera =
-            root.getObjectByName('camera')
-
-        const cameraBase =
-            root.getObjectByName('camera_base')
-
-        if (!securityCamera || !cameraBase) {
-            console.warn(
-                'Security camera or camera base not found.'
-            )
-
-            return
-        }
-
-        root.updateMatrixWorld(true)
-
-        const originalParent =
-            securityCamera.parent
-
-        /**
-         * Find the base/pivot position in world space.
-         */
-        const baseWorldPosition =
-            new THREE.Vector3()
-
-        cameraBase.getWorldPosition(
-            baseWorldPosition
-        )
-
-        /**
-         * Convert that position into the camera parent's
-         * local coordinate space.
-         */
-        const pivotPosition =
-            baseWorldPosition.clone()
-
-        originalParent.worldToLocal(
-            pivotPosition
-        )
-
-        const pivot =
-            new THREE.Group()
-
-        pivot.name =
-            'SecurityCameraPivot'
-
-        pivot.position.copy(
-            pivotPosition
-        )
-
-        originalParent.add(pivot)
-
-        /**
-         * Keep the camera exactly where it currently is
-         * while making it a child of the pivot.
-         */
-        pivot.attach(
-            securityCamera
-        )
-
-        /**
-         * Find the center of the camera body.
-         *
-         * This tells us which horizontal direction the camera
-         * is currently extending away from the base.
-         */
-        const cameraBounds =
-            new THREE.Box3()
-                .setFromObject(
-                    securityCamera
-                )
-
-        const cameraCenterWorld =
-            new THREE.Vector3()
-
-        cameraBounds.getCenter(
-            cameraCenterWorld
-        )
-
-        const cameraCenterLocal =
-            cameraCenterWorld.clone()
-
-        originalParent.worldToLocal(
-            cameraCenterLocal
-        )
-
-        /**
-         * Horizontal angle of the camera's original pose.
-         *
-         * We use this as our zero/reference angle.
-         */
-        const cameraDirectionX =
-            cameraCenterLocal.x -
-            pivot.position.x
-
-        const cameraDirectionY =
-            cameraCenterLocal.y -
-            pivot.position.y
-
-        const initialDirection =
-            Math.atan2(
-                cameraDirectionY,
-                cameraDirectionX
-            )
-
-        this.securityCameraTracking = {
-            pivot,
-            initialDirection,
-            trackingSpeed: 4.5,
-
-            viewerWorldPosition:
-                new THREE.Vector3(),
-
-            viewerLocalPosition:
-                new THREE.Vector3()
-        }
-    }
-
-    /**
-     * Rotates the station security camera horizontally
-     * toward the user's current perspective.
-     *
-     * Only the Y axis is modified.
-     *
-     * @param {number} delta Seconds since the previous frame.
-     */
-    updateSecurityCameraTracking(delta) {
-        const tracking =
-            this.securityCameraTracking
-
-        if (!tracking) {
-            return
-        }
-
-        const {
-            pivot,
-            initialDirection,
-            trackingSpeed,
-            viewerWorldPosition,
-            viewerLocalPosition
-        } = tracking
-
-        /**
-         * Get the user's camera position.
-         */
-        this.camera.getWorldPosition(
-            viewerWorldPosition
-        )
-
-        /**
-         * Convert it into the same coordinate space
-         * that the security-camera pivot uses.
-         */
-        viewerLocalPosition.copy(
-            viewerWorldPosition
-        )
-
-        pivot.parent.worldToLocal(
-            viewerLocalPosition
-        )
-
-        const directionX =
-            viewerLocalPosition.x -
-            pivot.position.x
-
-        const directionY =
-            viewerLocalPosition.y -
-            pivot.position.y
-
-        const targetDirection =
-            Math.atan2(
-                directionY,
-                directionX
-            )
-
-        let targetRotationZ =
-            targetDirection -
-            initialDirection
-
-        /**
-         * Normalize to -PI -> PI first.
-         */
-        targetRotationZ =
-            Math.atan2(
-                Math.sin(targetRotationZ),
-                Math.cos(targetRotationZ)
-            )
-
-        /**
-         * Mechanical limits: maximum 90 degrees
-         * in either direction.
-         */
-        targetRotationZ =
-            THREE.MathUtils.clamp(
-                targetRotationZ,
-                -Math.PI / 2,
-                Math.PI / 2
-            )
-
-
-
-        const angleDifference =
-            Math.atan2(
-                Math.sin(
-                    targetRotationZ -
-                    pivot.rotation.z
-                ),
-                Math.cos(
-                    targetRotationZ -
-                    pivot.rotation.z
-                )
-            )
-
-        const smoothing =
-            1 - Math.exp(
-                -trackingSpeed * delta
-            )
-
-        pivot.rotation.z +=
-            angleDifference *
-            smoothing
-    }
-
-    loadAssets(renderer) {
-        this.loadModel(renderer)
-        this.loadEnvironmentMap()
+    loadAssets() {
+        this.loadModel();
+        this.loadEnvironmentMap();
     }
 
     setupLighting(renderer) {
-        RectAreaLightUniformsLib.init()
+        RectAreaLightUniformsLib.init();
 
-        renderer.toneMappingExposure = 1.35
-
-        /**
-         * Adds a color controller for any THREE.Color property.
-         */
-        const addColorController = (
-            folder,
-            object,
-            property,
-            label
-        ) => {
-            const colorSettings = {
-                color: `#${object[property].getHexString()}`
-            }
-
-            folder
-                .addColor(colorSettings, 'color')
-                .name(label)
-                .onChange((value) => {
-                    object[property].set(value)
-                })
-        }
-
-        /**
-         * Adds position or target controls for a Vector3.
-         */
-        const addVector3Controls = (
-            parentFolder,
-            label,
-            vector,
-            onChange
-        ) => {
-            const folder =
-                parentFolder.addFolder(label)
-
-            folder
-                .add(vector, 'x', -50, 50, 0.1)
-                .name('X')
-                .onChange(onChange)
-
-            folder
-                .add(vector, 'y', -50, 50, 0.1)
-                .name('Y')
-                .onChange(onChange)
-
-            folder
-                .add(vector, 'z', -50, 50, 0.1)
-                .name('Z')
-                .onChange(onChange)
-
-            return folder
-        }
-
-        /**
-         * Adds the complete GUI for a RectAreaLight.
-         */
-        const addRectAreaLightGUI = (
-            parentFolder,
-            label,
-            light,
-            target
-        ) => {
-            const folder =
-                parentFolder.addFolder(label)
-
-            const updateDirection = () => {
-                light.lookAt(target)
-            }
-
-            addColorController(
-                folder,
-                light,
-                'color',
-                'Color'
-            )
-
-            folder
-                .add(light, 'intensity', 0, 30, 0.05)
-                .name('Intensity')
-
-            folder
-                .add(light, 'width', 0.1, 50, 0.1)
-                .name('Width')
-
-            folder
-                .add(light, 'height', 0.1, 30, 0.1)
-                .name('Height')
-
-            folder
-                .add(light, 'visible')
-                .name('Visible')
-
-            addVector3Controls(
-                folder,
-                'Position',
-                light.position,
-                updateDirection
-            )
-
-            addVector3Controls(
-                folder,
-                'Target',
-                target,
-                updateDirection
-            )
-        }
-
-        /**
-         * Adds the complete GUI for a PointLight.
-         */
-        const addPointLightGUI = (
-            parentFolder,
-            label,
-            light
-        ) => {
-            const folder =
-                parentFolder.addFolder(label)
-
-            addColorController(
-                folder,
-                light,
-                'color',
-                'Color'
-            )
-
-            folder
-                .add(light, 'intensity', 0, 30, 0.05)
-                .name('Intensity')
-
-            folder
-                .add(light, 'distance', 0, 50, 0.1)
-                .name('Distance')
-
-            folder
-                .add(light, 'decay', 0, 4, 0.05)
-                .name('Decay')
-
-            folder
-                .add(light, 'visible')
-                .name('Visible')
-
-            addVector3Controls(
-                folder,
-                'Position',
-                light.position,
-                () => { }
-            )
-        }
+        renderer.toneMappingExposure = 1.35;
 
         /**
          * STATION BASE FILL
@@ -418,15 +34,13 @@ export default class Experience {
          * Provides broad visibility and prevents unlit geometry from
          * disappearing into complete darkness.
          */
-        const stationBaseFillLight =
-            new THREE.HemisphereLight(
-                0xec5555,
-                0x164574,
-                1.61
-            )
+        const stationBaseFillLight = new THREE.HemisphereLight(
+            0xec5555,
+            0x164574,
+            1.61,
+        );
 
-        stationBaseFillLight.name =
-            'StationBaseFillLight'
+        stationBaseFillLight.name = "StationBaseFillLight";
 
         /**
          * STATION MAIN LIGHT
@@ -434,48 +48,30 @@ export default class Experience {
          * This used to be called novaLightMain. It now provides the
          * station's dominant cool directional illumination.
          */
-        const stationMainLight =
-            new THREE.DirectionalLight(
-                0x8a7575,
-                16.15
-            )
+        const stationMainLight = new THREE.DirectionalLight(0x8a7575, 16.15);
 
-        stationMainLight.name =
-            'StationMainLight'
+        stationMainLight.name = "StationMainLight";
 
-        stationMainLight.position.set(
-            0,
-            9.2,
-            -6.7
-        )
+        stationMainLight.position.set(0, 9.2, -6.7);
 
-        stationMainLight.target.position.set(
-            0,
-            -3.2,
-            -5.6
-        )
+        stationMainLight.target.position.set(0, -3.2, -5.6);
 
-        stationMainLight.castShadow = true
+        stationMainLight.castShadow = true;
 
+        stationMainLight.shadow.mapSize.set(512, 512);
 
-        stationMainLight.shadow.mapSize.set(
-            512,
-            512
-        )
+        stationMainLight.shadow.camera.left = -12;
+        stationMainLight.shadow.camera.right = 12;
+        stationMainLight.shadow.camera.top = 10;
+        stationMainLight.shadow.camera.bottom = -10;
+        stationMainLight.shadow.camera.near = 0.1;
+        stationMainLight.shadow.camera.far = 500;
 
-        stationMainLight.shadow.camera.left = -12
-        stationMainLight.shadow.camera.right = 12
-        stationMainLight.shadow.camera.top = 10
-        stationMainLight.shadow.camera.bottom = -10
-        stationMainLight.shadow.camera.near = 0.1
-        stationMainLight.shadow.camera.far = 500
+        stationMainLight.shadow.normalBias = 0.01;
+        stationMainLight.shadow.bias = 0;
 
-        stationMainLight.shadow.normalBias = 0.01
-        stationMainLight.shadow.bias = 0
-
-        stationMainLight.shadow.radius = 1
-        stationMainLight.shadow.camera
-            .updateProjectionMatrix()
+        stationMainLight.shadow.radius = 1;
+        stationMainLight.shadow.camera.updateProjectionMatrix();
 
         /**
          * NOVA FLOOR SPILL
@@ -483,56 +79,36 @@ export default class Experience {
          * This used to be called windowBounceLight. It now creates the
          * subtle orange illumination visible across the floor.
          */
-        const novaFloorSpillLight =
-            new THREE.RectAreaLight(
-                0xff4400,
-                1.6,
-                7.1,
-                3
-            )
+        const novaFloorSpillLight = new THREE.RectAreaLight(
+            0xff4400,
+            1.6,
+            7.1,
+            3,
+        );
 
-        novaFloorSpillLight.name =
-            'NovaFloorSpillLight'
+        novaFloorSpillLight.name = "NovaFloorSpillLight";
 
-        novaFloorSpillLight.position.set(
-            0,
-            -4.9,
-            -19
-        )
+        novaFloorSpillLight.position.set(0, -4.9, -19);
 
-        const novaFloorSpillTarget =
-            new THREE.Vector3(
-                0,
-                5,
-                0
-            )
+        const novaFloorSpillTarget = new THREE.Vector3(0, 5, 0);
 
-        novaFloorSpillLight.lookAt(
-            novaFloorSpillTarget
-        )
-
+        novaFloorSpillLight.lookAt(novaFloorSpillTarget);
 
         /**
          * TERMINAL SIDE LIGHT
          */
-        const terminalSideLight =
-            new THREE.PointLight(
-                0x186a72,
-                15.15,
-                26.7,
-                0.8
-            )
+        const terminalSideLight = new THREE.PointLight(
+            0x186a72,
+            15.15,
+            26.7,
+            0.8,
+        );
 
-        terminalSideLight.name =
-            'TerminalSideLight'
+        terminalSideLight.name = "TerminalSideLight";
 
-        terminalSideLight.decay = 1.15
+        terminalSideLight.decay = 1.15;
 
-        terminalSideLight.position.set(
-            2.9,
-            1.2,
-            -3.9
-        )
+        terminalSideLight.position.set(2.9, 1.2, -3.9);
 
         /**
          * Add every active light and the directional-light target.
@@ -542,8 +118,8 @@ export default class Experience {
             stationMainLight,
             stationMainLight.target,
             novaFloorSpillLight,
-            terminalSideLight
-        )
+            terminalSideLight,
+        );
 
         /**
          * Keep references available for other systems if needed later.
@@ -552,286 +128,8 @@ export default class Experience {
             stationBaseFillLight,
             stationMainLight,
             novaFloorSpillLight,
-            terminalSideLight
-        }
-
-        /**
-         * LIGHTING GUI
-         */
-        const lightingFolder =
-            this.gu.addFolder('Lighting')
-
-        /**
-         * Scene and HDR controls.
-         */
-        const sceneFolder =
-            lightingFolder.addFolder('Scene / HDR')
-
-        sceneFolder
-            .add(
-                this.scene,
-                'backgroundIntensity',
-                0,
-                20,
-                0.05
-            )
-            .name('Background Intensity')
-            .listen()
-
-        sceneFolder
-            .add(
-                this.scene,
-                'environmentIntensity',
-                0,
-                3,
-                0.01
-            )
-            .name('Environment Intensity')
-            .listen()
-
-        sceneFolder
-            .add(
-                this.scene,
-                'backgroundBlurriness',
-                0,
-                1,
-                0.01
-            )
-            .name('Background Blur')
-            .listen()
-
-        sceneFolder
-            .add(
-                renderer,
-                'toneMappingExposure',
-                0.1,
-                3,
-                0.01
-            )
-            .name('Exposure')
-            .listen()
-
-        /**
-         * Station base-fill controls.
-         */
-        const baseFillFolder =
-            lightingFolder.addFolder(
-                'Station Base Fill'
-            )
-
-        addColorController(
-            baseFillFolder,
-            stationBaseFillLight,
-            'color',
-            'Sky Color'
-        )
-
-        addColorController(
-            baseFillFolder,
-            stationBaseFillLight,
-            'groundColor',
-            'Ground Color'
-        )
-
-        baseFillFolder
-            .add(
-                stationBaseFillLight,
-                'intensity',
-                0,
-                5,
-                0.01
-            )
-            .name('Intensity')
-
-        baseFillFolder
-            .add(
-                stationBaseFillLight,
-                'visible'
-            )
-            .name('Visible')
-
-        /**
-         * Station directional-light controls.
-         */
-        const stationMainFolder =
-            lightingFolder.addFolder(
-                'Station Main Light'
-            )
-
-        addColorController(
-            stationMainFolder,
-            stationMainLight,
-            'color',
-            'Color'
-        )
-
-        stationMainFolder
-            .add(
-                stationMainLight,
-                'intensity',
-                0,
-                30,
-                0.05
-            )
-            .name('Intensity')
-
-        stationMainFolder
-            .add(
-                stationMainLight,
-                'visible'
-            )
-            .name('Visible')
-
-        stationMainFolder
-            .add(
-                stationMainLight,
-                'castShadow'
-            )
-            .name('Cast Shadow')
-
-        addVector3Controls(
-            stationMainFolder,
-            'Position',
-            stationMainLight.position,
-            () => { }
-        )
-
-        addVector3Controls(
-            stationMainFolder,
-            'Target',
-            stationMainLight.target.position,
-            () => { }
-        )
-
-        /**
-         * Shadow controls.
-         */
-        const shadowFolder =
-            stationMainFolder.addFolder('Shadow')
-
-        const updateShadowCamera = () => {
-            stationMainLight.shadow.camera
-                .updateProjectionMatrix()
-        }
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow,
-                'normalBias',
-                -0.2,
-                0.2,
-                0.001
-            )
-            .name('Normal Bias')
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow,
-                'bias',
-                -0.01,
-                0.01,
-                0.0001
-            )
-            .name('Bias')
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'near',
-                0.1,
-                20,
-                0.1
-            )
-            .name('Near')
-            .onChange(updateShadowCamera)
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'far',
-                10,
-                1000,
-                1
-            )
-            .name('Far')
-            .onChange(updateShadowCamera)
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'left',
-                -50,
-                0,
-                0.1
-            )
-            .name('Left')
-            .onChange(updateShadowCamera)
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'right',
-                0,
-                50,
-                0.1
-            )
-            .name('Right')
-            .onChange(updateShadowCamera)
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'top',
-                0,
-                50,
-                0.1
-            )
-            .name('Top')
-            .onChange(updateShadowCamera)
-
-        shadowFolder
-            .add(
-                stationMainLight.shadow.camera,
-                'bottom',
-                -50,
-                0,
-                0.1
-            )
-            .name('Bottom')
-            .onChange(updateShadowCamera)
-
-        /**
-         * Local area-light controls.
-         */
-        const areaLightsFolder =
-            lightingFolder.addFolder(
-                'Local Area Lights'
-            )
-
-        addRectAreaLightGUI(
-            areaLightsFolder,
-            'Nova Floor Spill',
-            novaFloorSpillLight,
-            novaFloorSpillTarget
-        )
-
-
-        /**
-         * Terminal-light controls.
-         */
-        const terminalLightsFolder =
-            lightingFolder.addFolder(
-                'Terminal Lights'
-            )
-
-
-        addPointLightGUI(
-            terminalLightsFolder,
-            'Terminal Side Light',
-            terminalSideLight
-        )
-
-        lightingFolder.open()
+            terminalSideLight,
+        };
     }
     instanceRepeatedMeshes(root, meshNames) {
         root.updateMatrixWorld(true);
@@ -864,7 +162,7 @@ export default class Experience {
             const instancedMesh = new THREE.InstancedMesh(
                 sourceMesh.geometry,
                 sourceMesh.material,
-                matches.length
+                matches.length,
             );
 
             instancedMesh.name = `${meshName}_Instanced`;
@@ -873,28 +171,18 @@ export default class Experience {
              * This controls whether the bed contributes to the
              * directional light's shadow map.
              */
-            instancedMesh.visible = sourceMesh.visible
-            instancedMesh.castShadow = false
-            instancedMesh.receiveShadow =
-                sourceMesh.receiveShadow
-
-
+            instancedMesh.visible = sourceMesh.visible;
+            instancedMesh.castShadow = false;
+            instancedMesh.receiveShadow = sourceMesh.receiveShadow;
 
             const instanceMatrix = new THREE.Matrix4();
 
-            for (
-                let index = 0;
-                index < matches.length;
-                index++
-            ) {
+            for (let index = 0; index < matches.length; index++) {
                 instanceMatrix
                     .copy(inverseRootMatrix)
                     .multiply(matches[index].matrixWorld);
 
-                instancedMesh.setMatrixAt(
-                    index,
-                    instanceMatrix
-                );
+                instancedMesh.setMatrixAt(index, instanceMatrix);
             }
 
             instancedMesh.instanceMatrix.needsUpdate = true;
@@ -907,22 +195,17 @@ export default class Experience {
             instancedMesh.computeBoundingSphere();
 
             root.add(instancedMesh);
-            this.floorMeshes.push(instancedMesh)
+            this.floorMeshes.push(instancedMesh);
 
             for (const mesh of matches) {
                 mesh.removeFromParent();
             }
-
-            console.log(
-                `Instanced ${matches.length} copies of ${meshName}`,
-                instancedMesh.boundingSphere
-            );
         }
 
         root.updateMatrixWorld(true);
     }
 
-    loadModel(renderer) {
+    loadModel() {
         const hotspotOccluderNames = new Set([
             "Cylinder002",
             "Cylinder003",
@@ -941,10 +224,8 @@ export default class Experience {
             "Wall_mesh",
             "Wall_mesh2",
             "Circle013_1",
-            "Occluder_Wall"
-
+            "Occluder_Wall",
         ]); // set of names for meshes that should be used as occluders for hotspots
-
 
         const shouldAddHotspotOccluder = (obj) => {
             if (hotspotOccluderNames.has(obj.name)) {
@@ -954,43 +235,41 @@ export default class Experience {
             return false;
         };
 
-        this.monitorMeshes = []
+        this.monitorMeshes = [];
         this.ceilingMeshes = [];
-        this.glbDebugMeshes = [];
         this.floorMeshes = [];
-        let walls;
         this.monitorGlass;
-        let monitorFrame;
         this.terminalPosition;
 
-        this.objectsArr = []
+        this.objectsArr = [];
 
+        const dracoLoader = new DRACOLoader(this.loadingManager);
+        dracoLoader.setDecoderPath("/draco/"); // Set the path to the Draco decoder files
+        const gltfLoader = new GLTFLoader(this.loadingManager);
+        gltfLoader.setDRACOLoader(dracoLoader);
 
-        const dracoLoader = new DRACOLoader(this.loadingManager)
-        dracoLoader.setDecoderPath('/draco/') // Set the path to the Draco decoder files
-        this.loader = new HDRLoader(this.loadingManager)
-        const gltfLoader = new GLTFLoader(this.loadingManager)
-        gltfLoader.setDRACOLoader(dracoLoader)
+        this.objsToHide = []; // Store meshes that should be hidden when the terminal is focused on
 
-        this.objsToHide = [] // Store meshes that should be hidden when the terminal is focused on
-
-        gltfLoader.load('/models/Untitled4.glb', (gltf) => {
+        gltfLoader.load("/models/sceneOptimized3.glb", (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
                 }
 
-                if (obj.name.includes("camera"))
-                    console.log("Camera mesh found:", obj.name, obj)
+                if (
+                    !obj.name.includes("Mesh043") &&
+                    !obj.name.includes("Box00") &&
+                    !obj.name.includes("Auto") &&
+                    !obj.name.includes("Cube_Screen") &&
+                    !obj.name.includes("Cube007") &&
+                    !obj.name.includes("spaceship-window") &&
+                    !obj.name.includes("Occluder") &&
+                    !obj.name.includes("Mesh009_1") &&
+                    !obj.material.name.includes("IsolatedGlass")
+                )
+                    this.objsToHide.push(obj);
 
-                if (!obj.name.includes("Mesh043") && !obj.name.includes("Box00") && !obj.name.includes("Auto") && !obj.name.includes("Cube_Screen") && !obj.name.includes("Cube007") && !obj.name.includes("spaceship-window-side001") && !obj.name.includes("Occluder"))
-                    this.objsToHide.push(obj)
-
-
-                this.glbDebugMeshes.push(obj);
-
-
-                // KILL THE DOUBLE-RENDER TRANSMISSION PASS 
+                // KILL THE DOUBLE-RENDER TRANSMISSION PASS
                 if (obj.material.transmission > 0) {
                     obj.material.transmission = 0;
                     obj.material.needsUpdate = true;
@@ -1003,55 +282,75 @@ export default class Experience {
                     obj.material.side = THREE.DoubleSide;
                 }
                 if (obj.isMesh) {
-
-
                     if (shouldAddHotspotOccluder(obj)) {
                         this.objectsArr.push(obj);
                     }
-                    if (obj.name.includes("ceil") || obj.name.includes("Mesh018") || obj.name.includes("Mesh019") || obj.name.includes("Mesh021") || obj.name === "Mesh001_1" || obj.name === "Mesh001" || obj.name.includes("Mesh001") || obj.name.includes("Mesh045") || obj.name.includes("Mesh047")) {
+                    if (
+                        obj.name.includes("ceil") ||
+                        obj.name.includes("Mesh018") ||
+                        obj.name.includes("Mesh019") ||
+                        obj.name.includes("Mesh021") ||
+                        obj.name === "Mesh001_1" ||
+                        obj.name === "Mesh001" ||
+                        obj.name.includes("Mesh001") ||
+                        obj.name.includes("Mesh045") ||
+                        obj.name.includes("Mesh047")
+                    ) {
                         this.ceilingMeshes.push(obj); // it will catch all the ceiling meshes and hide them when the cube is focused on, but not when the terminal is focused on
                     }
-                    console.log("Mesh:", obj.name, "| Material:", obj.material.name);
-                    if (obj.name === "Occluder_Floor" || obj.name === "Occluder_Ceiling" || obj.name === "Wall_mesh" || obj.name === "Wall_mesh2") {
+                    if (
+                        obj.name === "Occluder_Floor" ||
+                        obj.name === "Occluder_Ceiling" ||
+                        obj.name === "Wall_mesh" ||
+                        obj.name === "Wall_mesh2" ||
+                        obj.name === "Occluder_Wall"
+                    ) {
                         obj.material.side = THREE.DoubleSide;
-                        obj.visible = false
-
+                        obj.visible = false;
                     }
 
-
-                    if (obj.name === "Mesh043_2") { // windows
-                        obj.visible = false
+                    if (obj.name === "Mesh009_3") {
+                        // windows
+                        obj.visible = false;
+                        obj.material.transparent = true;
+                        obj.material.opacity = 0.08;
+                        obj.material.depthWrite = false;
+                        obj.material.side = THREE.DoubleSide;
                     }
 
-                    if (obj.name.includes("Mesh0")) { // floor 
-                        obj.receiveShadow = true
+                    if (obj.name.includes("Mesh0")) {
+                        // floor
+                        obj.receiveShadow = true;
                     }
 
-
-
-                    if (obj.name.includes("Circle") || obj.name.includes("Plane") || obj.name.includes("Machine") || obj.name.includes("Shelf") || obj.name.includes("Cube007")) {
-                        obj.castShadow = true
+                    if (
+                        obj.name.includes("Circle") ||
+                        obj.name.includes("Plane") ||
+                        obj.name.includes("Machine") ||
+                        obj.name.includes("Shelf") ||
+                        obj.name.includes("Cube007")
+                    ) {
+                        obj.castShadow = true;
                     }
-                    
 
                     if (obj.name === "Sci-fi_Bed2") {
-                        obj.receiveShadow = true
-                        obj.castShadow = true
+                        obj.receiveShadow = true;
+                        obj.castShadow = true;
                     }
 
                     if (obj.name === "Box007") {
-                        obj.castShadow = true
-                        obj.receiveShadow = true
+                        obj.castShadow = true;
+                        obj.receiveShadow = true;
                     }
 
                     if (obj.name === "Cube_Screen_0") {
-                        this.monitorMeshes.push(obj)
-                        this.monitorGlass = obj
-                        this.terminalPosition = obj.position
+                        this.monitorMeshes.push(obj);
+                        this.monitorGlass = obj;
+                        this.terminalPosition = obj.position;
                         // Completely overwrite whatever material Blender sent
                         obj.material = new THREE.MeshBasicMaterial({
                             map: this.terminal.texture,
-                        })
+                        });
 
                         /**
                          * Terminal-only shader controls.
@@ -1061,26 +360,24 @@ export default class Experience {
                          */
                         this.terminalGlitchUniforms = {
                             strength: {
-                                value: 0
+                                value: 0,
                             },
 
                             time: {
-                                value: 0
-                            }
-                        }
+                                value: 0,
+                            },
+                        };
 
                         obj.material.onBeforeCompile = (shader) => {
-
                             shader.uniforms.terminalGlitchStrength =
-                                this.terminalGlitchUniforms.strength
+                                this.terminalGlitchUniforms.strength;
 
                             shader.uniforms.terminalGlitchTime =
-                                this.terminalGlitchUniforms.time
-
+                                this.terminalGlitchUniforms.time;
 
                             shader.fragmentShader =
                                 shader.fragmentShader.replace(
-                                    '#include <common>',
+                                    "#include <common>",
                                     `
             #include <common>
 
@@ -1102,13 +399,12 @@ export default class Experience {
                     ) * 43758.5453
                 );
             }
-            `
-                                )
-
+            `,
+                                );
 
                             shader.fragmentShader =
                                 shader.fragmentShader.replace(
-                                    '#include <map_fragment>',
+                                    "#include <map_fragment>",
                                     `
             #ifdef USE_MAP
 
@@ -1257,402 +553,334 @@ diffuseColor *=
     sampledDiffuseColor;
 
             #endif
-            `
-                                )
-                        }
+            `,
+                                );
+                        };
 
-                        obj.material.needsUpdate = true
+                        obj.material.needsUpdate = true;
                     }
 
                     this.terminal.texture.repeat.set(1, 1); // No tiling
                     obj.material.needsUpdate = true;
-
-
                 }
-
-            })
+            });
             this.instanceRepeatedMeshes(gltf.scene, [
-                'Mesh057_1',
-                'Mesh057_2',
-                'Mesh057_3',
-                'Mesh048',
-                'Mesh048_1'
+                "Mesh057_1",
+                "Mesh057_2",
+                "Mesh057_3",
+                "Mesh048",
+                "Mesh048_1",
             ]);
             this.initHotspots();
-            this.scene.add(gltf.scene)
-            this.setupSecurityCameraTracking(
-                gltf.scene
-            )
-        })
+            this.scene.add(gltf.scene);
+            this.setupSecurityCameraTracking(gltf.scene);
+        });
 
-
-        this.assetsLoaded = true
-
-
+        this.assetsLoaded = true;
     }
 
     loadEnvironmentMap() {
         /**
-       * Environment map
-       */
-        this.exrLoader = new EXRLoader() // Set the path to the EXR loader files
-        const environmentMap = this.exrLoader.load(
-            '/environmentMaps/abstract-sci-fi-space_2K_2d6e1402-da4e-4b19-b175-931eceb2ceda.exr',
+         * Environment map
+         */
+        this.exrLoader = new EXRLoader(); // Set the path to the EXR loader files
+        this.exrLoader.load(
+            "/environmentMaps/abstract-sci-fi-space_2K_2d6e1402-da4e-4b19-b175-931eceb2ceda.exr",
             (environmentMap) => {
-                environmentMap.mapping =
-                    THREE.EquirectangularReflectionMapping
+                environmentMap.mapping = THREE.EquirectangularReflectionMapping;
 
-                this.scene.background = environmentMap
-                this.scene.environment = environmentMap
+                this.scene.background = environmentMap;
+                this.scene.environment = environmentMap;
 
                 /**
                  * Only changes the visible skybox.
                  */
-                this.scene.backgroundIntensity = 0.7
+                this.scene.backgroundIntensity = 0.7;
 
                 /**
                  * Changes how strongly the HDR lights and reflects
                  * on physical materials.
                  */
-                this.scene.environmentIntensity = 1.8
-
-
-
-            }
-        )
+                this.scene.environmentIntensity = 1.8;
+            },
+        );
     }
     constructor(canvas) {
         // Scene
-        let sceneReady = false
-        this.scene = new THREE.Scene()
+        let sceneReady = false;
+        this.scene = new THREE.Scene();
 
-        this.terminalFullscreen = null
-
+        this.terminalFullscreen = null;
 
         const preventLoadingScreenPinch = (event) => {
-    const loadingScreen =
-        document.querySelector('.loading-screen')
+            const loadingScreen = document.querySelector(".loading-screen");
 
-    if (
-        loadingScreen?.contains(event.target) &&
-        event.touches.length > 1
-    ) {
-        event.preventDefault()
-    }
-}
+            if (
+                loadingScreen?.contains(event.target) &&
+                event.touches.length > 1
+            ) {
+                event.preventDefault();
+            }
+        };
 
-document.addEventListener(
-    'touchmove',
-    preventLoadingScreenPinch,
-    {
-        passive: false,
-        capture: true
-    }
-)
+        document.addEventListener("touchmove", preventLoadingScreenPinch, {
+            passive: false,
+            capture: true,
+        });
 
-const isTouchDevice =
-    navigator.maxTouchPoints > 0 ||
-    window.matchMedia('(any-pointer: coarse)').matches
+        const isTouchDevice =
+            navigator.maxTouchPoints > 0 ||
+            window.matchMedia("(any-pointer: coarse)").matches;
 
-const usesMobileTerminalFullscreen = isTouchDevice
+        const usesMobileTerminalFullscreen = isTouchDevice;
+
+        document.documentElement.classList.toggle(
+            "touch-device",
+            isTouchDevice,
+        );
 
         /**
- * Loading screen
- *
- * LoadingScreen owns the overlay, loading manager,
- * title animation and entry transition.
- */
-        this.loadingScreen =
-            new LoadingScreen({
-                scene: this.scene,
+         * Loading screen
+         *
+         * LoadingScreen owns the overlay, loading manager,
+         * title animation and entry transition.
+         */
+        this.loadingScreen = new LoadingScreen({
+            scene: this.scene,
 
-                onAnimationFinished: () => {
-                    this.loadAssets(renderer)
-                },
+            onAnimationFinished: () => {
+                this.loadAssets(renderer);
+            },
 
-                onSceneReady: () => {
-                    sceneReady = true
-                    if (usesMobileTerminalFullscreen) {
-                        this.terminalFullscreen = new TerminalFullscreen({
-                            terminalCanvas: this.terminal.canvas,
-                            dialogueCanvas: this.terminal.mobileCanvas,
-                            onDialogueResize: (
+            onSceneReady: () => {
+                sceneReady = true;
+                if (usesMobileTerminalFullscreen) {
+                    this.terminalFullscreen = new TerminalFullscreen({
+                        terminalCanvas: this.terminal.canvas,
+                        dialogueCanvas: this.terminal.mobileCanvas,
+                        onDialogueResize: (displayedWidth, displayedHeight) => {
+                            this.terminal.resizeMobileCanvas(
                                 displayedWidth,
-                                displayedHeight
-                            ) => {
-                                this.terminal.resizeMobileCanvas(
-                                    displayedWidth,
-                                    displayedHeight
-                                )
-                            }
-                        })
+                                displayedHeight,
+                            );
+                        },
+                    });
 
-                        this.terminal.setFullscreenController(
-                            this.terminalFullscreen
-                        )
-                    }
-                    playTerminalGlitch()
-                    renderer.shadowMap.autoUpdate = false
-                    trackballControls.enabled = true
-                    controls.enabled = true
-                    renderer.info.autoReset = false;
-                    console.log("renderer: ", renderer.info)
-
+                    this.terminal.setFullscreenController(
+                        this.terminalFullscreen,
+                    );
                 }
-            })
 
-
+                renderer.shadowMap.autoUpdate = false;
+                trackballControls.enabled = true;
+                controls.enabled = true;
+                renderer.info.autoReset = false;
+            },
+        });
 
         /**
          * Keep a local reference so the existing loaders do not
          * need to change beyond this extraction.
          */
-        this.loadingManager =
-            this.loadingScreen.loadingManager
+        this.loadingManager = this.loadingScreen.loadingManager;
         // Initialize the math library BEFORE creating the light
         RectAreaLightUniformsLib.init();
-        // (Color, Intensity, Width, Height) 
+        // (Color, Intensity, Width, Height)
         // Make the width/height roughly the size of your window opening
-        const windowBounceLight = new THREE.RectAreaLight(0xff4400, 1.0, 30, 10);
+        const windowBounceLight = new THREE.RectAreaLight(
+            0xff4400,
+            1.0,
+            30,
+            10,
+        );
 
         // Position it exactly at the glass, facing inward
         windowBounceLight.position.set(0, 5, -18);
         windowBounceLight.lookAt(0, 5, 0);
 
-
         // Camera
-        this.camera = new THREE.PerspectiveCamera(70,
+        this.camera = new THREE.PerspectiveCamera(
+            70,
             window.innerWidth / window.innerHeight,
             0.1, // near
             1000, // far
         );
 
-
         this.camera.position.set(1.5, 2.5, 10.5);
-        this.camera.lookAt(0.9, 1.24, 0)
+        this.camera.lookAt(0.9, 1.24, 0);
         this.scene.add(this.camera);
-
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({
             canvas,
-            antialias: window.devicePixelRatio <= 1,
-            powerPreference: 'high-performance'
+            antialias: window.devicePixelRatio <= 1.25,
+            powerPreference: "high-performance",
         });
-        console.log(renderer.antialias)
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFShadowMap
+        renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        renderer.toneMapping =
-            THREE.ACESFilmicToneMapping
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-        renderer.toneMappingExposure = 1 // tone mapping intensity
+        renderer.toneMappingExposure = 1; // tone mapping intensity
 
-        let hotspotNeedUpdate = false
+        let hotspotNeedUpdate = false;
 
-
-        const heightShrink = 0.75
+        const heightShrink = 0.75;
 
         const resizeExperience = () => {
-            hotspotNeedUpdate = true
+            hotspotNeedUpdate = true;
 
             // Start with the regular layout viewport as fallback.
-            let viewportWidth = window.innerWidth
-            let viewportHeight = window.innerHeight
+            let viewportWidth = window.innerWidth;
+            let viewportHeight = window.innerHeight;
 
             // Read the CURRENT visual viewport dimensions on every resize.
             if (window.visualViewport) {
-                viewportWidth = window.visualViewport.width
-                viewportHeight = window.visualViewport.height
+                viewportWidth = window.visualViewport.width;
+                viewportHeight = window.visualViewport.height;
             }
 
-            const viewportAspect = viewportWidth / viewportHeight
-            const isPortrait = viewportAspect < 1.0
+            const viewportAspect = viewportWidth / viewportHeight;
+            const isPortrait = viewportAspect < 1.0;
 
-            const isShortLandscape = !isPortrait && viewportHeight <= 500
+            const isShortLandscape = !isPortrait && viewportHeight <= 500;
 
             document.documentElement.classList.toggle(
-                'short-landscape',
-                isShortLandscape
-            )
+                "short-landscape",
+                isShortLandscape,
+            );
 
-            this.canvasWidth = viewportWidth
-            this.canvasHeight = viewportHeight
+            this.canvasWidth = viewportWidth;
+            this.canvasHeight = viewportHeight;
 
+            if (!isPortrait && !isTouchDevice) {
+                this.canvasHeight *= heightShrink;
+            }
 
+            this.camera.aspect = this.canvasWidth / this.canvasHeight;
+            this.camera.updateProjectionMatrix();
 
-if (!isPortrait && !isTouchDevice) {
-    this.canvasHeight *= heightShrink
-}
-
-            this.camera.aspect = this.canvasWidth / this.canvasHeight
-            this.camera.updateProjectionMatrix()
-
-            renderer.setSize(this.canvasWidth, this.canvasHeight)
-            effectComposer.setSize(this.canvasWidth, this.canvasHeight)
+            renderer.setSize(this.canvasWidth, this.canvasHeight);
+            effectComposer.setSize(this.canvasWidth, this.canvasHeight);
 
             if (this.supernova) {
-                const currentRatio = renderer.getPixelRatio()
+                const currentRatio = renderer.getPixelRatio();
 
                 this.supernova.uniforms.iResolution.value.set(
                     this.canvasWidth * currentRatio,
-                    this.canvasHeight * currentRatio
-                )
+                    this.canvasHeight * currentRatio,
+                );
             }
 
-
-            document.documentElement.classList.toggle(
-                'short-landscape',
-                isShortLandscape
-            )
-
+            document.documentElement.style.setProperty(
+                "--viewport-width",
+                `${viewportWidth}px`,
+            );
 
             document.documentElement.style.setProperty(
-                '--viewport-width',
-                `${viewportWidth}px`
-            )
+                "--viewport-height",
+                `${viewportHeight}px`,
+            );
 
-            document.documentElement.style.setProperty(
-                '--viewport-height',
-                `${viewportHeight}px`
-            )
+            this.canvasRect = renderer.domElement.getBoundingClientRect();
+        };
 
-            this.canvasRect = renderer.domElement.getBoundingClientRect()
-        }
-
-        window.addEventListener('resize', resizeExperience)
+        window.addEventListener("resize", resizeExperience);
 
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', resizeExperience)
+            window.visualViewport.addEventListener("resize", resizeExperience);
         }
-
 
         // [ DOM MEASUREMENT CACHE ]
         // measure the physical footprint of the canvas
-        // This is required for raycasting and UI hotspots. 
+        // This is required for raycasting and UI hotspots.
         this.canvasRect = renderer.domElement.getBoundingClientRect();
 
-        const effectComposer = new EffectComposer(renderer)
-        effectComposer.setSize(this.canvasWidth, this.canvasHeight)
-        effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        resizeExperience()
+        const composerRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+            type: THREE.HalfFloatType,
+        });
+
+        composerRenderTarget.samples =
+            window.devicePixelRatio <= 1.25
+                ? Math.min(4, renderer.capabilities.maxSamples)
+                : 0;
+
+        const effectComposer = new EffectComposer(
+            renderer,
+            composerRenderTarget,
+        );
+        effectComposer.setSize(this.canvasWidth, this.canvasHeight);
+        effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        resizeExperience();
         /**
- * Post processing
- */
+         * Post processing
+         */
 
+        const renderPass = new RenderPass(this.scene, this.camera);
+        effectComposer.addPass(renderPass);
 
-        const renderPass = new RenderPass(this.scene, this.camera)
-        effectComposer.addPass(renderPass)
+        const outputPass = new OutputPass();
+        effectComposer.addPass(outputPass);
 
-        const glitchPass = new GlitchPass()
-        effectComposer.addPass(glitchPass)
-        glitchPass.enabled = true
+        const fxaaPass = new FXAAPass();
+        fxaaPass.enabled = false;
 
-        const outputPass = new OutputPass()
-        effectComposer.addPass(outputPass)
-
-        const fxaaPass = new FXAAPass()
-        fxaaPass.enabled = false
-
-        effectComposer.addPass(fxaaPass)
-
-        const terminalGlitchTimeouts = []
-
-        const playTerminalGlitch = () => {
-
-            for (const timeout of terminalGlitchTimeouts) {
-                clearTimeout(timeout)
-            }
-
-            terminalGlitchTimeouts.length = 0
-
-            const glitch = (delay, duration, wild = false) => {
-
-                terminalGlitchTimeouts.push(
-                    setTimeout(() => {
-                        glitchPass.goWild = wild
-                        glitchPass.enabled = true
-                    }, delay)
-                )
-
-                terminalGlitchTimeouts.push(
-                    setTimeout(() => {
-                        glitchPass.enabled = false
-                        glitchPass.goWild = false
-                    }, delay + duration)
-                )
-            }
-
-            // Violent connection snap
-            glitch(0, 160, true)
-
-            // Follow-up interference
-            glitch(260, 180, false)
-
-            // Final stronger hiccup before stabilizing
-            glitch(520, 220, true)
-        }
-
-        this.gu = new GUI()
+        effectComposer.addPass(fxaaPass);
 
         this.terminal = new TerminalCanvas(this);
         /**
-        * Lights
-        */
-        // ---------------------------------------------------------
-        // WARM FLOOR BOUNCE
-        // currently disabled, but kept for GUI testing
-        // ---------------------------------------------------------
-        const floorBounceLight = new THREE.RectAreaLight(0xffffff, 0.0, 28.6, 4.0);
-
-        floorBounceLight.position.set(1.2, -7.5, -11.8);
-        floorBounceLight.lookAt(11.7, 0, 0);
-
-        this.scene.add(floorBounceLight);
-
+         * Lights
+         */
         // ==========================================
         // DESK LIGHTS (Untouched)
         // ==========================================
-        const deskLight =
-            new THREE.PointLight(0x35d5e5, 5, 5)
+        const deskLight = new THREE.PointLight(0x35d5e5, 5, 5);
 
-        const deskLight2 =
-            new THREE.PointLight(0x35d5e5, 5, 5)
+        const deskLight2 = new THREE.PointLight(0x35d5e5, 5, 5);
         deskLight.decay = 2;
         deskLight2.decay = 2;
         deskLight.position.set(0, 2.5, 0); // up in the ceiling
         deskLight2.position.set(2.5, 1.2, -4.2); // near desk
         this.scene.add(deskLight, deskLight2);
 
-
-        this.scene.add(deskLight, deskLight2)
-
         // ---------------------------------------------------------
         // COOL FLOOR DETAIL LIGHT
         // final-ish favorite version
         // ---------------------------------------------------------
-        const coolFloorDetailLight = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
+        const coolFloorDetailLight = new THREE.RectAreaLight(
+            0x7eb5e2,
+            1.5,
+            22,
+            9,
+        );
 
         coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
         coolFloorDetailLight.lookAt(3.8, 0, 2.1);
 
         this.scene.add(coolFloorDetailLight);
 
-        const coolFloorDetailLight2 = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
+        const coolFloorDetailLight2 = new THREE.RectAreaLight(
+            0x7eb5e2,
+            1.5,
+            22,
+            9,
+        );
 
         coolFloorDetailLight2.position.set(10, -9.2, -4.9);
         coolFloorDetailLight2.lookAt(3.8, 0, 2.1);
 
-
-        const coolFloorDetailLight3 = new THREE.RectAreaLight(0x7eb5e2, 1.5, 22, 9);
+        const coolFloorDetailLight3 = new THREE.RectAreaLight(
+            0x7eb5e2,
+            1.5,
+            22,
+            9,
+        );
 
         coolFloorDetailLight3.position.set(-5, -9.2, -4.9);
         coolFloorDetailLight3.lookAt(3.8, 0, 2.1);
-
-
 
         /**
          * Bed back fill light
@@ -1661,355 +889,52 @@ if (!isPortrait && !isTouchDevice) {
          * We store our own Vector3 target and call lookAt() whenever it changes.
          */
 
-        const bedBackLight = new THREE.RectAreaLight(
-            0x5f9fc7,
-            3,
-            4,
-            2.5
-        )
+        const bedBackLight = new THREE.RectAreaLight(0x5f9fc7, 3, 4, 2.5);
 
-        this.scene.add(
-            coolFloorDetailLight2,
-            coolFloorDetailLight3
-        )
-        coolFloorDetailLight.intensity = 0.9
-        coolFloorDetailLight2.intensity = 0.9
-        coolFloorDetailLight3.intensity = 0.9
-        this.scene.environmentIntensity = 0.55
+        this.scene.add(coolFloorDetailLight2, coolFloorDetailLight3);
+        coolFloorDetailLight.intensity = 0.9;
+        coolFloorDetailLight2.intensity = 0.9;
+        coolFloorDetailLight3.intensity = 0.9;
+        this.scene.environmentIntensity = 0.55;
 
         const stationAmbientLight = new THREE.HemisphereLight(
             0x9ab3c4, // Pale blue-grey, not saturated cyan
             0x101820, // Dark blue-grey underneath
-            0.65
-        )
+            0.65,
+        );
 
-        this.scene.add(stationAmbientLight)
+        this.scene.add(stationAmbientLight);
 
-        bedBackLight.name = 'BedBackFillLight'
+        bedBackLight.name = "BedBackFillLight";
 
-        bedBackLight.position.set(
-            3.4,
-            -0.6,
-            6.6
-        )
+        bedBackLight.position.set(3.4, -0.6, 6.6);
 
         const bedBackLightTarget = new THREE.Vector3(
-            1.9,  // Moved your desired target coordinates here
+            1.9, // Moved your desired target coordinates here
             0.9,
-            1.9
-        )
+            1.9,
+        );
 
-        bedBackLight.lookAt(bedBackLightTarget)
-        this.scene.add(bedBackLight)
-        /**
-         * Re-aim the light after changing either its position
-         * or the target position through the GUI.
-         */
-        const updateBedBackLightDirection = () => {
-            bedBackLight.lookAt(bedBackLightTarget)
-        }
-
-        updateBedBackLightDirection()
-
-        const bedBackLightDebug = {
-            color: `#${bedBackLight.color.getHexString()}`
-        }
-
-        const bedBackLightFolder =
-            this.gu.addFolder('Bed Back Light')
-
-        bedBackLightFolder
-            .addColor(bedBackLightDebug, 'color')
-            .name('Color')
-            .onChange((value) => {
-                bedBackLight.color.set(value)
-            })
-
-        bedBackLightFolder
-            .add(bedBackLight, 'intensity', 0, 20, 0.1)
-            .name('Intensity')
-
-        bedBackLightFolder
-            .add(bedBackLight, 'width', 0.1, 10, 0.1)
-            .name('Width')
-
-        bedBackLightFolder
-            .add(bedBackLight, 'height', 0.1, 10, 0.1)
-            .name('Height')
-
-        bedBackLightFolder
-            .add(bedBackLight, 'visible')
-            .name('Visible')
-
-        const bedBackLightPositionFolder =
-            bedBackLightFolder.addFolder('Position')
-
-        bedBackLightPositionFolder
-            .add(bedBackLight.position, 'x', -20, 20, 0.1)
-            .name('X')
-            .onChange(updateBedBackLightDirection)
-
-        bedBackLightPositionFolder
-            .add(bedBackLight.position, 'y', -10, 10, 0.1)
-            .name('Y')
-            .onChange(updateBedBackLightDirection)
-
-        bedBackLightPositionFolder
-            .add(bedBackLight.position, 'z', -20, 20, 0.1)
-            .name('Z')
-            .onChange(updateBedBackLightDirection)
-
-        const bedBackLightTargetFolder =
-            bedBackLightFolder.addFolder('Target')
-
-        bedBackLightTargetFolder
-            .add(bedBackLightTarget, 'x', -20, 20, 0.1)
-            .name('X')
-            .onChange(updateBedBackLightDirection)
-
-        bedBackLightTargetFolder
-            .add(bedBackLightTarget, 'y', -10, 10, 0.1)
-            .name('Y')
-            .onChange(updateBedBackLightDirection)
-
-        bedBackLightTargetFolder
-            .add(bedBackLightTarget, 'z', -20, 20, 0.1)
-            .name('Z')
-            .onChange(updateBedBackLightDirection)
-
-        bedBackLightFolder.open()
-
-        /**
-* LIGHTING DEBUG GUI
-*/
-
-        const lightingFolder =
-            this.gu.addFolder('Lighting')
-
-        /**
-         * Adds a color controller for any THREE.Color property.
-         */
-        const addColorController = (
-            folder,
-            object,
-            property,
-            label
-        ) => {
-            const colorParams = {
-                color: `#${object[property].getHexString()}`
-            }
-
-            folder
-                .addColor(colorParams, 'color')
-                .name(label)
-                .onChange((value) => {
-                    object[property].set(value)
-                })
-        }
-
-        /**
-         * Adds XYZ position controls.
-         */
-        const addPositionControls = (
-            folder,
-            position,
-            onChange
-        ) => {
-            folder
-                .add(position, 'x', -30, 30, 0.1)
-                .name('X')
-                .onChange(onChange)
-
-            folder
-                .add(position, 'y', -20, 20, 0.1)
-                .name('Y')
-                .onChange(onChange)
-
-            folder
-                .add(position, 'z', -30, 30, 0.1)
-                .name('Z')
-                .onChange(onChange)
-        }
-
-        /**
-         * Adds controls for a RectAreaLight.
-         */
-        const addRectAreaLightGUI = (
-            parentFolder,
-            label,
-            light,
-            target
-        ) => {
-            const folder =
-                parentFolder.addFolder(label)
-
-            addColorController(
-                folder,
-                light,
-                'color',
-                'Color'
-            )
-
-            folder
-                .add(light, 'intensity', 0, 20, 0.05)
-                .name('Intensity')
-
-            folder
-                .add(light, 'width', 0.1, 40, 0.1)
-                .name('Width')
-
-            folder
-                .add(light, 'height', 0.1, 20, 0.1)
-                .name('Height')
-
-            folder
-                .add(light, 'visible')
-                .name('Visible')
-
-            const updateDirection = () => {
-                light.lookAt(target)
-            }
-
-            const positionFolder =
-                folder.addFolder('Position')
-
-            addPositionControls(
-                positionFolder,
-                light.position,
-                updateDirection
-            )
-
-            const targetFolder =
-                folder.addFolder('Target')
-
-            addPositionControls(
-                targetFolder,
-                target,
-                updateDirection
-            )
-        }
-
-        /**
-         * SCENE / HDR
-         */
-
-        const sceneFolder =
-            lightingFolder.addFolder('Scene / HDR')
-
-        sceneFolder
-            .add(
-                this.scene,
-                'backgroundIntensity',
-                0,
-                15,
-                0.05
-            )
-            .name('Background Intensity')
-            .listen()
-
-        sceneFolder
-            .add(
-                this.scene,
-                'environmentIntensity',
-                0,
-                3,
-                0.01
-            )
-            .name('Environment Intensity')
-            .listen()
-
-        sceneFolder
-            .add(
-                this.scene,
-                'backgroundBlurriness',
-                0,
-                1,
-                0.01
-            )
-            .name('Background Blur')
-
-        sceneFolder
-            .add(
-                renderer,
-                'toneMappingExposure',
-                0.1,
-                3,
-                0.01
-            )
-            .name('Exposure')
-
-        /**
-         * NEUTRAL STATION FILL
-         */
-
-        const ambientFolder =
-            lightingFolder.addFolder('Station Fill')
-
-        addColorController(
-            ambientFolder,
-            stationAmbientLight,
-            'color',
-            'Sky Color'
-        )
-
-        addColorController(
-            ambientFolder,
-            stationAmbientLight,
-            'groundColor',
-            'Ground Color'
-        )
-
-        ambientFolder
-            .add(
-                stationAmbientLight,
-                'intensity',
-                0,
-                3,
-                0.01
-            )
-            .name('Intensity')
-
-        ambientFolder
-            .add(stationAmbientLight, 'visible')
-            .name('Visible')
-
-        /**
-         * MAIN NOVA LIGHT
-         */
-
-
-
-
-
-
+        bedBackLight.lookAt(bedBackLightTarget);
+        this.scene.add(bedBackLight);
         /**
          * RECT AREA LIGHTS
          *
          * Each RectAreaLight needs a stored Vector3 target.
          */
 
-        const windowBounceTarget =
-            new THREE.Vector3(0, 5, 0)
+        const windowBounceTarget = new THREE.Vector3(0, 5, 0);
 
-        const floorBounceTarget =
-            new THREE.Vector3(11.7, 0, 0)
+        const coolFloorTarget1 = new THREE.Vector3(3.8, 0, 2.1);
 
-        const coolFloorTarget1 =
-            new THREE.Vector3(3.8, 0, 2.1)
+        const coolFloorTarget2 = new THREE.Vector3(10, 0, 2.1);
 
-        const coolFloorTarget2 =
-            new THREE.Vector3(10, 0, 2.1)
+        const coolFloorTarget3 = new THREE.Vector3(-5, 0, 2.1);
 
-        const coolFloorTarget3 =
-            new THREE.Vector3(-5, 0, 2.1)
-
-        windowBounceLight.lookAt(windowBounceTarget)
-        floorBounceLight.lookAt(floorBounceTarget)
-
-        coolFloorDetailLight.lookAt(coolFloorTarget1)
-        coolFloorDetailLight2.lookAt(coolFloorTarget2)
-        coolFloorDetailLight3.lookAt(coolFloorTarget3)
-
+        windowBounceLight.lookAt(windowBounceTarget);
+        coolFloorDetailLight.lookAt(coolFloorTarget1);
+        coolFloorDetailLight2.lookAt(coolFloorTarget2);
+        coolFloorDetailLight3.lookAt(coolFloorTarget3);
 
         /**
          * Lights must be inside the scene for their Visible toggles
@@ -2018,67 +943,24 @@ if (!isPortrait && !isTouchDevice) {
         this.scene.add(
             windowBounceLight,
             coolFloorDetailLight2,
-            coolFloorDetailLight3
-        )
+            coolFloorDetailLight3,
+        );
 
         /**
          * Start the problematic accent lights disabled.
          */
-        windowBounceLight.visible = false
-        coolFloorDetailLight.visible = false
-        coolFloorDetailLight2.visible = false
-        coolFloorDetailLight3.visible = false
+        windowBounceLight.visible = false;
+        coolFloorDetailLight.visible = false;
+        coolFloorDetailLight2.visible = false;
+        coolFloorDetailLight3.visible = false;
 
+        this.cube = new Cube(this.scene);
 
-
-        this.cube = new Cube(this.scene)
-
-
-
-
-
-        console.log({
-            forcedColors:
-                window.matchMedia('(forced-colors: active)').matches,
-
-            background:
-                getComputedStyle(
-                    document.querySelector('.loading-screen')
-                ).backgroundImage,
-
-            letterColor:
-                getComputedStyle(
-                    document.querySelector('.loading-letter')
-                ).color
-        })
-
-        this.setupLighting(renderer)
-
-
-
-
-
-        const debugParams = {
-            lookX: 1,
-            lookY: 1.24, // Start slightly above the floor
-            lookZ: 0
-        };
-
-
-
-
-
-        const mainLightFolder = this.gu.addFolder('Main Light');
-
-
-
-
-
-
+        this.setupLighting(renderer);
 
         // Load the noise image
-        const textureLoader = new THREE.TextureLoader()
-        const noiseTexture = textureLoader.load('/textures/noise.png');
+        const textureLoader = new THREE.TextureLoader();
+        const noiseTexture = textureLoader.load("/textures/noise.png");
 
         // CRITICAL for Shadertoy noise ports: Set it to repeat infinitely
         noiseTexture.wrapS = THREE.RepeatWrapping;
@@ -2090,205 +972,51 @@ if (!isPortrait && !isTouchDevice) {
             position: new THREE.Vector3(-15, 5, 50),
             scale: 8,
             visible: true,
-            noiseMap: noiseTexture
+            noiseMap: noiseTexture,
         });
 
-        this.supernova.mesh.position.x = -15
-        this.supernova.mesh.position.y = 6
-        this.supernova.mesh.position.z = -850 // very far away in the distance, so it looks like it's outside the window, but not too far so it doesn't get clipped by the far plane
-        this.supernova.mesh.scale.setScalar(175) // huge scale to make it look like it's far away in the distance
-        // const novaFolder = gu.addFolder('Supernova')
-        // // (min, max, increments), change supernova position 
-        // novaFolder.add(this.supernova.mesh.position, 'x', -1000, 1000, 1).name('Position X')
-        // novaFolder.add(this.supernova.mesh.position, 'y', -1000, 1000, 1).name('Position Y')
-        // novaFolder.add(this.supernova.mesh.position, 'z', -1000, 1000, 1).name('Position Z')
-        // novaFolder.add(this.supernova.mesh.scale, 'x', 1, 100, 0.5).name('Scale').onChange((val) => {
-        //     this.supernova.mesh.scale.setScalar(val)
-        // })
-
-
-
-
-
-        document.addEventListener('contextmenu', (e) => e.preventDefault()) // prevent RMB click pop up
-
-
-
-
-
-
-        // 3. Create a helper function to update both systems safely
-        const updateCameraTarget = () => {
-            const newTarget = new THREE.Vector3(debugParams.lookX, debugParams.lookY, debugParams.lookZ);
-
-            // Update the camera lens
-            this.camera.lookAt(newTarget);
-
-            // Update the center of the OrbitControls universe
-            controls.target.copy(newTarget);
-            controls.update();
-        };
-
-        // 4. Add the sliders to the screen
-        // const cameraFolder = this.gu.addFolder('Initial Look Target');
-
-        // .add(object, property).min.max.step.name.onChange
-        // cameraFolder.add(debugParams, 'lookX').min(-10).max(10).step(0.01).name('Target X').onChange(updateCameraTarget);
-        // cameraFolder.add(debugParams, 'lookY').min(-10).max(10).step(0.01).name('Target Y').onChange(updateCameraTarget);
-        // cameraFolder.add(debugParams, 'lookZ').min(-10).max(10).step(0.01).name('Target Z').onChange(updateCameraTarget);
-
-        // cameraFolder.open(); // Keeps the folder open by default
-
-
-        const cam = this.gu.addFolder('Camera')
+        this.supernova.mesh.position.x = -15;
+        this.supernova.mesh.position.y = 6;
+        this.supernova.mesh.position.z = -850; // very far away in the distance, so it looks like it's outside the window, but not too far so it doesn't get clipped by the far plane
+        this.supernova.mesh.scale.setScalar(175); // huge scale to make it look like it's far away in the distance
+        document.addEventListener("contextmenu", (e) => e.preventDefault()); // prevent RMB click pop up
 
         // Controls
-        const trackballControls = new TrackballControls(this.camera, canvas)
-        trackballControls.noRotate = true
-        trackballControls.noZoom = false
-        trackballControls.zoomSpeed = 2
-        trackballControls.panSpeed = 0.5
+        const trackballControls = new TrackballControls(this.camera, canvas);
+        trackballControls.noRotate = true;
+        trackballControls.noZoom = false;
+        trackballControls.zoomSpeed = 2;
+        trackballControls.panSpeed = 0.5;
         const controls = new OrbitControls(this.camera, canvas);
-        // controls.zoomSpeed = 2.0 // Increase zoom speed
-        controls.enableZoom = false
+        controls.enableZoom = false;
         controls.target.set(0.9, 1.24, 0); // Set the initial target to match camera.lookAt
         controls.enableDamping = true;
-        controls.dampingFactor = 0.12
-        controls.minDistance = 0
+        controls.dampingFactor = 0.12;
+        controls.minDistance = 0;
         let isTransitioning = false;
 
-        trackballControls.enabled = false
-        controls.enabled = false
+        trackballControls.enabled = true;
+        controls.enabled = false;
 
         // Hot spot variables
         this.isFocused = false;
         const lookTarget = this.cube.cubeGroup.position.clone(); // this is the point the camera will look at when focusing on a hotspot
 
         // Increase the offset significantly so we don't end up inside the mesh when we lower the FOV
-        const isometricDistance = 1.8
-
+        const isometricDistance = 1.8;
 
         const cameraTarget = new THREE.Vector3(
             lookTarget.x + isometricDistance,
             lookTarget.y + isometricDistance,
-            lookTarget.z + isometricDistance
-        )
+            lookTarget.z + isometricDistance,
+        );
 
-        const cameraHome = this.camera.position.clone()
+        const cameraHome = this.camera.position.clone();
         const lookHome = new THREE.Vector3(0.9, 1.24, 0);
 
-        // --- NEW FOV VARIABLES ---
+        // FOV transition values
         const homeFov = this.camera.fov;
         let targetFov = homeFov; // We will lerp toward this value
-
-        /**
- * CAMERA DEBUG GUI
- *
- * Directly edits the live camera while keeping OrbitControls and
- * TrackballControls active. Use this to find the terminal close-up pose.
- */
-        const updateCameraFromGUI = () => {
-            /**
-             * Stop the focus lerp from immediately overwriting values changed
-             * through the GUI.
-             */
-            isTransitioning = false
-
-            /**
-             * Preserve the edited pose as the current transition target too.
-             */
-            cameraTarget.copy(this.camera.position)
-            lookTarget.copy(controls.target)
-            targetFov = this.camera.fov
-
-            this.camera.updateProjectionMatrix()
-
-            controls.update()
-
-            trackballControls.target.copy(controls.target)
-            trackballControls.update()
-
-            hotspotNeedUpdate = true
-        }
-
-        const cameraPositionFolder =
-            cam.addFolder('Position')
-
-        cameraPositionFolder
-            .add(this.camera.position, 'x', -20, 20, 0.01)
-            .name('X')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        cameraPositionFolder
-            .add(this.camera.position, 'y', -20, 20, 0.01)
-            .name('Y')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        cameraPositionFolder
-            .add(this.camera.position, 'z', -20, 20, 0.01)
-            .name('Z')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        cam
-            .add(this.camera, 'fov', 5, 500, 0.1)
-            .name('FOV')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        const cameraLookTargetFolder =
-            cam.addFolder('Look Target')
-
-        cameraLookTargetFolder
-            .add(controls.target, 'x', -20, 20, 0.01)
-            .name('X')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        cameraLookTargetFolder
-            .add(controls.target, 'y', -20, 20, 0.01)
-            .name('Y')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        cameraLookTargetFolder
-            .add(controls.target, 'z', -20, 20, 0.01)
-            .name('Z')
-            .onChange(updateCameraFromGUI)
-            .listen()
-
-        const cameraDebugActions = {
-            printTerminalPose: () => {
-                const position = this.camera.position
-                const target = controls.target
-
-                console.log(`
-cameraTarget.set(
-    ${position.x.toFixed(4)},
-    ${position.y.toFixed(4)},
-    ${position.z.toFixed(4)}
-)
-
-lookTarget.set(
-    ${target.x.toFixed(4)},
-    ${target.y.toFixed(4)},
-    ${target.z.toFixed(4)}
-)
-
-targetFov = ${this.camera.fov.toFixed(2)}
-        `)
-            }
-        }
-
-        cam
-            .add(cameraDebugActions, 'printTerminalPose')
-            .name('Print Terminal Pose')
-
-        cameraPositionFolder.open()
-        cameraLookTargetFolder.open()
-        cam.open()
 
         function showItems(visibility, meshArray) {
             meshArray.forEach((ceilingMesh) => {
@@ -2298,12 +1026,24 @@ targetFov = ${this.camera.fov.toFixed(2)}
         /**
          * focus mode on cube
          */
-        const cubeControlsHint = document.querySelector('#cube-controls-hint'); // UI for the cube controls 
-        const cubeScrambleButton = document.querySelector('#cube-scramble-button')
-        const cubeScrambleButtonLabel = document.querySelector('.scramble-button-label')
-        const cubeHotspot = document.querySelector("#hotspot-cube")
-        const terminalShaderGlitchTimeouts = []
+        const cubeControlsHint = document.querySelector("#cube-controls-hint");
 
+        const cubeControlsHintMobile = document.querySelector(
+            "#cube-controls-hint-mobile",
+        );
+
+        const cubeFocusExitButtons = [
+            document.querySelector("#cube-focus-exit-button"),
+
+            document.querySelector("#cube-focus-exit-button-mobile"),
+        ].filter(Boolean);
+
+        const cubeScrambleButtons = [
+            document.querySelector("#cube-scramble-button"),
+
+            document.querySelector("#cube-scramble-button-mobile"),
+        ].filter(Boolean);
+        const terminalShaderGlitchTimeouts = [];
 
         /**
          * Keeps the scramble button's label, disabled state and visual
@@ -2313,80 +1053,72 @@ targetFov = ${this.camera.fov.toFixed(2)}
          * @param {boolean} isEnabled
          */
         const setCubeScrambleButtonState = (isRunning, isEnabled) => {
-            cubeScrambleButton.classList.toggle(
-                'is-running',
-                isRunning
-            )
+            for (const button of cubeScrambleButtons) {
+                button.classList.toggle("is-running", isRunning);
 
-            if (isRunning) {
-                cubeScrambleButtonLabel.textContent = 'SCRAMBLING'
+                const label = button.querySelector(".scramble-button-label");
+
+                if (isRunning) {
+                    label.textContent = "SCRAMBLING";
+                } else {
+                    label.textContent = "SCRAMBLE";
+                }
+
+                button.disabled = !isEnabled;
+
+                button.setAttribute("aria-busy", String(isRunning));
             }
-            else {
-                cubeScrambleButtonLabel.textContent = 'SCRAMBLE CUBE'
-            }
+        };
 
-            cubeScrambleButton.disabled = !isEnabled
-            cubeScrambleButton.setAttribute(
-                'aria-busy',
-                String(isRunning)
-            )
-        }
-
-
-        /**
-         * The HTML control owns only the request. Cube and Rotator still
-         * own scramble generation, animation locking and cubie movement.
-         */
-        cubeScrambleButton.addEventListener('click', async () => {
+        const requestCubeScramble = async () => {
             if (!this.isFocused) {
-                return
+                return;
             }
 
-            if (this.currPointName !== 'RubiksCube') {
-                return
+            if (this.currPointName !== "RubiksCube") {
+                return;
             }
 
-            if (this.cube.rotator.isAnimating || this.cube.rotator.isLayerActive) {
-                return
+            if (
+                this.cube.rotator.isAnimating ||
+                this.cube.rotator.isLayerActive
+            ) {
+                return;
             }
 
-            setCubeScrambleButtonState(true, false)
+            setCubeScrambleButtonState(true, false);
 
             try {
-                await this.cube.scramble()
-            }
-            finally {
+                await this.cube.scramble();
+            } finally {
                 const cubeFocusIsStillActive =
-                    this.isFocused &&
-                    this.currPointName === 'RubiksCube'
+                    this.isFocused && this.currPointName === "RubiksCube";
 
-                setCubeScrambleButtonState(
-                    false,
-                    cubeFocusIsStillActive
-                )
+                setCubeScrambleButtonState(false, cubeFocusIsStillActive);
             }
-        })
+        };
 
+        for (const button of cubeScrambleButtons) {
+            button.addEventListener("click", requestCubeScramble);
+        }
 
         /**
          * Immediately stops the terminal glitch and cancels
          * every scheduled burst that has not happened yet.
          */
         const stopTerminalShaderGlitch = () => {
-
             for (const timeout of terminalShaderGlitchTimeouts) {
-                clearTimeout(timeout)
+                clearTimeout(timeout);
             }
 
-            terminalShaderGlitchTimeouts.length = 0
+            terminalShaderGlitchTimeouts.length = 0;
 
             if (!this.terminalGlitchUniforms) {
-                return
+                return;
             }
 
-            this.terminalGlitchUniforms.strength.value = 0
-        }
-
+            this.terminalGlitchUniforms.strength.value = 0;
+        };
 
         /**
          * Plays a violent terminal connection sequence.
@@ -2395,122 +1127,113 @@ targetFov = ${this.camera.fov.toFixed(2)}
          * smaller signal hiccups until the display stabilizes.
          */
         const playTerminalShaderGlitch = () => {
-
             if (!this.terminalGlitchUniforms) {
-                return
+                return;
             }
 
             /**
              * Important if the transition somehow gets triggered
              * again before the previous sequence has finished.
              */
-            stopTerminalShaderGlitch()
+            stopTerminalShaderGlitch();
 
-            const strength =
-                this.terminalGlitchUniforms.strength
-
+            const strength = this.terminalGlitchUniforms.strength;
 
             /**
              * Schedule one instantaneous strength change.
              */
             const setStrength = (delay, value) => {
-
                 const timeout = setTimeout(() => {
-                    strength.value = value
-                }, delay)
+                    strength.value = value;
+                }, delay);
 
-                terminalShaderGlitchTimeouts.push(timeout)
-            }
-
+                terminalShaderGlitchTimeouts.push(timeout);
+            };
 
             /**
              * First hit happens immediately.
              *
              * This is intentionally above 1.
              */
-            strength.value = 1.35
-
+            strength.value = 1.35;
 
             // Initial violent connection failure
-            setStrength(220, 0.75)
-            setStrength(420, 1.2)
-            setStrength(620, 0.3)
+            setStrength(220, 0.75);
+            setStrength(420, 1.2);
+            setStrength(620, 0.3);
 
             // Another hard signal tear
-            setStrength(740, 1.05)
-            setStrength(980, 0)
+            setStrength(740, 1.05);
+            setStrength(980, 0);
 
             // Short secondary burst
-            setStrength(1130, 0.85)
-            setStrength(1340, 0.15)
+            setStrength(1130, 0.85);
+            setStrength(1340, 0.15);
 
             // Signal is beginning to recover
-            setStrength(1480, 0.65)
-            setStrength(1690, 0)
+            setStrength(1480, 0.65);
+            setStrength(1690, 0);
 
             // Final tiny hiccup
-            setStrength(1870, 0.35)
+            setStrength(1870, 0.35);
 
             // Connection stable
-            setStrength(2050, 0)
-        }
+            setStrength(2050, 0);
+        };
         const enterFocusMode = (activePoint) => {
-             showItems(false, this.objsToHide)
-              showItems(false, this.floorMeshes)
+            showItems(false, this.objsToHide);
+            showItems(false, this.floorMeshes);
             this.isFocused = true;
             isTransitioning = true;
-            controls.enabled = false
-            trackballControls.enabled = false
+            controls.enabled = false;
+            trackballControls.enabled = false;
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
-            this.points.forEach(p => {
-                p.element.style.opacity = '0';
-                p.element.style.pointerEvents = 'none';
+            this.points.forEach((p) => {
+                p.element.style.opacity = "0";
+                p.element.style.pointerEvents = "none";
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
-            if (activePoint.name === 'RubiksCube') {
-                
-                showItems(false, this.ceilingMeshes)
-                showItems(false, this.monitorMeshes)
-                for(let i = 0; i < this.floorMeshes.length; i++) {
-                    this.floorMeshes[i].receiveShadow = false
+            if (activePoint.name === "RubiksCube") {
+                showItems(false, this.ceilingMeshes);
+                showItems(false, this.monitorMeshes);
+                for (let i = 0; i < this.floorMeshes.length; i++) {
+                    this.floorMeshes[i].receiveShadow = false;
                 }
 
                 const cubeIsBusy =
                     this.cube.rotator.isAnimating ||
-                    this.cube.rotator.isLayerActive
+                    this.cube.rotator.isLayerActive;
 
-                setCubeScrambleButtonState(
-                    cubeIsBusy,
-                    !cubeIsBusy
-                )
+                setCubeScrambleButtonState(cubeIsBusy, !cubeIsBusy);
 
-                controls.enabled = true
-                controls.enableZoom = true
-                controls.enableRotate = false
-                controls.enablePan = false
+                controls.enabled = true;
+                controls.enableZoom = true;
+                controls.enableRotate = false;
+                controls.enablePan = false;
+                if (isTouchDevice) {
+                    cubeControlsHintMobile.classList.add("visible");
+                } else {
+                    cubeControlsHint.classList.add("visible");
+                }
 
-                cubeControlsHint.classList.add('visible')
+                lookTarget.copy(activePoint.position);
 
-                lookTarget.copy(activePoint.position)
-
-                targetFov = 15
+                targetFov = 15;
 
                 const currentWindowAspect =
-                    window.innerWidth / window.innerHeight
+                    window.innerWidth / window.innerHeight;
 
-                const BASE_ASPECT = 16 / 9
+                const BASE_ASPECT = 16 / 9;
 
-                let scaleFactor = 0.8
+                let scaleFactor = 0.8;
 
                 if (currentWindowAspect < BASE_ASPECT) {
-                    scaleFactor =
-                        BASE_ASPECT / currentWindowAspect
+                    scaleFactor = BASE_ASPECT / currentWindowAspect;
                 }
 
                 const dynamicDistance =
-                    isometricDistance *
-                    (1 + ((scaleFactor - 1) * 0.2))
+                    isometricDistance * (1 + (scaleFactor - 1) * 0.2);
 
                 /**
                  * Keep the camera horizontally and vertically aligned
@@ -2521,15 +1244,15 @@ targetFov = ${this.camera.fov.toFixed(2)}
                 cameraTarget.set(
                     lookTarget.x - dynamicDistance,
                     lookTarget.y + dynamicDistance,
-                    lookTarget.z + dynamicDistance
-                )
+                    lookTarget.z + dynamicDistance,
+                );
             }
 
             // --- 2. TERMINAL LOGIC ---
-            else if (activePoint.name === 'Terminal') {
-                this.terminalGlitchUniforms.strength.value = 1
-                showItems(false, this.ceilingMeshes)
-                playTerminalShaderGlitch()
+            else if (activePoint.name === "Terminal") {
+                this.terminalGlitchUniforms.strength.value = 1;
+                showItems(false, this.ceilingMeshes);
+                playTerminalShaderGlitch();
                 lookTarget.copy(activePoint.position.clone());
 
                 // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
@@ -2542,194 +1265,126 @@ targetFov = ${this.camera.fov.toFixed(2)}
                 cameraTarget.set(
                     lookTarget.x,
                     lookTarget.y + 0.22,
-                    lookTarget.z + 1.55
+                    lookTarget.z + 1.55,
                 );
             }
         };
 
         const exitFocusMode = () => {
-            showItems(true, this.ceilingMeshes) // unhide ceiling
-            showItems(true, this.monitorMeshes)
-            showItems(true, this.objsToHide)
-            fxaaPass.enabled = false
+            showItems(true, this.ceilingMeshes); // unhide ceiling
+            showItems(true, this.monitorMeshes);
+            showItems(true, this.floorMeshes);
+            showItems(true, this.objsToHide);
 
-            cubeControlsHint.classList.remove('visible');
-            setCubeScrambleButtonState(false, false)
+            fxaaPass.enabled = false;
+
+            cubeControlsHint.classList.remove("visible");
+            cubeControlsHintMobile.classList.remove("visible");
+            setCubeScrambleButtonState(false, false);
             isTransitioning = true;
 
             // Bring all UI hotspots back
-            this.points.forEach(p => {
-                p.element.style.opacity = '1';
-                p.element.style.pointerEvents = 'auto';
+            this.points.forEach((p) => {
+                p.element.style.opacity = "1";
+                p.element.style.pointerEvents = "auto";
             });
 
             // Return to home values
             targetFov = homeFov;
             cameraTarget.copy(cameraHome);
             lookTarget.copy(lookHome);
-
         };
 
-        const closeTerminalFullscreen = async () => {
-    if (
-        !this.terminalFullscreen?.isOpen ||
-        this.terminalFullscreen.isTransitioning
-    ) {
-        return
-    }
-
-    await this.terminalFullscreen.close()
-    this.terminal.restoreAfterMobileSignalTraceExit()
-
-    if (this.currPointName === 'Terminal') {
-        exitFocusMode()
-
-        this.isFocused = false
-        this.currPointName = ''
-    }
-}
-
-document
-    .querySelector('#terminal-fullscreen-close')
-    ?.addEventListener(
-        'click',
-        closeTerminalFullscreen
-    )
-
-document
-    .querySelector('#terminal-fullscreen-back')
-    ?.addEventListener(
-        'click',
-        () => {
-            this.terminal.goBack()
-        }
-    )
-
-        // Escape key exits
-        window.addEventListener('keydown', async (input) => {
-    if (input.key !== 'Escape') {
-        return
-    }
-
-    if (this.terminalFullscreen?.isOpen) {
-        await closeTerminalFullscreen()
-        return
-    }
-
-    if (this.isFocused) {
-        exitFocusMode()
-        this.isFocused = false
-        this.currPointName = ''
-    }
-})
-
-
-
-
-
-
-
-
-        // Press 'i' on your keyboard to print the Draw Call Ledger
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'i') {
-                let meshCount = 0;
-                const drawCallLedger = {};
-
-                this.scene.traverse((child) => {
-                    if (child.isMesh && child.visible) {
-                        meshCount++;
-
-                        const parentName = child.parent
-                            ? (child.parent.name || child.parent.type)
-                            : 'Root';
-
-                        if (!drawCallLedger[parentName]) {
-                            drawCallLedger[parentName] = 0;
-                        }
-
-                        drawCallLedger[parentName]++;
-                    }
-                });
-
-                console.log(`🔍 TOTAL VISIBLE MESHES: ${meshCount}`);
-                console.table(drawCallLedger);
-            }
-        });
-
-        const raycaster = new THREE.Raycaster()
-        const pointer = new THREE.Vector2()
-
-        const isVisibleInHierarchy = (object) => {
-            let current = object;
-
-            while (current) {
-                if (!current.visible) {
-                    return false;
-                }
-
-                current = current.parent;
-            }
-
-            return true;
-        };
-
-        const getObjectPath = (object) => {
-            const names = [];
-            let current = object;
-
-            while (current && current !== this.scene) {
-                let label = current.name;
-
-                if (!label || label.trim() === "") {
-                    label = `[${current.type}]`;
-                }
-
-                names.unshift(label);
-                current = current.parent;
-            }
-
-            return names.join(" > ");
-        };
-
-        const getMaterialDebugName = (material) => {
-            if (!material) {
-                return "No material";
-            }
-
-            if (Array.isArray(material)) {
-                const materialNames = [];
-
-                for (const singleMaterial of material) {
-                    if (singleMaterial.name && singleMaterial.name.trim() !== "") {
-                        materialNames.push(singleMaterial.name);
-                    }
-                    else {
-                        materialNames.push(singleMaterial.type);
-                    }
-                }
-
-                return materialNames.join(", ");
-            }
-
-            if (material.name && material.name.trim() !== "") {
-                return material.name;
-            }
-
-            return material.type;
-        };
-
-        const inspectGlbObjectFromPointer = (event) => {
-            // Hold Shift while clicking so this does not mess with normal interactions.
-            if (!event.shiftKey) {
+        const closeCubeFocus = () => {
+            if (!this.isFocused || this.currPointName !== "RubiksCube") {
                 return;
             }
 
-            event.preventDefault();
-            event.stopPropagation();
+            exitFocusMode();
 
-            if (event.stopImmediatePropagation) {
-                event.stopImmediatePropagation();
+            this.isFocused = false;
+            this.currPointName = "";
+        };
+
+        for (const button of cubeFocusExitButtons) {
+            button.addEventListener("click", closeCubeFocus);
+        }
+
+        const closeTerminalFullscreen = async () => {
+            if (
+                !this.terminalFullscreen?.isOpen ||
+                this.terminalFullscreen.isTransitioning
+            ) {
+                return;
+            }
+
+            await this.terminalFullscreen.close();
+            this.terminal.restoreAfterMobileSignalTraceExit();
+
+            if (this.currPointName === "Terminal") {
+                exitFocusMode();
+
+                this.isFocused = false;
+                this.currPointName = "";
+            }
+        };
+
+        document
+            .querySelector("#terminal-fullscreen-close")
+            ?.addEventListener("click", closeTerminalFullscreen);
+
+        document
+            .querySelector("#terminal-fullscreen-back")
+            ?.addEventListener("click", () => {
+                this.terminal.goBack();
+            });
+
+        // Escape key exits
+        window.addEventListener("keydown", async (input) => {
+            if (input.key !== "Escape") {
+                return;
+            }
+
+            if (this.terminalFullscreen?.isOpen) {
+                await closeTerminalFullscreen();
+                return;
+            }
+
+            if (this.isFocused) {
+                exitFocusMode();
+                this.isFocused = false;
+                this.currPointName = "";
+            }
+        });
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        const getActiveTerminal = () => {
+            if (this.currPointName !== "Terminal") {
+                return null;
+            }
+
+            if (!this.terminal) {
+                return null;
+            }
+
+            return this.terminal;
+        };
+
+        /**
+         * Given a pointer event, this function calculates the corresponding position on the terminal's canvas.
+         * It uses raycasting to determine where the pointer intersects with the monitor glass and then maps that intersection to the terminal's canvas coordinates.
+         * @param {*} event the pointer event (e.g., mouse click or touch) from which to derive the position.
+         * @returns an object with x and y properties representing the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
+         */
+        const getTerminalCanvasPositionFromPointerEvent = (event) => {
+            if (!this.monitorGlass) {
+                return null;
+            }
+
+            if (this.terminalFullscreen?.isOpen) {
+                return null;
             }
 
             const rect = renderer.domElement.getBoundingClientRect();
@@ -2739,159 +1394,29 @@ document
 
             raycaster.setFromCamera(pointer, this.camera);
 
-            const hits = raycaster.intersectObjects(this.glbDebugMeshes, true);
+            const hits = raycaster.intersectObject(this.monitorGlass);
 
             if (hits.length === 0) {
-                console.log("No GLB object hit.");
-                return;
+                return null;
             }
 
-            let selectedHit = null;
-
-            for (const hit of hits) {
-                if (isVisibleInHierarchy(hit.object)) {
-                    selectedHit = hit;
-                    break;
-                }
-            }
-
-            if (!selectedHit) {
-                console.log("Only hidden GLB objects were hit.");
-                return;
-            }
-
-            const object = selectedHit.object;
-            const worldPosition = new THREE.Vector3();
-
-            object.getWorldPosition(worldPosition);
-
-            console.group("🎯 GLB Object Inspector");
-            console.log("Object name:", object.name);
-            console.log("Object type:", object.type);
-            console.log("Material:", getMaterialDebugName(object.material));
-            console.log("Parent:", object.parent ? object.parent.name : "No parent");
-            console.log("Full path:", getObjectPath(object));
-            console.log("Distance from camera:", selectedHit.distance);
-            console.log("Hit point:", selectedHit.point);
-            console.log("Object world position:", worldPosition);
-            console.log("Object:", object);
-
-            if (selectedHit.uv) {
-                console.log("UV:", selectedHit.uv);
-            }
-
-            console.groupEnd();
-
-            const maxHitsToShow = Math.min(hits.length, 10);
-            const hitTable = [];
-
-            for (let i = 0; i < maxHitsToShow; i++) {
-                const hit = hits[i];
-
-                hitTable.push({
-                    index: i,
-                    name: hit.object.name,
-                    material: getMaterialDebugName(hit.object.material),
-                    distance: hit.distance,
-                    visible: isVisibleInHierarchy(hit.object),
-                    path: getObjectPath(hit.object)
-                });
-            }
-
-            console.table(hitTable);
-        };
-
-        const getActiveTerminal = () => {
-            if (this.currPointName !== "Terminal") {
-                return null
-            }
-
-            if (!this.terminal) {
-                return null
-            }
-
-            return this.terminal
-        }
-
-
-
-        /**
-         * Returns the names of one material or multiple materials.
-         */
-        function getMaterialNames(material) {
-            if (!material) {
-                return 'No material';
-            }
-            if (Array.isArray(material)) {
-                return material.map((currentMaterial) => {
-                    return currentMaterial.name;
-                });
-            }
-            return material.name;
-        }
-
-        /**
-         * Logs the clicked object's full parent hierarchy.
-         */
-        function logParentChain(object) {
-            const parentChain = [];
-            let currentObject = object;
-
-            while (currentObject) {
-                parentChain.push({
-                    name: currentObject.name || '(unnamed)',
-                    type: currentObject.type
-                });
-
-                currentObject = currentObject.parent;
-            }
-        }
-        /**
-         * Given a pointer event, this function calculates the corresponding position on the terminal's canvas.
-         * It uses raycasting to determine where the pointer intersects with the monitor glass and then maps that intersection to the terminal's canvas coordinates. 
-         * @param {*} event the pointer event (e.g., mouse click or touch) from which to derive the position.
-         * @returns an object with x and y properties representing the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
-         */
-        const getTerminalCanvasPositionFromPointerEvent = (event) => {
-            if (!this.monitorGlass) {
-                return null
-            }
-
-            if (this.terminalFullscreen?.isOpen) {
-                return null
-            }
-
-            const rect = renderer.domElement.getBoundingClientRect()
-
-            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-
-            raycaster.setFromCamera(pointer, this.camera)
-
-            const hits = raycaster.intersectObject(this.monitorGlass)
-
-            if (hits.length === 0) {
-                return null
-            }
-
-            const hit = hits[0]
+            const hit = hits[0];
 
             if (!hit.uv) {
-                return null
+                return null;
             }
 
-            const rawU = hit.uv.x
-            const rawV = hit.uv.y
+            const rawU = hit.uv.x;
+            const rawV = hit.uv.y;
 
-
-            const canvasX = rawU * this.terminal.canvas.width // Map the transformed U to the canvas width
-            const canvasY = (1 - rawV) * this.terminal.canvas.height // Invert Y because canvas coordinates start from the top-left
+            const canvasX = rawU * this.terminal.canvas.width; // Map the transformed U to the canvas width
+            const canvasY = (1 - rawV) * this.terminal.canvas.height; // Invert Y because canvas coordinates start from the top-left
 
             return {
                 x: canvasX,
-                y: canvasY
-            }
-        }
+                y: canvasY,
+            };
+        };
 
         /**
          * Handles pointer events on the monitor.
@@ -2900,142 +1425,102 @@ document
          * @returns the position on the terminal's canvas, or null if the pointer does not intersect with the monitor glass.
          */
         const handleMonitorPointerEvent = (event, type) => {
-            const terminal = getActiveTerminal()
+            const terminal = getActiveTerminal();
 
             if (!terminal) {
-                return
+                return;
             }
 
             const canvasPosition =
-                getTerminalCanvasPositionFromPointerEvent(event)
+                getTerminalCanvasPositionFromPointerEvent(event);
 
             if (!canvasPosition) {
                 if (type === "up") {
-                    terminal.handlePointerCancel()
+                    terminal.handlePointerCancel();
 
                     if (
-                        event.currentTarget.hasPointerCapture?.(
-                            event.pointerId
-                        )
+                        event.currentTarget.hasPointerCapture?.(event.pointerId)
                     ) {
                         event.currentTarget.releasePointerCapture(
-                            event.pointerId
-                        )
+                            event.pointerId,
+                        );
                     }
                 }
 
-                return
+                return;
             }
 
             if (type === "down") {
                 const handled = terminal.handlePointerDown(
                     canvasPosition.x,
-                    canvasPosition.y
-                )
+                    canvasPosition.y,
+                );
 
                 if (handled) {
-                    event.currentTarget.setPointerCapture(
-                        event.pointerId
-                    )
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                }
+            } else if (type === "move") {
+                terminal.handlePointerMove(canvasPosition.x, canvasPosition.y);
+            } else if (type === "up") {
+                terminal.handlePointerUp(canvasPosition.x, canvasPosition.y);
+
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
                 }
             }
-            else if (type === "move") {
-                terminal.handlePointerMove(
-                    canvasPosition.x,
-                    canvasPosition.y
-                )
-            }
-            else if (type === "up") {
-                terminal.handlePointerUp(
-                    canvasPosition.x,
-                    canvasPosition.y
-                )
-
-                if (
-                    event.currentTarget.hasPointerCapture(
-                        event.pointerId
-                    )
-                ) {
-                    event.currentTarget.releasePointerCapture(
-                        event.pointerId
-                    )
-                }
-            }
-        }
-
-
-
+        };
 
         const handlePointerDown = (event) => {
-            handleMonitorPointerEvent(event, "down")
-        }
+            handleMonitorPointerEvent(event, "down");
+        };
 
         const handlePointerMove = (event) => {
-            handleMonitorPointerEvent(event, "move")
-        }
+            handleMonitorPointerEvent(event, "move");
+        };
 
         const handlePointerUp = (event) => {
-            handleMonitorPointerEvent(event, "up")
-        }
+            handleMonitorPointerEvent(event, "up");
+        };
 
         const handlePointerCancel = (event) => {
-            const terminal = getActiveTerminal()
+            const terminal = getActiveTerminal();
 
             if (terminal) {
-                terminal.handlePointerCancel()
+                terminal.handlePointerCancel();
             }
 
-            if (
-                event.currentTarget.hasPointerCapture?.(
-                    event.pointerId
-                )
-            ) {
-                event.currentTarget.releasePointerCapture(
-                    event.pointerId
-                )
+            if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
             }
-        }
+        };
 
         // Normal 3D monitor input
-        renderer.domElement.addEventListener(
-            "pointerdown",
-            handlePointerDown
-        )
+        renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
-        renderer.domElement.addEventListener(
-            "pointermove",
-            handlePointerMove
-        )
+        renderer.domElement.addEventListener("pointermove", handlePointerMove);
 
-        renderer.domElement.addEventListener(
-            "pointerup",
-            handlePointerUp
-        )
+        renderer.domElement.addEventListener("pointerup", handlePointerUp);
 
         renderer.domElement.addEventListener(
             "pointercancel",
-            handlePointerCancel
-        )
+            handlePointerCancel,
+        );
 
         // Instantiate CubeInput
-        this.CubeInput = new CubeInput(this.cube, renderer, this)
+        this.CubeInput = new CubeInput(this.cube, renderer, this);
 
-
-
-
-        window.addEventListener('keydown', async (event) => {
-            if (event.code !== 'KeyJ' || !event.shiftKey) {
-                return
+        window.addEventListener("keydown", async (event) => {
+            if (event.code !== "KeyJ" || !event.shiftKey) {
+                return;
             }
 
-            const exporter = new GLTFExporter()
+            const exporter = new GLTFExporter();
 
             /**
              * Clone the decal so exporting it doesn't change
              * the version currently positioned in the station.
              */
-            const decalToExport =
-                this.portfolioDecal.clone(true)
+            const decalToExport = this.portfolioDecal.clone(true);
 
             /**
              * Put it at Blender's origin.
@@ -3043,79 +1528,38 @@ document
              * We keep its current scale so the size you've chosen
              * in Three.js is preserved.
              */
-            decalToExport.position.set(0, 0, 0)
-            decalToExport.rotation.set(0, 0, 0)
+            decalToExport.position.set(0, 0, 0);
+            decalToExport.rotation.set(0, 0, 0);
+            decalToExport.updateMatrixWorld(true);
 
-            decalToExport.updateMatrixWorld(true)
-
-            const exportScene = new THREE.Scene()
-
-            exportScene.name = 'PortfolioDecalExport'
-            exportScene.add(decalToExport)
-
-
-            const panel = document.querySelector('.loading-panel')
-
-                ({
-                    innerWidth,
-                    innerHeight,
-                    compactQuery: matchMedia(
-                        '(orientation: landscape) and (max-height: 500px)'
-                    ).matches,
-                    panelHeight: panel.getBoundingClientRect().height,
-                    panelPadding: getComputedStyle(panel).padding,
-                    loadingScreenHeight:
-                        document.querySelector('.loading-screen').getBoundingClientRect().height
-                })
+            const exportScene = new THREE.Scene();
+            exportScene.name = "PortfolioDecalExport";
+            exportScene.add(decalToExport);
 
             try {
-                const glb = await exporter.parseAsync(
-                    exportScene,
-                    {
-                        binary: true,
-                        onlyVisible: true,
-                    }
-                )
+                const glb = await exporter.parseAsync(exportScene, {
+                    binary: true,
+                    onlyVisible: true,
+                });
 
-                const blob = new Blob(
-                    [glb],
-                    {
-                        type: 'model/gltf-binary',
-                    }
-                )
+                const blob = new Blob([glb], {
+                    type: "model/gltf-binary",
+                });
 
-                const downloadUrl =
-                    URL.createObjectURL(blob)
+                const downloadUrl = URL.createObjectURL(blob);
+                const downloadLink = document.createElement("a");
 
-                const downloadLink =
-                    document.createElement('a')
+                downloadLink.href = downloadUrl;
+                downloadLink.download = "portfolio-wall-decal.glb";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
 
-                downloadLink.href = downloadUrl
-                downloadLink.download =
-                    'portfolio-wall-decal.glb'
-
-                document.body.appendChild(
-                    downloadLink
-                )
-
-                downloadLink.click()
-                downloadLink.remove()
-
-                URL.revokeObjectURL(downloadUrl)
-
-                console.log(
-                    'Portfolio decal exported successfully.'
-                )
+                URL.revokeObjectURL(downloadUrl);
+            } catch {
+                // Export failures are intentionally ignored in the production UI.
             }
-            catch (error) {
-                console.error(
-                    'Failed to export portfolio decal:',
-                    error
-                )
-            }
-        })
-
-
+        });
 
         this.initHotspots = () => {
             const glassBox = new THREE.Box3().setFromObject(this.monitorGlass);
@@ -3124,106 +1568,102 @@ document
 
             this.points = [
                 {
-                    name: 'RubiksCube',
+                    name: "RubiksCube",
                     position: this.cube.cubeGroup.position,
-                    element: document.querySelector('#hotspot-cube'),
-                    ignoreMeshes: [this.cube.cubeGroup, this.floorMesh, this.ceilingMeshes]
+                    element: document.querySelector("#hotspot-cube"),
+                    ignoreMeshes: [
+                        this.cube.cubeGroup,
+                        this.floorMesh,
+                        this.ceilingMeshes,
+                    ],
                 },
                 {
-                    name: 'Terminal',
+                    name: "Terminal",
                     position: trueGlassCenter,
-                    element: document.querySelector('#hotspot-terminal'),
-                    ignoreMeshes: [this.monitorGlass, this.floorMesh, this.ceilingMeshes]
-                }
+                    element: document.querySelector("#hotspot-terminal"),
+                    ignoreMeshes: [
+                        this.monitorGlass,
+                        this.floorMesh,
+                        this.ceilingMeshes,
+                    ],
+                },
             ];
 
-            // NEW: Dynamically attach a click listener to every hotspot in the array
+            // Attach a click listener to every hotspot in the array
             this.points.forEach((point) => {
-                point.element.addEventListener('click', () => {
+                point.element.addEventListener("click", () => {
                     if (!this.isFocused && !isTransitioning) {
-                        this.currPointName = point.name
+                        this.currPointName = point.name;
 
                         // Pass the specific point we clicked into the focus function
                         enterFocusMode(point);
 
                         if (
-                            point.name === 'Terminal' &&
+                            point.name === "Terminal" &&
                             this.terminalFullscreen
                         ) {
-                            this.terminalFullscreen.open()
+                            this.terminalFullscreen.open();
                         }
                     }
                 });
             });
-        }
-
-        // stats
-        const stats = new Stats()
-        stats.showPanel(0)
-        document.body.appendChild(stats.dom)
-
+        };
 
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
         // ---------------------------------------------------------
-        const timer = new THREE.Timer()
-        const cubeWorldPos = new THREE.Vector3();
-
+        const timer = new THREE.Timer();
         // [ MEMORY PRE-ALLOCATION ]
-        let hotspotX = 0;
-        let hotspotY = 0;
         let canvasLocalX = 0;
         let canvasLocalY = 0;
         let targetX = 0;
         let targetY = 0;
         const tempScreenVector = new THREE.Vector2();
-        const tempHitPoint = new THREE.Vector3();
-        this.assetsLoaded = false
+        this.assetsLoaded = false;
 
-        controls.addEventListener('change', () => {
+        controls.addEventListener("change", () => {
             hotspotNeedUpdate = true;
         });
 
-        trackballControls.addEventListener('change', () => {
-            hotspotNeedUpdate = true
+        trackballControls.addEventListener("change", () => {
+            hotspotNeedUpdate = true;
         });
 
         const tick = (timestamp) => {
             renderer.info.reset();
-            controls.update(); // Moved update controls and renderer update to the top so the hotspot gets synced with them at the current frame
+            controls.update(); // Keep hotspot projection synchronized with the current camera frame.
             if (!this.terminalFullscreen?.shouldPauseScene) {
-    effectComposer.render()
-}
+                effectComposer.render();
+            }
 
-
-            timer.update(timestamp)
+            timer.update(timestamp);
             const elapsedTime = timer.getElapsed();
             if (this.terminalGlitchUniforms) {
-
-                this.terminalGlitchUniforms.time.value =
-                    elapsedTime
+                this.terminalGlitchUniforms.time.value = elapsedTime;
             }
-            const delta = timer.getDelta()
-            this.updateSecurityCameraTracking(delta)
-            this.CubeInput.update(delta)
+            const delta = timer.getDelta();
+            this.CubeInput.update(delta);
 
-            stats.update()
-
-            this.loadingScreen.update(delta)
+            this.loadingScreen.update(delta);
 
             // ---- CAMERA LERP ----
             if (isTransitioning) {
-                hotspotNeedUpdate = true
+                hotspotNeedUpdate = true;
                 // 1. Lerp position and look target
                 this.camera.position.lerp(cameraTarget, delta * 12);
                 controls.target.lerp(lookTarget, delta * 12);
 
                 // 2. Lerp the FOV
-                this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, delta * 12);
+                this.camera.fov = THREE.MathUtils.lerp(
+                    this.camera.fov,
+                    targetFov,
+                    delta * 12,
+                );
                 this.camera.updateProjectionMatrix(); // CRITICAL: Required when FOV changes
 
                 // Check if we've arrived (close enough)
-                if (this.camera.position.distanceTo(cameraTarget) < 0.01) { // Bumped to 0.01 to prevent micro-stutters at the end of the lerp
+                if (this.camera.position.distanceTo(cameraTarget) < 0.01) {
+                    // Bumped to 0.01 to prevent micro-stutters at the end of the lerp
                     this.camera.position.copy(cameraTarget);
                     this.camera.fov = targetFov; // Snap exactly to target just in case
                     this.camera.updateProjectionMatrix(); //
@@ -3233,14 +1673,14 @@ document
                     if (!this.isFocused) {
                         controls.update();
                         trackballControls.update();
-                        trackballControls.enabled = true
-                        controls.enabled = true
-                        controls.enableRotate = true
-                        controls.enablePan = true
+                        trackballControls.enabled = true;
+                        controls.enabled = true;
+                        controls.enableRotate = true;
+                        controls.enablePan = true;
                     }
                 }
             }
-            const target = controls.target
+            const target = controls.target;
             if (sceneReady === true && this.points && hotspotNeedUpdate) {
                 for (const point of this.points) {
                     // Convert the hotspot's 3D world position into normalized screen coordinates.
@@ -3254,12 +1694,12 @@ document
                     // If the hotspot is outside the camera view, hide it immediately and do an early exit.
                     // This prevents DOM labels from appearing when their 3D target is off-screen.
                     if (
-                        // if the x or y isn't between -1 and 1, the hotspot isn't in the camera view 
+                        // if the x or y isn't between -1 and 1, the hotspot isn't in the camera view
                         Math.abs(screenPos.x) > 1 ||
                         Math.abs(screenPos.y) > 1 ||
                         screenPos.z > 1 // If z is greater than 1, the projected point is outside the camera's visible depth range.
                     ) {
-                        point.element.classList.remove('visible');
+                        point.element.classList.remove("visible");
                         continue;
                     }
 
@@ -3270,26 +1710,31 @@ document
                     // Create a ray from the camera through the hotspot's projected screen position.
                     // This ray represents the line of sight between the camera and the hotspot.
                     raycaster.setFromCamera(tempScreenVector, this.camera);
-                    const intersects = raycaster.intersectObjects(this.objectsArr, true)
-                    // .filter(hit => !point.ignoreMeshes.some(ignoreObj => ignoreObj.getObjectById(hit.object.id)));
-                    // 🚨 THE DETECTIVE LOG
+                    const intersects = raycaster.intersectObjects(
+                        this.objectsArr,
+                        true,
+                    );
                     if (intersects.length === 0) {
-                        point.element.classList.add('visible');
+                        point.element.classList.add("visible");
                     } else {
                         const intersectionDistance = intersects[0].distance;
-                        const pointDistance = point.position.distanceTo(this.camera.position);
+                        const pointDistance = point.position.distanceTo(
+                            this.camera.position,
+                        );
 
                         if (intersectionDistance < pointDistance) {
-                            point.element.classList.remove('visible');
+                            point.element.classList.remove("visible");
                             continue;
                         } else {
-                            point.element.classList.add('visible');
+                            point.element.classList.add("visible");
                         }
                     }
 
                     // [ REVERSE-RAYCASTING: 3D TO HTML DOM ]
-                    canvasLocalX = (screenPos.x * 0.5 + 0.5) * this.canvasRect.width;
-                    canvasLocalY = (screenPos.y * -0.5 + 0.5) * this.canvasRect.height;
+                    canvasLocalX =
+                        (screenPos.x * 0.5 + 0.5) * this.canvasRect.width;
+                    canvasLocalY =
+                        (screenPos.y * -0.5 + 0.5) * this.canvasRect.height;
 
                     targetX = Math.round(this.canvasRect.left + canvasLocalX);
                     targetY = Math.round(this.canvasRect.top + canvasLocalY);
@@ -3300,20 +1745,10 @@ document
                 hotspotNeedUpdate = false;
             }
             this.supernova.update(elapsedTime, this.camera);
-
-            // Update helpers in real-time if you move sliders in the GUI
-            // mainLightHelper.update();
-            // shadowCameraHelper.update();
-            trackballControls.target.set(target.x, target.y, target.z)
-            trackballControls.update()
-            // Go through each points 
+            trackballControls.target.set(target.x, target.y, target.z);
+            trackballControls.update();
             requestAnimationFrame(tick);
         };
-        tick()
-
-
-
+        tick();
     }
-
-
 }

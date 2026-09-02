@@ -32,11 +32,11 @@ export default class SignalTrace {
 
         this.boardStartY = 300
 
-        this.titleFontSize = 52
-        this.subtitleFontSize = 36
-        this.statusFontSize = 36
-        this.controlsFontSize = 28
-        this.nodeLabelFontSize = 32
+        this.titleFontSize = 60
+        this.subtitleFontSize = 40
+        this.statusFontSize = 40
+        this.controlsFontSize = 36
+        this.nodeLabelFontSize = 40
 
         /**
          * Colors used when drawing archive targets.
@@ -92,6 +92,9 @@ export default class SignalTrace {
         * Whether the current pipe layout creates
         * a valid signal path from SRC to ARC.
         */
+        console.log("SignalTrace object ", this)
+        console.log("Level object ", this.level)
+        console.log("Drag controller object ", this.dragController)
         this.signalConnected;
 
         /**
@@ -219,27 +222,49 @@ export default class SignalTrace {
         /**
          * Calculate the full board width.
          */
-        const boardWidth = this.cols * this.tileSize + (this.cols - 1) * this.tileGap
+        this.boardWidth = this.cols * this.tileSize + (this.cols - 1) * this.tileGap
         // calculate the width by calculating total amount of columns multiplied by the tile size
         // also add to the calculation the columns * the gaps, but reduct one gap since the board has this.cols - 1 gaps
 
         /**
-         * Center the board horizontally on the terminal canvas.
+         * Desktop keeps the original monitor-space coordinates untouched.
+         * On mobile fullscreen, center the board and its dynamically sized
+         * inventory as one gameplay group inside the widened canvas.
          */
-        /**
-         * Fullscreen mobile widens the surrounding Signal Trace canvas, but
-         * the inventory intentionally keeps its original game-space position.
-         * Keep the board centered inside the same 1920px gameplay layout so
-         * widening the outer frame cannot push the board into the inventory.
-         */
-        let gameplayLayoutWidth = this.canvas.width
-
         if (this.terminal.signalTraceUsesMobileAspect) {
-            gameplayLayoutWidth = this.terminal.monitorCanvasWidth
-        }
+            const inventoryDimensions =
+                this.inventory.updatePanelDimensions()
 
-        this.boardStartX =
-            (gameplayLayoutWidth - boardWidth) / 2 - 400
+            const boardInventoryGap = 250
+            const gameplayWidth =
+                this.boardWidth +
+                boardInventoryGap +
+                inventoryDimensions.width
+
+            const gameplayStartX =
+                (this.canvas.width - gameplayWidth) / 2
+
+            this.boardStartX = gameplayStartX
+
+            /**
+             * Inventory backgrounds begin 30px before panelX. Include that
+             * inset so the visible panel, rather than its slot origin, starts
+             * exactly boardInventoryGap pixels after the board.
+             */
+            this.inventory.panelX =
+                this.boardStartX +
+                this.boardWidth +
+                boardInventoryGap +
+                30
+
+            this.inventory.panelY = this.boardStartY
+        }
+        else {
+            this.boardStartX =
+                (this.canvas.width - this.boardWidth) / 2 - 400
+
+            this.inventory.panelY = this.boardStartY
+        }
 
         /**
          * Resolve the current level's targets once before drawing the grid.
@@ -303,6 +328,7 @@ export default class SignalTrace {
 
 
         this.dragController.drawHeldPipe()
+        this.isCursorInsideBoard(null, null)
     }
 
 
@@ -348,9 +374,6 @@ export default class SignalTrace {
         return tile
     }
 
-    getTile(row, col) {
-
-    }
 
     canPickUpPipe(row, col) {
         if (!this.isInsideBoard(row, col)) {
@@ -464,7 +487,14 @@ handlePointerCancel() {
     }
 
 
-
+    isCursorInsideBoard(canvasX, canvasY) {
+        this.boardHeight = this.rows * (this.tileGap + this.tileSize)
+        const boardEndX = this.boardStartX + this.boardWidth
+        const boardEndY = this.boardStartY + this.boardHeight
+        if(canvasX >= this.boardStartX && canvasX <= boardEndX && canvasY >= this.boardStartY && canvasY <= boardEndY) 
+            return true
+        return false
+    }
 
 
 

@@ -172,11 +172,10 @@ export default class SignalTraceDragController {
         if (!this.signalTrace.inventory.canPickUpSlot(this.inventoryPosition.index)) {
             return false
         }
-
         this.heldPipe = this.signalTrace.inventory.createPipeFromSlot(
             this.inventoryPosition.index
         )
-
+        console.log("held pipe ", this.heldPipe)
         this.originType = "inventory"
         this.sourcePosition = null
         this.sourceInventoryIndex = this.inventoryPosition.index
@@ -298,19 +297,15 @@ export default class SignalTraceDragController {
      * Otherwise returns false
      */
     dropTileAtInventory(canvasX, canvasY) {
-        if (this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY) !== null) {
-            const index = this.signalTrace.inventory.getSlotAtCanvasPosition(canvasX, canvasY).index
-            const inventoryPipe = this.signalTrace.inventory.createPipeFromSlot(index)
-            if (this.heldPipe.type === inventoryPipe.type) {
+            const index = this.signalTrace.inventory.returnSlotPositionFromPipeType(this.heldPipe)
+            console.log("index in drop tile ", index)
+            if (!this.signalTrace.isCursorInsideBoard(canvasX, canvasY)) {
                 this.signalTrace.inventory.changeSlotCount(index, 1)
                 this.clearHeldPipe()
-                this.signalTrace.updateSignalState()
                 this.tile.pipe = null
                 this.signalTrace.drawBootScreen()
                 return true
             }
-
-        }
         return false
     }
 

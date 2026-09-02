@@ -25,8 +25,8 @@ export default class TerminalCanvas {
         // Set the internal pixel resolution of the canvas.
         // This is not the CSS size. This is the actual texture resolution.
         // Higher resolution = sharper text when the 3D camera zooms into the monitor.
-        this.monitorCanvasWidth = 1920
-        this.monitorCanvasHeight = 1200
+        this.monitorCanvasWidth = 2160
+        this.monitorCanvasHeight = 1350
 
         this.canvas.width = this.monitorCanvasWidth;
         this.canvas.height = this.monitorCanvasHeight;
@@ -673,7 +673,7 @@ export default class TerminalCanvas {
          * dialogue choices above it.
          */
         this.ctx.fillStyle = dimGreen
-        this.ctx.font = '34px monospace'
+        this.ctx.font = '40px monospace'
         this.ctx.fillText(
             'AVAILABLE GAME MODULE',
             startX,
@@ -735,7 +735,7 @@ export default class TerminalCanvas {
         )
 
         this.ctx.fillStyle = signalAmber
-        this.ctx.font = '38px monospace'
+        this.ctx.font = '46px monospace'
         this.ctx.fillText(
             'INTERACTIVE LOGIC SIMULATION',
             startX + 44,
@@ -813,7 +813,7 @@ export default class TerminalCanvas {
          */
         const telemetryX = startX + 710
 
-        this.ctx.font = '38px monospace'
+        this.ctx.font = '46px monospace'
         this.ctx.fillStyle = '#00C83A'
         this.ctx.fillText(
             'SYSTEM  ONLINE',
@@ -860,7 +860,7 @@ export default class TerminalCanvas {
             this.ctx.fillStyle = moduleTitleGreen
         }
 
-        this.ctx.font = 'bold 46px monospace'
+        this.ctx.font = 'bold 50px monospace'
         this.ctx.textAlign = 'center'
         this.ctx.fillText(
             launchText,
@@ -871,7 +871,7 @@ export default class TerminalCanvas {
         this.ctx.textAlign = 'left'
         this.ctx.fillStyle = footerColor
 
-        this.ctx.font = '32px monospace'
+        this.ctx.font = '40px monospace'
         this.ctx.fillText(
             footerText,
             launchX,
@@ -1444,26 +1444,24 @@ export default class TerminalCanvas {
         this.draw()
     }
 
-    /** Keep the external mobile Back control synchronized with terminal state. */
-    syncTouchBackButton() {
-        const backButton = document.querySelector(
-            '#terminal-fullscreen-back'
+    /** Keep the external mobile and desktop Back controls synchronized. */
+    syncBackButtons() {
+        const backButtons = document.querySelectorAll(
+            '#terminal-fullscreen-back, #terminal-focus-back'
         )
-
-        if (!backButton) {
-            return
-        }
 
         const canGoBack =
             this.mode === 'signalTrace' ||
             this.currentNodeId !== 'start'
 
-        backButton.hidden = !canGoBack
-        backButton.disabled = !canGoBack
+        for (const backButton of backButtons) {
+            backButton.hidden = !canGoBack
+            backButton.disabled = !canGoBack
+        }
     }
 
     /**
-     * Performs the terminal's existing Left Arrow behavior for touch controls.
+     * Performs the terminal's existing Left Arrow behavior for external controls.
      * Signal Trace returns to dialogue; dialogue pages return to the root.
      */
     goBack() {
@@ -1510,7 +1508,7 @@ export default class TerminalCanvas {
             this.prepareSignalTraceCanvasForFullscreen()
             this.signalTrace.startSignalTrace()
             this.syncFullscreenCanvas()
-            this.syncTouchBackButton()
+            this.syncBackButtons()
             return true
         }
 
@@ -1687,7 +1685,7 @@ export default class TerminalCanvas {
 
     draw() {
         this.dialogueHitAreas = []
-        this.syncTouchBackButton()
+        this.syncBackButtons()
 
         // ------------------------------------------
         // 1. CLEAR THE PREVIOUS FRAME
@@ -1718,7 +1716,7 @@ export default class TerminalCanvas {
         // This is extremely useful while writing TerminalTree content.
         if (!node) {
             this.ctx.fillStyle = '#00FF41';
-            this.ctx.font = '30px monospace';
+            this.ctx.font = '40px monospace';
 
             this.ctx.fillText('ERROR: NODE NOT FOUND', 50, 80);
             this.ctx.fillText(`Missing node: ${this.currentNodeId}`, 50, 130);
@@ -1735,11 +1733,11 @@ export default class TerminalCanvas {
 
         const paddingX = 70
         const headerFontSize = 60
-        const bodyFontSize = 50
-        const choiceFontSize = 45
-        const bodyLineHeight = 56
-        const choiceLineHeight = 62
-        const highlightHeight = 52
+        const bodyFontSize = 55
+        const choiceFontSize = 50
+        const bodyLineHeight = 58
+        const choiceLineHeight = 68
+        const highlightHeight = 56
 
         // Terminal green.
         this.ctx.fillStyle = '#00FF41';

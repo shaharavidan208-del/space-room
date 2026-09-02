@@ -99,6 +99,41 @@
     <div class="scene-frame">
         <canvas class="webgl"></canvas>
 
+        <div
+            id="terminal-focus-controls"
+            class="terminal-focus-controls"
+            role="group"
+            aria-label="Terminal focus controls"
+        >
+            <button
+                id="terminal-focus-back"
+                class="terminal-focus-control terminal-focus-back"
+                type="button"
+                aria-label="Return to terminal main directory"
+                hidden
+                disabled
+            >
+                <span
+                    class="terminal-fullscreen-back-icon"
+                    aria-hidden="true"
+                ></span>
+                <span class="terminal-fullscreen-close-label">BACK</span>
+            </button>
+
+            <button
+                id="terminal-focus-exit"
+                class="terminal-focus-control terminal-focus-exit"
+                type="button"
+                aria-label="Exit terminal focus mode"
+            >
+                <span
+                    class="terminal-fullscreen-close-icon"
+                    aria-hidden="true"
+                ></span>
+                <span class="terminal-fullscreen-close-label">EXIT</span>
+            </button>
+        </div>
+
         <div id="cube-controls-hint" class="cube-controls-hint">
             <div class="hint-title">Cube Controls</div>
             <div class="hint-row">
@@ -113,16 +148,77 @@
 
             <div class="hint-divider"></div>
 
-            <button
-                id="cube-scramble-button"
-                class="cube-scramble-button"
-                type="button"
-                disabled
-            >
-                <span class="scramble-status-light" aria-hidden="true"></span>
-                <span class="scramble-button-label">SCRAMBLE CUBE</span>
-            </button>
+            <div class="cube-hud-actions">
+    <button
+        id="cube-scramble-button"
+        class="cube-scramble-button"
+        type="button"
+        data-idle-label="SCRAMBLE CUBE"
+        disabled
+    >
+        <span
+            class="scramble-status-light"
+            aria-hidden="true"
+        ></span>
+
+        <span class="scramble-button-label">
+            SCRAMBLE CUBE
+        </span>
+    </button>
+
+    <button
+        id="cube-focus-exit-button"
+        class="cube-scramble-button cube-focus-exit-button"
+        type="button"
+    >
+        EXIT
+    </button>
+</div>
         </div>
+        <div
+    id="cube-controls-hint-mobile"
+    class="cube-controls-hint cube-controls-hint-mobile"
+>
+    <div class="hint-title">Touch Controls</div>
+
+    <div class="hint-row">
+        <span class="hint-key">DRAG EMPTY</span>
+        <span>ROTATE CUBE</span>
+    </div>
+
+    <div class="hint-row">
+        <span class="hint-key">DRAG CUBE</span>
+        <span>ROTATE LAYER</span>
+    </div>
+
+    <div class="hint-divider"></div>
+
+    <div class="cube-mobile-actions">
+        <button
+            id="cube-scramble-button-mobile"
+            class="cube-scramble-button"
+            type="button"
+            disabled
+        >
+            <span
+                class="scramble-status-light"
+                aria-hidden="true"
+            ></span>
+
+            <span class="scramble-button-label">
+                SCRAMBLE
+            </span>
+        </button>
+
+        <button
+            id="cube-focus-exit-button-mobile"
+            class="cube-scramble-button cube-focus-exit-button-mobile"
+            type="button"
+        >
+            EXIT
+        </button>
+    </div>
+</div>
     </div>
 
     <div class="loading-screen">

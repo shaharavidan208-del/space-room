@@ -62,6 +62,11 @@ export default class SignalTraceInventory {
                 count: this.signalTrace.level.pipeCount.splitUp,
                 drawPipe: null
             },
+            {
+                pipe: new Pipe("splitLeft", ["up", "down", "left"], 9),
+                count: this.signalTrace.level.pipeCount.splitLeft,
+                drawPipe: null
+            },
 
         ]
     }
@@ -87,7 +92,7 @@ export default class SignalTraceInventory {
          * These values are canvas-space coordinates.
          * They control where the module cache appears on the terminal screen.
          */
-        this.panelX = 1280
+        this.panelX = 1520
         this.panelY = signalTrace.boardStartY
         this.rightSideInventoryCnt = -1
         this.panelWidth = 500
@@ -104,18 +109,26 @@ export default class SignalTraceInventory {
 
     shouldDrawSlot() {
         this.slotCount = 0
+        this.itemsToDraw = []
         for(let i = 0; i < this.items.length; i++) {
+            console.log("checking item: ", this.items[i])
             if(this.items[i].count > 0) {
-                this.items[i].drawPipe = true
-                this.items[i].slotPosition = this.slotCount
-                this.slotCount++
-            }
-            else {
-                this.items[i].drawPipe = false
+                this.itemsToDraw.push(this.items[i])
             }
         }
+
+        
     }
 
+    returnSlotPositionFromPipeType(pipe) {
+        const notFound = "No matching pipe found"
+        for(let i = 0; i < this.itemsToDraw.length; i++) {
+            if(pipe.type === this.itemsToDraw[i].pipe.type) {
+                return i
+            }
+        }
+        return notFound
+    }
 
     /**
      * Draws the full inventory panel.
@@ -128,31 +141,43 @@ export default class SignalTraceInventory {
      * This should be called from SignalTrace's main draw method.
      */
     draw() {
-        if(!this.items)
+        if(!this.itemsToDraw)
             return
         this.drawPanelBackground()
         this.drawPanelTitle()
-        for (let i = 0; i < this.items.length; i++) {
-                if(this.items[i].drawPipe) {
-                    this.drawSlot(i)
-                }
+        for (let i = 0; i < this.itemsToDraw.length; i++) {
+            this.drawSlot(i)
     }
     }
 
     /**
      * Draws the translucent panel behind the inventory slots.
      *
-     * The panel height is calculated from the number of inventory items,
-     * so the panel grows/shrinks with the level inventory.
+     * The panel width follows the number of occupied inventory columns.
+     * SignalTrace also calls this before positioning the complete mobile
+     * gameplay group, so drawing and centering use the same measurements.
      */
+    updatePanelDimensions() {
+        this.rows = 4
+        this.panelHeight = (this.slotSize + this.slotGap) * this.rows
+        this.columns = Math.ceil(
+    this.itemsToDraw.length / 4
+)
+        this.panelWidth =
+            (this.slotSize + this.slotGap) * this.columns + 15
+        return {
+            width: this.panelWidth,
+            height: this.panelHeight
+        }
+        
+    }
+
+
     drawPanelBackground() {
         const ctx = this.ctx
-        this.rows = 4
-        this.panelHeight = (this.slotSize + this.slotGap) * 4.25
+        this.updatePanelDimensions()
 
         ctx.save()
-        this.columns = Math.ceil(this.slotCount / 4)
-        this.panelWidth = (this.slotSize + this.slotGap) * this.columns + 15
         ctx.fillStyle = "rgba(0, 255, 65, 0.025)"
         ctx.fillRect(this.panelX - 30, this.panelY, this.panelWidth, this.panelHeight)
 
@@ -191,7 +216,9 @@ export default class SignalTraceInventory {
      * The index of the inventory item to draw.
      */
     drawSlot(index) {
-        const position = this.getSlotPosition(this.items[index].slotPosition)
+        console.log("drawing slot for index: ", index, " with item: ", this.itemsToDraw[index])
+        const position = this.getSlotPosition(index)
+        console.log("slot position: ", position)
         const x = position.x
         const y = position.y
         const ctx = this.ctx
@@ -202,7 +229,7 @@ export default class SignalTraceInventory {
          * Visually disable empty inventory slots.
          * The slot still exists, but the player cannot pick it up.
          */
-        if (this.items[index].count <= 0) {
+        if (this.itemsToDraw[index].count <= 0) {
             ctx.globalAlpha = 0.28
         }
 
@@ -219,14 +246,14 @@ export default class SignalTraceInventory {
         ctx.lineWidth = 5
         ctx.strokeRect(x, y, this.slotSize, this.slotSize)
 
-        this.signalTrace.pipeRenderer.drawPipe(x, y, this.items[index].pipe.connections)
+        this.signalTrace.pipeRenderer.drawPipe(x, y, this.itemsToDraw[index].pipe.connections)
 
         /**
          * Draw remaining module count.
          */
         ctx.fillStyle = "rgba(216, 255, 220, 0.78)"
         ctx.font = "40px monospace"
-        ctx.fillText("x" + this.items[index].count, x + this.slotSize + 32, y + 88)
+        ctx.fillText("x" + this.itemsToDraw[index].count, x + this.slotSize + 32, y + 88)
 
         ctx.restore()
     }
@@ -282,9 +309,9 @@ export default class SignalTraceInventory {
      */
     getSlotAtCanvasPosition(canvasX, canvasY) {
         // Check every inventory slot until one contains the pointer.
-        for (let i = 0; i < this.items.length; i++) {
+        for (let i = 0; i < this.itemsToDraw.length; i++) {
             // Get the top-left canvas position of this slot.
-            const position = this.getSlotPosition(this.items[i].slotPosition)
+            const position = this.getSlotPosition(i)
 
             // Calculate the complete rectangular boundary of the slot.
             const left = position.x
@@ -309,8 +336,6 @@ export default class SignalTraceInventory {
         return null
     }
 
-    
-
     /**
      * Checks whether an inventory slot can be picked up.
      *
@@ -330,11 +355,11 @@ export default class SignalTraceInventory {
             return false
         }
 
-        if (index >= this.items.length) {
+        if (index >= this.itemsToDraw.length) {
             return false
         }
 
-        const item = this.items[index]
+        const item = this.itemsToDraw[index]
 
         if (!item) {
             return false
@@ -359,8 +384,8 @@ export default class SignalTraceInventory {
      * A fresh tile object that can be placed into SignalTrace.grid.
      */
     createPipeFromSlot(index) {
-        const item = this.items[index]
-        const pipeCopy = new Pipe(item.pipe.type, item.pipe.connections)
+        const item = this.itemsToDraw[index]
+        const pipeCopy = new Pipe(item.pipe.type, item.pipe.connections, item.pipe.index)
         return pipeCopy
     }
 
@@ -376,6 +401,7 @@ export default class SignalTraceInventory {
      * The index of the slot to decrease.
      */
     changeSlotCount(index, change) {
-        this.items[index].count += change
+        console.log("changing slot count for index: ", index, " by: ", change)
+        this.itemsToDraw[index].count += change
     }
 }

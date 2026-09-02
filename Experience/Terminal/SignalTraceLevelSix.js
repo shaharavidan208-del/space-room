@@ -41,11 +41,11 @@ export default class SignalTraceLevelSix {
         this.pipeCount = {
             vertical: 2,
             cornerUpLeft: 1,
-            cornerDownLeft: 1,
-            cornerUpRight: 3,
+            cornerDownLeft: 2,
+            cornerUpRight: 2,
             horizontal: 2,
             cornerDownRight: 1,
-            splitRight: 1
+            splitRight: 1,
         }
 
         /**

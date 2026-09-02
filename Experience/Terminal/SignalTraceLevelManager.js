@@ -4,6 +4,7 @@ import SignalTraceLevelThree from "./SignalTraceLevelThree.js"
 import SignalTraceLevelFour from "./SignalTraceLevelFour.js"
 import SignalTraceLevelFive from "./SignalTraceLevelFive.js"
 import SignalTraceLevelSix from "./SignalTraceLevelSix.js"
+import SignalTraceLevelSeven from "./SignalTraceLevelSeven.js"
 import SignalTraceInventory from "./SignalTraceInventory.js"
 
 export default class SignalTraceLevelManager {
@@ -16,7 +17,8 @@ export default class SignalTraceLevelManager {
             SignalTraceLevelThree,
             SignalTraceLevelFour,
             SignalTraceLevelFive,
-            SignalTraceLevelSix
+            SignalTraceLevelSix,
+            SignalTraceLevelSeven,
         ]
 
         this.currentLevelIndex = 0
@@ -135,9 +137,6 @@ this.victoryLevelSelectButton = {
         ctx.textAlign = "center"
         ctx.fillText("SIGNAL TRACE", canvas.width / 2, 280)
 
-        ctx.fillStyle = "rgba(92, 255, 177, 0.72)"
-        ctx.font = "34px monospace"
-        ctx.fillText("RECOVERY TERMINAL", canvas.width / 2, 345)
 
         /**
          * Start button.
@@ -263,7 +262,7 @@ this.victoryLevelSelectButton = {
         )
 
         ctx.fillStyle = "#d8ffdc"
-        ctx.font = "28px monospace"
+        ctx.font = "40px monospace"
         ctx.textAlign = "center"
         ctx.fillText(
             "MENU",
@@ -279,7 +278,7 @@ this.victoryLevelSelectButton = {
         ctx.fillText("LEVEL SELECT", canvas.width / 2, 145)
 
         ctx.fillStyle = "rgba(92, 255, 177, 0.72)"
-        ctx.font = "28px monospace"
+        ctx.font = "40px monospace"
         ctx.fillText("SELECT SIGNAL ARCHIVE", canvas.width / 2, 190)
 
         /**
@@ -941,7 +940,7 @@ drawVictoryBanner(progress, centerY) {
     /**
      * Small confirmation message underneath.
      */
-    ctx.font = "30px monospace"
+    ctx.font = "42px monospace"
 
     ctx.fillStyle =
         `rgba(92, 255, 177, ${subtitleAlpha * 0.72})`
@@ -1020,7 +1019,7 @@ drawVictoryScreen() {
     ctx.fillStyle =
         "rgba(0, 255, 65, 0.5)"
 
-    ctx.font = "30px monospace"
+    ctx.font = "42px monospace"
 
     ctx.fillText(
         `ARCHIVE NODE ${levelNumber} RECOVERED`,
@@ -1194,7 +1193,7 @@ drawVictoryButton(button, label, primary) {
         ? "#d8ffdc"
         : "rgba(216, 255, 220, 0.68)"
 
-    ctx.font = "38px monospace"
+    ctx.font = "44px monospace"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 

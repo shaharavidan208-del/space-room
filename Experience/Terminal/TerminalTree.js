@@ -120,7 +120,7 @@ build_terminal: {
 
 build_signal_trace: {
     header: "MAKING IT INTERACTIVE: SIGNAL TRACE",
-    aiText: "Once the terminal could support accurate input, I wanted it to contain something more substantial than portfolio text and navigation menus.\n\nThat idea became Signal Trace, a complete connection puzzle built inside the terminal. It grew from a single experimental grid into a multi-level game with limited pipe inventories, different node types, locked tiles, animations, solve detection, and its own menu and progression systems.\n\nSignal Trace turned the terminal from an interface for reading about the project into another interactive part of the project itself.",
+    aiText: "Once the terminal could support accurate input, I wanted it to contain something more substantial than portfolio text and navigation menus.\n\nThat idea became Signal Trace, a complete connection puzzle game built inside the terminal. It grew from a single experimental grid into a multi-level game with limited pipe inventories, different node types, locked tiles, solve detection, and its own menu and progression systems.",
     choices: [
         { text: "[ NEXT: Optimizing the result ]", nextId: "build_optimization" },
         { text: "[ PREVIOUS: THE TERMINAL ]", nextId: "build_terminal" },

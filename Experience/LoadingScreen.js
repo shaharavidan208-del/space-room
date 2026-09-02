@@ -87,13 +87,13 @@ export default class LoadingScreen {
         /**
          * Time between launching consecutive letters.
          */
-        this.LETTER_LAUNCH_INTERVAL = 0.2
+        this.LETTER_LAUNCH_INTERVAL = 0.1
 
         /**
          * Duration of each letter's CSS transition.
          * This must match your CSS transition duration.
          */
-        this.LETTER_TRAVEL_DURATION = 0.5
+        this.LETTER_TRAVEL_DURATION = 0.3
 
         /**
          * How quickly the visual loading progress moves.
@@ -101,7 +101,7 @@ export default class LoadingScreen {
          * A value of 0.25 means a completely uninterrupted
          * journey from 0 to 1 takes roughly four seconds.
          */
-        this.LOADING_PROGRESS_SPEED = 0.25
+        this.LOADING_PROGRESS_SPEED = 0.5
 
         /**
          * Prevents a long frame or asset-parsing freeze from
