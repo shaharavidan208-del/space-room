@@ -85,6 +85,10 @@ export default class SignalTraceDragController {
      * @returns {void}
      */
     handlePointerDown(canvasX, canvasY) {
+        if (this.isDragging()) {
+            return
+        }
+
         // Give board tiles priority when checking what the pointer selected.
         if (this.tryPickUpBoardTile(canvasX, canvasY)) {
             return
@@ -112,6 +116,10 @@ export default class SignalTraceDragController {
         this.tile = this.signalTrace.getTileAtCanvasPosition(canvasX, canvasY)
         // The pointer is not currently over the board.
         if (!this.tile) {
+            return false
+        }
+
+        if (!this.tile.pipe) {
             return false
         }
 
@@ -299,10 +307,12 @@ export default class SignalTraceDragController {
     dropTileAtInventory(canvasX, canvasY) {
             const index = this.signalTrace.inventory.returnSlotPositionFromPipeType(this.heldPipe)
             console.log("index in drop tile ", index)
-            if (!this.signalTrace.isCursorInsideBoard(canvasX, canvasY)) {
+            if (
+                !this.signalTrace.isCursorInsideBoard(canvasX, canvasY) &&
+                Number.isInteger(index)
+            ) {
                 this.signalTrace.inventory.changeSlotCount(index, 1)
                 this.clearHeldPipe()
-                this.tile.pipe = null
                 this.signalTrace.drawBootScreen()
                 return true
             }
@@ -338,7 +348,9 @@ export default class SignalTraceDragController {
             if (!this.sourcePosition) {
                 return
             }
-            this.tile.pipe = this.heldPipe
+
+            const sourceTile = this.signalTrace.grid[this.sourcePosition.row][this.sourcePosition.col]
+            sourceTile.pipe = this.heldPipe
             return
         }
 
@@ -368,6 +380,7 @@ export default class SignalTraceDragController {
         this.originType = null
         this.sourcePosition = null
         this.sourceInventoryIndex = null
+        this.tile = null
     }
 
     /**
@@ -391,6 +404,10 @@ export default class SignalTraceDragController {
         const y = this.dragCanvasY - signalTrace.tileSize / 2
 
 
-        signalTrace.pipeRenderer.drawPipe(x, y, this.heldPipe.connections)
+        signalTrace.pipeRenderer.drawHeldPipeIndicator(
+            x,
+            y,
+            this.heldPipe.connections
+        )
     }
 }

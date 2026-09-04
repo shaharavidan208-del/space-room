@@ -14,6 +14,7 @@ export default class SignalTraceInventory {
          * - tile sizing values
          */
         this.signalTrace = signalTrace
+        this.items = []
 
         if(this.signalTrace.level.pipeCount) {
         this.items = [
@@ -97,8 +98,7 @@ export default class SignalTraceInventory {
         this.rightSideInventoryCnt = -1
         this.panelWidth = 500
 
-        if(this.items)
-            this.shouldDrawSlot()
+        this.shouldDrawSlot()
         /**
          * Active mutable inventory state.
          *
@@ -121,13 +121,12 @@ export default class SignalTraceInventory {
     }
 
     returnSlotPositionFromPipeType(pipe) {
-        const notFound = "No matching pipe found"
         for(let i = 0; i < this.itemsToDraw.length; i++) {
             if(pipe.type === this.itemsToDraw[i].pipe.type) {
                 return i
             }
         }
-        return notFound
+        return null
     }
 
     /**
@@ -141,7 +140,7 @@ export default class SignalTraceInventory {
      * This should be called from SignalTrace's main draw method.
      */
     draw() {
-        if(!this.itemsToDraw)
+        if(this.itemsToDraw.length === 0)
             return
         this.drawPanelBackground()
         this.drawPanelTitle()
@@ -158,6 +157,18 @@ export default class SignalTraceInventory {
      * gameplay group, so drawing and centering use the same measurements.
      */
     updatePanelDimensions() {
+        if (this.itemsToDraw.length === 0) {
+            this.rows = 0
+            this.columns = 0
+            this.panelWidth = 0
+            this.panelHeight = 0
+
+            return {
+                width: this.panelWidth,
+                height: this.panelHeight
+            }
+        }
+
         this.rows = 4
         this.panelHeight = (this.slotSize + this.slotGap) * this.rows
         this.columns = Math.ceil(

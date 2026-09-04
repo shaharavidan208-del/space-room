@@ -250,7 +250,7 @@ export default class Experience {
 
         this.objsToHide = []; // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load("/models/sceneOptimized3.glb", (gltf) => {
+        gltfLoader.load("/models/sceneOptimized6.glb", (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -1043,6 +1043,11 @@ diffuseColor *=
 
             document.querySelector("#cube-scramble-button-mobile"),
         ].filter(Boolean);
+
+        const terminalBackButton = document.querySelector(
+            "#terminal-fullscreen-back",
+        );
+
         const terminalShaderGlitchTimeouts = [];
 
         /**
@@ -1253,6 +1258,12 @@ diffuseColor *=
                 this.terminalGlitchUniforms.strength.value = 1;
                 showItems(false, this.ceilingMeshes);
                 playTerminalShaderGlitch();
+
+                this.terminal.setDesktopControlsVisible(
+                    !this.terminalFullscreen,
+                );
+                this.terminal.syncBackButtons();
+
                 lookTarget.copy(activePoint.position.clone());
 
                 // Aim slightly below the screen center so the keyboard/base becomes part of the shot.
@@ -1280,6 +1291,7 @@ diffuseColor *=
 
             cubeControlsHint.classList.remove("visible");
             cubeControlsHintMobile.classList.remove("visible");
+            this.terminal.setDesktopControlsVisible(false);
             setCubeScrambleButtonState(false, false);
             isTransitioning = true;
 
@@ -1310,6 +1322,23 @@ diffuseColor *=
             button.addEventListener("click", closeCubeFocus);
         }
 
+        const closeDesktopTerminalFocus = () => {
+            if (
+                !this.isFocused ||
+                this.currPointName !== "Terminal" ||
+                this.terminalFullscreen?.isOpen
+            ) {
+                return;
+            }
+
+            exitFocusMode();
+
+            this.isFocused = false;
+            this.currPointName = "";
+        };
+
+        this.terminal.setDesktopExitHandler(closeDesktopTerminalFocus);
+
         const closeTerminalFullscreen = async () => {
             if (
                 !this.terminalFullscreen?.isOpen ||
@@ -1333,11 +1362,11 @@ diffuseColor *=
             .querySelector("#terminal-fullscreen-close")
             ?.addEventListener("click", closeTerminalFullscreen);
 
-        document
-            .querySelector("#terminal-fullscreen-back")
-            ?.addEventListener("click", () => {
+        if (terminalBackButton) {
+            terminalBackButton.addEventListener("click", () => {
                 this.terminal.goBack();
             });
+        }
 
         // Escape key exits
         window.addEventListener("keydown", async (input) => {

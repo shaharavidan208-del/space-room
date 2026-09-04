@@ -119,6 +119,96 @@ export default class SignalTracePipeRenderer {
         this.ctx.restore()
     }
 
+    drawHeldPipeIndicator(x, y, pipeConnections) {
+        const indicatorScale = 1.2
+        const centerX = x + this.tileSize / 2
+        const centerY = y + this.tileSize / 2
+
+        this.ctx.save()
+        this.ctx.translate(centerX, centerY)
+        this.ctx.scale(indicatorScale, indicatorScale)
+        this.ctx.translate(-centerX, -centerY)
+
+        this.drawPipe(x, y, pipeConnections)
+        this.drawHeldPipeGlow(x, y, pipeConnections)
+        this.drawHeldPipeTargetingBrackets(x, y)
+
+        this.ctx.restore()
+    }
+
+    drawHeldPipeGlow(x, y, pipeConnections) {
+        const centerX = x + this.tileSize / 2
+        const centerY = y + this.tileSize / 2
+
+        this.ctx.save()
+
+        this.ctx.lineJoin = "round"
+        this.ctx.globalCompositeOperation = "lighter"
+        this.ctx.shadowColor = this.colors.terminalGreen
+        this.ctx.shadowBlur = 22
+        this.ctx.strokeStyle = "rgba(0, 255, 65, 0.3)"
+        this.ctx.lineWidth = 16
+        this.strokePipeShape(
+            x,
+            y,
+            centerX,
+            centerY,
+            pipeConnections
+        )
+
+        this.ctx.shadowBlur = 14
+        this.ctx.strokeStyle = "rgba(184, 255, 192, 0.82)"
+        this.ctx.lineWidth = 5
+        this.strokePipeShape(
+            x,
+            y,
+            centerX,
+            centerY,
+            pipeConnections
+        )
+
+        this.ctx.restore()
+    }
+
+    drawHeldPipeTargetingBrackets(x, y) {
+        const padding = 14
+        const cornerLength = 28
+        const left = x - padding
+        const top = y - padding
+        const right = x + this.tileSize + padding
+        const bottom = y + this.tileSize + padding
+
+        this.ctx.save()
+
+        this.ctx.beginPath()
+
+        this.ctx.moveTo(left, top + cornerLength)
+        this.ctx.lineTo(left, top)
+        this.ctx.lineTo(left + cornerLength, top)
+
+        this.ctx.moveTo(right - cornerLength, top)
+        this.ctx.lineTo(right, top)
+        this.ctx.lineTo(right, top + cornerLength)
+
+        this.ctx.moveTo(right, bottom - cornerLength)
+        this.ctx.lineTo(right, bottom)
+        this.ctx.lineTo(right - cornerLength, bottom)
+
+        this.ctx.moveTo(left + cornerLength, bottom)
+        this.ctx.lineTo(left, bottom)
+        this.ctx.lineTo(left, bottom - cornerLength)
+
+        this.ctx.lineWidth = 3
+        this.ctx.lineCap = "square"
+        this.ctx.lineJoin = "miter"
+        this.ctx.strokeStyle = "rgba(184, 255, 192, 0.92)"
+        this.ctx.shadowColor = this.colors.terminalGreen
+        this.ctx.shadowBlur = 10
+        this.ctx.stroke()
+
+        this.ctx.restore()
+    }
+
 
     drawConnectorBand(x, y, direction) {
         /**

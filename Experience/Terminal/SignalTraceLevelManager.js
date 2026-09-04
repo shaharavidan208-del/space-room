@@ -238,37 +238,7 @@ this.victoryLevelSelectButton = {
         ctx.fillRect(frameX + 28, frameY + frameHeight - 32, 90, 4)
         ctx.fillRect(frameX + frameWidth - 118, frameY + frameHeight - 32, 90, 4)
 
-        /**
-         * Menu button at top center.
-         */
-        this.menuButton.x = canvas.width / 2 - this.menuButton.width / 2
-        this.menuButton.y = 28
-
-        ctx.fillStyle = "rgba(0, 255, 65, 0.08)"
-        ctx.fillRect(
-            this.menuButton.x,
-            this.menuButton.y,
-            this.menuButton.width,
-            this.menuButton.height
-        )
-
-        ctx.strokeStyle = "rgba(0, 255, 65, 0.24)"
-        ctx.lineWidth = 4
-        ctx.strokeRect(
-            this.menuButton.x,
-            this.menuButton.y,
-            this.menuButton.width,
-            this.menuButton.height
-        )
-
-        ctx.fillStyle = "#d8ffdc"
-        ctx.font = "40px monospace"
-        ctx.textAlign = "center"
-        ctx.fillText(
-            "MENU",
-            canvas.width / 2,
-            this.menuButton.y + 35
-        )
+        this.drawMenuButton()
 
         /**
          * Screen title.
@@ -332,6 +302,61 @@ this.victoryLevelSelectButton = {
         }
 
         signalTrace.texture.needsUpdate = true
+    }
+
+    /**
+     * Draw the shared MENU button at the top center of the current screen.
+     * Level Select and active levels use this exact same renderer and hitbox.
+     */
+    drawMenuButton() {
+        const ctx = this.signalTrace.ctx
+        const canvas = this.signalTrace.canvas
+
+        this.menuButton.x = canvas.width / 2 - this.menuButton.width / 2
+        this.menuButton.y = 28
+
+        ctx.fillStyle = "rgba(0, 255, 65, 0.08)"
+        ctx.fillRect(
+            this.menuButton.x,
+            this.menuButton.y,
+            this.menuButton.width,
+            this.menuButton.height
+        )
+
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.24)"
+        ctx.lineWidth = 4
+        ctx.strokeRect(
+            this.menuButton.x,
+            this.menuButton.y,
+            this.menuButton.width,
+            this.menuButton.height
+        )
+
+        ctx.fillStyle = "#d8ffdc"
+        ctx.font = "40px monospace"
+        ctx.textAlign = "center"
+        ctx.fillText(
+            "MENU",
+            canvas.width / 2,
+            this.menuButton.y + 35
+        )
+    }
+
+    /**
+     * Handle the MENU button while a level is active.
+     * Returning true prevents the same press from reaching pipe dragging.
+     */
+    handlePlayingMenuPointerDown(canvasX, canvasY) {
+        if (this.currentScreen !== "playing") {
+            return false
+        }
+
+        if (!this.isInsideRect(canvasX, canvasY, this.menuButton)) {
+            return false
+        }
+
+        this.openMainMenu()
+        return true
     }
 
     /**

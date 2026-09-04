@@ -122,6 +122,8 @@ export default class SignalTrace {
     this.isRunning = true
     this.terminal.mode = "signalTrace"
     this.levelManager.openMainMenu()
+    this.terminal.drawDesktopControls()
+    this.texture.needsUpdate = true
 }
 
 
@@ -159,6 +161,12 @@ export default class SignalTrace {
          * Draw current signal connection status and controls.
          */
         this.drawSignalStatusText()
+
+        if (this.levelManager.currentScreen === "playing") {
+            this.levelManager.drawMenuButton()
+        }
+
+        this.terminal.drawDesktopControls()
 
         // Tell Three.js that the canvas texture changed.
         this.texture.needsUpdate = true;
@@ -235,7 +243,11 @@ export default class SignalTrace {
             const inventoryDimensions =
                 this.inventory.updatePanelDimensions()
 
-            const boardInventoryGap = 250
+            let boardInventoryGap = 0
+
+            if (inventoryDimensions.width > 0) {
+                boardInventoryGap = 250
+            }
             const gameplayWidth =
                 this.boardWidth +
                 boardInventoryGap +
@@ -413,16 +425,32 @@ export default class SignalTrace {
         this.levelManager.currentScreen === "playing"
     ) {
         this.levelManager.openVictorySplash()
+        this.terminal.drawDesktopControls()
+        this.texture.needsUpdate = true
     }
 }
 
    handlePointerDown(canvasX, canvasY) {
     if (this.levelManager.currentScreen === "playing") {
+        const menuWasOpened =
+            this.levelManager.handlePlayingMenuPointerDown(
+                canvasX,
+                canvasY
+            )
+
+        if (menuWasOpened) {
+            this.terminal.drawDesktopControls()
+            this.texture.needsUpdate = true
+            return
+        }
+
         this.dragController.handlePointerDown(canvasX, canvasY)
         return
     }
 
     this.levelManager.handlePointerDown(canvasX, canvasY)
+    this.terminal.drawDesktopControls()
+    this.texture.needsUpdate = true
 }
 
 handlePointerMove(canvasX, canvasY) {

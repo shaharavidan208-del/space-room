@@ -104,6 +104,12 @@ export default class TerminalCanvas {
         // forwarding DOM events back into it.
         this.domPointerId = null
 
+        /** Desktop controls are rendered into the monitor texture itself. */
+        this.desktopControlsVisible = false
+        this.desktopControlHitAreas = []
+        this.desktopPressedControl = null
+        this.desktopExitHandler = null
+
         this.signalTrace = new SignalTrace(this);
         // Set up keyboard input and draw the first frame immediately.
         this.setupHiddenInput();
@@ -1444,20 +1450,204 @@ export default class TerminalCanvas {
         this.draw()
     }
 
-    /** Keep the external mobile and desktop Back controls synchronized. */
+    /** Keep the external mobile Back control synchronized. */
     syncBackButtons() {
-        const backButtons = document.querySelectorAll(
-            '#terminal-fullscreen-back, #terminal-focus-back'
+        const backButton = document.querySelector(
+            '#terminal-fullscreen-back'
         )
 
-        const canGoBack =
+        if (!backButton) {
+            return
+        }
+
+        const canGoBack = this.canGoBack()
+
+        backButton.hidden = !canGoBack
+        backButton.disabled = !canGoBack
+    }
+
+    /** Whether Back has somewhere to return to from the current screen. */
+    canGoBack() {
+        return (
             this.mode === 'signalTrace' ||
             this.currentNodeId !== 'start'
+        )
+    }
 
-        for (const backButton of backButtons) {
-            backButton.hidden = !canGoBack
-            backButton.disabled = !canGoBack
+    /** Give the canvas EXIT control the same focus teardown used by Escape. */
+    setDesktopExitHandler(exitHandler) {
+        this.desktopExitHandler = exitHandler
+    }
+
+    /** Show or hide the controls drawn inside the desktop monitor texture. */
+    setDesktopControlsVisible(isVisible) {
+        if (this.desktopControlsVisible === isVisible) {
+            return
         }
+
+        this.desktopControlsVisible = isVisible
+        this.desktopPressedControl = null
+
+        if (isVisible) {
+            this.drawDesktopControls()
+        }
+        else {
+            this.clearDesktopControls()
+        }
+
+        this.texture.needsUpdate = true
+    }
+
+    /** Return the canvas region reserved for the desktop terminal controls. */
+    getDesktopControlsBounds() {
+        const controlSize = 112
+        const controlGap = 16
+        const marginTop = 44
+        const marginRight = 46
+
+        return {
+            controlSize: controlSize,
+            controlGap: controlGap,
+            x: this.canvas.width - marginRight - controlSize * 2 - controlGap,
+            y: marginTop,
+            width: controlSize * 2 + controlGap,
+            height: controlSize
+        }
+    }
+
+    /** Clear the reserved top-right area after desktop focus closes. */
+    clearDesktopControls() {
+        const bounds = this.getDesktopControlsBounds()
+
+        this.ctx.save()
+        this.ctx.fillStyle = '#050505'
+        this.ctx.fillRect(
+            bounds.x - 4,
+            bounds.y - 4,
+            bounds.width + 8,
+            bounds.height + 8
+        )
+        this.ctx.restore()
+
+        this.desktopControlHitAreas = []
+    }
+
+    /** Draw one monitor-space control using the mobile terminal's visual style. */
+    drawDesktopControl(action, label, x, y, size) {
+        const isPressed = this.desktopPressedControl === action
+        const centerX = x + size / 2
+        const iconCenterY = y + 42
+
+        this.ctx.save()
+        this.ctx.fillStyle = isPressed
+            ? 'rgba(255, 176, 0, 0.13)'
+            : 'rgba(5, 12, 7, 0.72)'
+        this.ctx.strokeStyle = isPressed
+            ? 'rgba(255, 255, 255, 0.82)'
+            : 'rgba(0, 255, 65, 0.42)'
+        this.ctx.lineWidth = 2
+        this.ctx.fillRect(x, y, size, size)
+        this.ctx.strokeRect(x + 1, y + 1, size - 2, size - 2)
+
+        this.ctx.strokeStyle = isPressed
+            ? '#ffffff'
+            : 'rgba(0, 255, 65, 0.82)'
+        this.ctx.lineWidth = 3
+        this.ctx.shadowColor = this.ctx.strokeStyle
+        this.ctx.shadowBlur = 8
+        this.ctx.beginPath()
+
+        if (action === 'back') {
+            this.ctx.moveTo(centerX + 18, iconCenterY)
+            this.ctx.lineTo(centerX - 18, iconCenterY)
+            this.ctx.moveTo(centerX - 18, iconCenterY)
+            this.ctx.lineTo(centerX - 4, iconCenterY - 14)
+            this.ctx.moveTo(centerX - 18, iconCenterY)
+            this.ctx.lineTo(centerX - 4, iconCenterY + 14)
+        }
+        else {
+            this.ctx.moveTo(centerX - 15, iconCenterY - 15)
+            this.ctx.lineTo(centerX + 15, iconCenterY + 15)
+            this.ctx.moveTo(centerX + 15, iconCenterY - 15)
+            this.ctx.lineTo(centerX - 15, iconCenterY + 15)
+        }
+
+        this.ctx.stroke()
+        this.ctx.shadowBlur = 0
+        this.ctx.fillStyle = isPressed
+            ? '#ffffff'
+            : 'rgba(0, 255, 65, 0.82)'
+        this.ctx.font = '22px "Audiowide", monospace'
+        this.ctx.textAlign = 'center'
+        this.ctx.textBaseline = 'alphabetic'
+        this.ctx.fillText(label, centerX, y + 92)
+        this.ctx.restore()
+
+        this.desktopControlHitAreas.push({
+            action: action,
+            x: x,
+            y: y,
+            width: size,
+            height: size
+        })
+    }
+
+    /** Draw desktop BACK/EXIT directly into the terminal's monitor texture. */
+    drawDesktopControls() {
+        this.desktopControlHitAreas = []
+
+        if (
+            !this.desktopControlsVisible ||
+            this.signalTraceUsesMobileAspect
+        ) {
+            return
+        }
+
+        const bounds = this.getDesktopControlsBounds()
+        const exitX = bounds.x + bounds.controlSize + bounds.controlGap
+
+        if (this.canGoBack()) {
+            this.drawDesktopControl(
+                'back',
+                'BACK',
+                bounds.x,
+                bounds.y,
+                bounds.controlSize
+            )
+        }
+
+        this.drawDesktopControl(
+            'exit',
+            'EXIT',
+            exitX,
+            bounds.y,
+            bounds.controlSize
+        )
+    }
+
+    /** Find the monitor-space desktop control beneath one pointer position. */
+    getDesktopControlAt(canvasX, canvasY) {
+        for (const hitArea of this.desktopControlHitAreas) {
+            if (this.isPointInsideHitArea(canvasX, canvasY, hitArea)) {
+                return hitArea
+            }
+        }
+
+        return null
+    }
+
+    /** Run the action belonging to a released desktop canvas control. */
+    activateDesktopControl(action) {
+        if (action === 'back') {
+            return this.goBack()
+        }
+
+        if (action === 'exit' && this.desktopExitHandler) {
+            this.desktopExitHandler()
+            return true
+        }
+
+        return false
     }
 
     /**
@@ -1554,6 +1744,15 @@ export default class TerminalCanvas {
 
     /** Routes a pointer press to dialogue choices or Signal Trace. */
     handlePointerDown(canvasX, canvasY) {
+        const desktopControl = this.getDesktopControlAt(canvasX, canvasY)
+
+        if (desktopControl) {
+            this.desktopPressedControl = desktopControl.action
+            this.drawDesktopControls()
+            this.texture.needsUpdate = true
+            return true
+        }
+
         if (this.mode === 'signalTrace') {
             this.signalTrace.handlePointerDown(canvasX, canvasY)
             return true
@@ -1564,6 +1763,10 @@ export default class TerminalCanvas {
 
     /** Signal Trace alone needs continuous pointer movement. */
     handlePointerMove(canvasX, canvasY) {
+        if (this.desktopPressedControl) {
+            return
+        }
+
         if (this.mode !== 'signalTrace') {
             return
         }
@@ -1573,6 +1776,29 @@ export default class TerminalCanvas {
 
     /** Signal Trace alone needs pointer release coordinates. */
     handlePointerUp(canvasX, canvasY) {
+        if (this.desktopPressedControl) {
+            const pressedControl = this.desktopPressedControl
+            const releasedControl = this.getDesktopControlAt(
+                canvasX,
+                canvasY
+            )
+
+            this.desktopPressedControl = null
+
+            if (
+                releasedControl &&
+                releasedControl.action === pressedControl
+            ) {
+                this.activateDesktopControl(pressedControl)
+            }
+            else {
+                this.drawDesktopControls()
+                this.texture.needsUpdate = true
+            }
+
+            return
+        }
+
         if (this.mode !== 'signalTrace') {
             return
         }
@@ -1582,6 +1808,13 @@ export default class TerminalCanvas {
 
     /** Cancel an active Signal Trace drag when pointer capture is lost. */
     handlePointerCancel() {
+        if (this.desktopPressedControl) {
+            this.desktopPressedControl = null
+            this.drawDesktopControls()
+            this.texture.needsUpdate = true
+            return
+        }
+
         if (this.mode !== 'signalTrace') {
             return
         }
@@ -1687,6 +1920,14 @@ export default class TerminalCanvas {
         this.dialogueHitAreas = []
         this.syncBackButtons()
 
+        /**
+         * Signal Trace and its menus draw centered text onto this same context.
+         * Re-establish the dialogue renderer's text state so a previous screen
+         * cannot shift dialogue content away from its intended coordinates.
+         */
+        this.ctx.textAlign = 'left'
+        this.ctx.textBaseline = 'alphabetic'
+
         // ------------------------------------------
         // 1. CLEAR THE PREVIOUS FRAME
         // ------------------------------------------
@@ -1720,6 +1961,8 @@ export default class TerminalCanvas {
 
             this.ctx.fillText('ERROR: NODE NOT FOUND', 50, 80);
             this.ctx.fillText(`Missing node: ${this.currentNodeId}`, 50, 130);
+
+            this.drawDesktopControls()
 
             // Tell Three.js to update the monitor texture.
             this.texture.needsUpdate = true;
@@ -1864,6 +2107,8 @@ export default class TerminalCanvas {
                 })
             }
         }
+
+        this.drawDesktopControls()
 
         // ------------------------------------------
         // 7. SEND UPDATED CANVAS TO GPU
