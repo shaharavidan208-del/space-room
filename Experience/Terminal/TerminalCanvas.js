@@ -85,6 +85,16 @@ export default class TerminalCanvas {
         this.dialogueSelectedIndex = 0;
 
         /**
+         * Stores each dialogue screen visited before the current one.
+         * Keeping the selected option with the node lets Back restore the
+         * exact dialogue state the user came from.
+         */
+        this.dialogueHistory = []
+
+        /** Optional feedback appended beneath the active dialogue text. */
+        this.dialogueNotice = ''
+
+        /**
          * Rebuilt by draw() from the exact rectangles used to render choices.
          * Pointer input reads these areas instead of duplicating layout math.
          */
@@ -987,6 +997,10 @@ export default class TerminalCanvas {
             }
         }
 
+        if (this.dialogueNotice) {
+            mobileText += `\n\n${this.dialogueNotice}`
+        }
+
         return mobileText
     }
 
@@ -1445,6 +1459,8 @@ export default class TerminalCanvas {
 
 
     returnToMainMenu() {
+        this.dialogueHistory = []
+        this.dialogueNotice = ''
         this.currentNodeId = 'start'
         this.dialogueSelectedIndex = 0
         this.draw()
@@ -1461,16 +1477,49 @@ export default class TerminalCanvas {
         }
 
         const canGoBack = this.canGoBack()
+        const returnsToPortfolio = this.mode === 'signalTrace'
+        const backLabel = backButton.querySelector(
+            '.terminal-fullscreen-close-label'
+        )
+
+        if (backLabel) {
+            backLabel.textContent = this.getBackButtonLabel()
+            backLabel.style.width = returnsToPortfolio ? '100%' : ''
+            backLabel.style.whiteSpace = returnsToPortfolio ? 'normal' : ''
+            backLabel.style.fontSize = returnsToPortfolio
+                ? 'clamp(0.3rem, 1.3dvh, 0.38rem)'
+                : ''
+            backLabel.style.letterSpacing = returnsToPortfolio
+                ? '0.04em'
+                : ''
+            backLabel.style.lineHeight = returnsToPortfolio ? '1.25' : ''
+        }
+
+        backButton.setAttribute(
+            'aria-label',
+            returnsToPortfolio
+                ? 'Back to portfolio'
+                : 'Back to previous screen'
+        )
 
         backButton.hidden = !canGoBack
         backButton.disabled = !canGoBack
+    }
+
+    /** Use a destination-specific label while Signal Trace is active. */
+    getBackButtonLabel() {
+        if (this.mode === 'signalTrace') {
+            return 'BACK TO PORTFOLIO'
+        }
+
+        return 'BACK'
     }
 
     /** Whether Back has somewhere to return to from the current screen. */
     canGoBack() {
         return (
             this.mode === 'signalTrace' ||
-            this.currentNodeId !== 'start'
+            this.dialogueHistory.length > 0
         )
     }
 
@@ -1500,18 +1549,20 @@ export default class TerminalCanvas {
 
     /** Return the canvas region reserved for the desktop terminal controls. */
     getDesktopControlsBounds() {
-        const controlSize = 112
+        const controlWidth = 180
+        const controlHeight = 140
         const controlGap = 16
         const marginTop = 44
         const marginRight = 46
 
         return {
-            controlSize: controlSize,
+            controlWidth: controlWidth,
+            controlHeight: controlHeight,
             controlGap: controlGap,
-            x: this.canvas.width - marginRight - controlSize * 2 - controlGap,
+            x: this.canvas.width - marginRight - controlWidth * 2 - controlGap,
             y: marginTop,
-            width: controlSize * 2 + controlGap,
-            height: controlSize
+            width: controlWidth * 2 + controlGap,
+            height: controlHeight
         }
     }
 
@@ -1533,10 +1584,13 @@ export default class TerminalCanvas {
     }
 
     /** Draw one monitor-space control using the mobile terminal's visual style. */
-    drawDesktopControl(action, label, x, y, size) {
+    drawDesktopControl(action, label, x, y, width, height) {
         const isPressed = this.desktopPressedControl === action
-        const centerX = x + size / 2
+        const centerX = x + width / 2
         const iconCenterY = y + 42
+        const labelLines = label === 'BACK TO PORTFOLIO'
+            ? ['BACK TO', 'PORTFOLIO']
+            : [label]
 
         this.ctx.save()
         this.ctx.fillStyle = isPressed
@@ -1546,8 +1600,8 @@ export default class TerminalCanvas {
             ? 'rgba(255, 255, 255, 0.82)'
             : 'rgba(0, 255, 65, 0.42)'
         this.ctx.lineWidth = 2
-        this.ctx.fillRect(x, y, size, size)
-        this.ctx.strokeRect(x + 1, y + 1, size - 2, size - 2)
+        this.ctx.fillRect(x, y, width, height)
+        this.ctx.strokeRect(x + 1, y + 1, width - 2, height - 2)
 
         this.ctx.strokeStyle = isPressed
             ? '#ffffff'
@@ -1577,18 +1631,28 @@ export default class TerminalCanvas {
         this.ctx.fillStyle = isPressed
             ? '#ffffff'
             : 'rgba(0, 255, 65, 0.82)'
-        this.ctx.font = '22px "Audiowide", monospace'
+        this.ctx.font = labelLines.length > 1
+            ? '26px "Audiowide", monospace'
+            : '30px "Audiowide", monospace'
         this.ctx.textAlign = 'center'
         this.ctx.textBaseline = 'alphabetic'
-        this.ctx.fillText(label, centerX, y + 92)
+
+        for (let index = 0; index < labelLines.length; index++) {
+            const labelY = labelLines.length > 1
+                ? y + 84 + index * 22
+                : y + 92
+
+            this.ctx.fillText(labelLines[index], centerX, labelY)
+        }
+
         this.ctx.restore()
 
         this.desktopControlHitAreas.push({
             action: action,
             x: x,
             y: y,
-            width: size,
-            height: size
+            width: width,
+            height: height
         })
     }
 
@@ -1604,15 +1668,16 @@ export default class TerminalCanvas {
         }
 
         const bounds = this.getDesktopControlsBounds()
-        const exitX = bounds.x + bounds.controlSize + bounds.controlGap
+        const exitX = bounds.x + bounds.controlWidth + bounds.controlGap
 
         if (this.canGoBack()) {
             this.drawDesktopControl(
                 'back',
-                'BACK',
+                this.getBackButtonLabel(),
                 bounds.x,
                 bounds.y,
-                bounds.controlSize
+                bounds.controlWidth,
+                bounds.controlHeight
             )
         }
 
@@ -1621,7 +1686,8 @@ export default class TerminalCanvas {
             'EXIT',
             exitX,
             bounds.y,
-            bounds.controlSize
+            bounds.controlWidth,
+            bounds.controlHeight
         )
     }
 
@@ -1651,8 +1717,8 @@ export default class TerminalCanvas {
     }
 
     /**
-     * Performs the terminal's existing Left Arrow behavior for external controls.
-     * Signal Trace returns to dialogue; dialogue pages return to the root.
+     * Performs the terminal's shared Back behavior for every input method.
+     * Signal Trace returns to the root; dialogue returns to its previous node.
      */
     goBack() {
         if (this.mode === 'signalTrace') {
@@ -1664,11 +1730,61 @@ export default class TerminalCanvas {
             return true
         }
 
-        if (this.currentNodeId === 'start') {
+        if (this.dialogueHistory.length === 0) {
             return false
         }
 
-        this.returnToMainMenu()
+        const previousDialogue = this.dialogueHistory.pop()
+
+        if (!TerminalTree[previousDialogue.nodeId]) {
+            this.returnToMainMenu()
+            return true
+        }
+
+        this.currentNodeId = previousDialogue.nodeId
+        this.dialogueSelectedIndex = previousDialogue.selectedIndex
+        this.dialogueNotice = ''
+        this.draw()
+
+        return true
+    }
+
+    /** Copy terminal text, with a selectable prompt when Clipboard is blocked. */
+    copyText(text) {
+        if (!text) {
+            return false
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            const sourceNodeId = this.currentNodeId
+
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    if (this.currentNodeId !== sourceNodeId) {
+                        return
+                    }
+
+                    this.dialogueNotice = 'EMAIL COPIED TO CLIPBOARD.'
+                    this.draw()
+                })
+                .catch(() => {
+                    window.prompt('Copy this email address:', text)
+                })
+
+            return true
+        }
+
+        window.prompt('Copy this email address:', text)
+        return true
+    }
+
+    /** Open a terminal link in a separate browser tab. */
+    openUrl(url) {
+        if (!url) {
+            return false
+        }
+
+        window.open(url, '_blank', 'noopener,noreferrer')
         return true
     }
 
@@ -1695,6 +1811,7 @@ export default class TerminalCanvas {
 
         if (selectedChoice.action === 'startSignalTrace') {
             this.dialogueSelectedIndex = 0
+            this.dialogueNotice = ''
             this.prepareSignalTraceCanvasForFullscreen()
             this.signalTrace.startSignalTrace()
             this.syncFullscreenCanvas()
@@ -1702,12 +1819,35 @@ export default class TerminalCanvas {
             return true
         }
 
+        if (selectedChoice.action === 'copyText') {
+            return this.copyText(selectedChoice.value)
+        }
+
+        if (selectedChoice.action === 'openUrl') {
+            return this.openUrl(selectedChoice.url)
+        }
+
         if (!selectedChoice.nextId) {
             return false
         }
 
+        if (selectedChoice.nextId === 'start') {
+            this.returnToMainMenu()
+            return true
+        }
+
+        if (selectedChoice.nextId === this.currentNodeId) {
+            return false
+        }
+
+        this.dialogueHistory.push({
+            nodeId: this.currentNodeId,
+            selectedIndex: choiceIndex
+        })
+
         this.currentNodeId = selectedChoice.nextId
         this.dialogueSelectedIndex = 0
+        this.dialogueNotice = ''
         this.draw()
 
         return true
@@ -1838,7 +1978,7 @@ export default class TerminalCanvas {
     // ↓
     // Enter follows selected choice.nextId
     // ↓
-    // Left returns to main menu
+    // Left returns to the previous dialogue node
 
     handleKeyDown(event) {
 
@@ -1872,8 +2012,8 @@ export default class TerminalCanvas {
     // .choices refers to the array in TerminalTree that holds each object containing text and nextId
     const maxChoices = choices.length;
 
-    // Universal escape key.
-    // No matter where the user is in the terminal tree, Escape returns to the root menu.
+    // Universal Back key.
+    // Left Arrow returns to the dialogue node visited immediately before this one.
     if (event.key === 'ArrowLeft') {
         this.goBack();
         return;
@@ -2010,11 +2150,17 @@ export default class TerminalCanvas {
         let cursorY = 240;
 
          // Draw the node's main text if it exists.
-        if (node.aiText) {
+        let dialogueText = node.aiText || ''
+
+        if (this.dialogueNotice) {
+            dialogueText += `\n\n${this.dialogueNotice}`
+        }
+
+        if (dialogueText) {
             const maxTextWidth = this.canvas.width - paddingX * 2.6
 
             cursorY = this.drawWrappedText(
-                node.aiText,
+                dialogueText,
                 paddingX,
                 cursorY,
                 maxTextWidth,
@@ -2168,4 +2314,3 @@ export default class TerminalCanvas {
 
     // 3. RENDER BASED ON CURRENT MODE
     // We use a switch statement to ask the State Machine what we should be drawing right now.
-

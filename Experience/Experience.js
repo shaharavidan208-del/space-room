@@ -1256,6 +1256,7 @@ diffuseColor *=
 
             // --- 2. TERMINAL LOGIC ---
             else if (activePoint.name === "Terminal") {
+                this.cube.cubeGroup.visible = false
                 this.terminalGlitchUniforms.strength.value = 1;
                 showItems(false, this.ceilingMeshes);
                 playTerminalShaderGlitch();
@@ -1287,7 +1288,7 @@ diffuseColor *=
             showItems(true, this.monitorMeshes);
             showItems(true, this.floorMeshes);
             showItems(true, this.objsToHide);
-
+            this.cube.cubeGroup.visible = true
             smaaPass.enabled = false;
 
             cubeControlsHint.classList.remove("visible");
