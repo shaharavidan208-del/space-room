@@ -101,7 +101,7 @@ The project's direction, scene design, architecture, interaction systems, optimi
 
 ## Asset Credits
 
-This project includes third-party models, textures, fonts, and other creative assets. Their creators, original sources, licenses, and any modifications are documented in [CREDITS (3).md](./CREDITS (3).md).
+This project includes third-party models, textures, fonts, and other creative assets. Their creators, original sources, licenses, and any modifications are documented in [CREDITS.md](./CREDITS.md).
 
 ## License
 
