@@ -95,7 +95,7 @@ The portfolio is under active development. Features, presentation text, interact
 
 ## AI Usage
 
-AI tools were used during development for brainstorming, debugging, code assistance, and parts of the asset-generation workflow. Generated output was reviewed, adapted, tested, and integrated into the larger project rather than used as a replacement for understanding the systems involved.
+AI tools were used during development for brainstorming, debugging, and code assistance. Generated output was reviewed, adapted, tested, and integrated into the larger project rather than used as a replacement for understanding the systems involved.
 
 The project's direction, scene design, architecture, interaction systems, optimization decisions, and final implementation choices were shaped through my own development process.
 
