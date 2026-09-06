@@ -7,6 +7,7 @@ Instead of presenting my work through a conventional webpage, I built an explora
 <!-- Replace the URL below with the deployed portfolio URL. -->
 **[Launch the portfolio](YOUR_LIVE_DEMO_URL)**
 
+![Space Station Portfolio](./Portfolio-Screenshot.png)
 <!-- Add a screenshot or short GIF once the final media is ready. -->
 <!-- ![Space Station Portfolio](./Portfolio-Screenshot.png) -->
 
