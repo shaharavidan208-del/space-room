@@ -107,6 +107,6 @@ This project includes third-party models, textures, fonts, and other creative as
 
 <!-- Choose a license for your own source code and add a LICENSE file. Do not apply that license to third-party assets unless their original licenses allow it. -->
 
-The source-code license for this project has not yet been specified. Third-party assets remain subject to their respective licenses as documented in [CREDITS (3).md](./CREDITS (3).md).
+The source-code license for this project has not yet been specified. Third-party assets remain subject to their respective licenses as documented in [CREDITS.md](./CREDITS.md).
 
 <img width="1899" height="927" alt="image" src="https://github.com/user-attachments/assets/08b3f083-a6ba-4667-98ab-115335f68bc8" />
