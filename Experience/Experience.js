@@ -14,7 +14,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { EXRLoader } from "three/addons/loaders/EXRLoader.js";
-import { FXAAPass } from "three/addons/postprocessing/FXAAPass.js";
+import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";   
 import TerminalFullscreen from "./TerminalFullscreen.js";
 
 export default class Experience {
@@ -804,7 +804,7 @@ diffuseColor *=
         });
 
         composerRenderTarget.samples =
-            window.devicePixelRatio <= 1.25
+            window.devicePixelRatio <= 1
                 ? Math.min(4, renderer.capabilities.maxSamples)
                 : 0;
 
@@ -825,10 +825,10 @@ diffuseColor *=
         const outputPass = new OutputPass();
         effectComposer.addPass(outputPass);
 
-        const fxaaPass = new FXAAPass();
-        fxaaPass.enabled = false;
+        const smaaPass = new SMAAPass();
+        effectComposer.addPass(smaaPass);
 
-        effectComposer.addPass(fxaaPass);
+        smaaPass.enabled = false
 
         this.terminal = new TerminalCanvas(this);
         /**
@@ -1212,6 +1212,7 @@ diffuseColor *=
 
                 setCubeScrambleButtonState(cubeIsBusy, !cubeIsBusy);
 
+                smaaPass.enabled = true;
                 controls.enabled = true;
                 controls.enableZoom = true;
                 controls.enableRotate = false;
@@ -1287,7 +1288,7 @@ diffuseColor *=
             showItems(true, this.floorMeshes);
             showItems(true, this.objsToHide);
 
-            fxaaPass.enabled = false;
+            smaaPass.enabled = false;
 
             cubeControlsHint.classList.remove("visible");
             cubeControlsHintMobile.classList.remove("visible");

@@ -11,8 +11,8 @@ export default class SignalTraceLevelSix {
         /**
          * Board size.
          */
-        this.rows = 6
-        this.cols = 6
+        this.rows = 7
+        this.cols = 7
 
         /**
          * Fixed signal nodes.
@@ -23,29 +23,67 @@ export default class SignalTraceLevelSix {
             direction: "right"
         }
 
-        this.relay = {
-            row: 1,
-            col: 4,
-            direction: "left"
-        }
-
         this.target = {
             row: 5,
             col: 5,
             direction: "left"
         }
 
+        this.secondTarget = {
+            row: 1,
+            col: 1,
+            direction: "left"
+        }
+
+        this.thirdTarget = {
+            row: 5,
+            col: 1,
+            direction: "left"
+        }
+
+        this.fourthTarget = {
+            row: 1,
+            col: 5,
+            direction: "left"
+        }
+
+        this.targets = [
+            {
+                row: this.target.row,
+                col: this.target.col,
+                direction: this.target.direction
+            },
+            {
+                row: this.secondTarget.row,
+                col: this.secondTarget.col,
+                direction: this.secondTarget.direction
+            },
+            {
+                row: this.thirdTarget.row,
+                col: this.thirdTarget.col,
+                direction: this.thirdTarget.direction
+            },
+            {
+                row: this.fourthTarget.row,
+                col: this.fourthTarget.col,
+                direction: this.fourthTarget.direction
+            }
+        ]
+
         /**
          * Available inventory pipe counts.
          */
         this.pipeCount = {
-            vertical: 2,
+            vertical: 1,
             cornerUpLeft: 1,
-            cornerDownLeft: 2,
-            cornerUpRight: 2,
-            horizontal: 2,
-            cornerDownRight: 1,
-            splitRight: 1,
+            cornerDownLeft: 3,
+            cornerUpRight: 3,
+            horizontal: 5,
+            cornerDownRight: 2,
+            splitDown: 0,
+            splitUp: 1,
+            splitRight: 2,
+            splitLeft: 0
         }
 
         /**
@@ -56,23 +94,26 @@ export default class SignalTraceLevelSix {
             [this.source.direction]
         )
 
-        this.relayPipe = new Pipe(
-            null,
-            [this.relay.direction]
-        )
-
         this.targetPipe = new Pipe(
             null,
             [this.target.direction]
         )
 
-        /**
-         * Locked board pipes.
-         */
-        this.lockedMiddlePipe = new Pipe(
-            "horizontal",
-            ["left", "right"]
+        this.secondTargetPipe = new Pipe(
+            null,
+            [this.secondTarget.direction]
         )
+
+        this.thirdTargetPipe = new Pipe(
+            null,
+            [this.thirdTarget.direction]
+        )
+
+        this.fourthTargetPipe = new Pipe(
+            null,
+            [this.fourthTarget.direction]
+        )
+
 
         this.lockedCornerPipe = new Pipe(
             "cornerUpRight",
@@ -111,21 +152,25 @@ export default class SignalTraceLevelSix {
         grid[this.source.row][this.source.col].pipe =
             this.sourcePipe
 
-        grid[this.relay.row][this.relay.col].pipe =
-            this.relayPipe
-
         grid[this.target.row][this.target.col].pipe =
             this.targetPipe
+
+        grid[this.secondTarget.row][this.secondTarget.col].pipe =
+            this.secondTargetPipe
+
+        grid[this.thirdTarget.row][this.thirdTarget.col].pipe =
+            this.thirdTargetPipe
+
+        grid[this.fourthTarget.row][this.fourthTarget.col].pipe =
+            this.fourthTargetPipe
 
         /**
          * Attach the locked pipes while preserving
          * the original Level Six layout.
          */
-        grid[2][2].pipe = this.lockedMiddlePipe
-        grid[2][2].locked = true
         grid[3][3].locked = true
         grid[3][4].locked = true
-        
+
         return grid
     }
 }
