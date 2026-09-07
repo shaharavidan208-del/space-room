@@ -7,7 +7,6 @@ import Cube from "./Cube/Cube.js";
 import CubeInput from "./Cube/CubeInput.js";
 import TerminalCanvas from "./Terminal/TerminalCanvas.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
-import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import LoadingScreen from "./LoadingScreen.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
@@ -250,7 +249,7 @@ export default class Experience {
 
         this.objsToHide = []; // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load("/models/sceneOptimized6.glb", (gltf) => {
+        gltfLoader.load("/models/sceneOptimized.glb", (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -338,7 +337,7 @@ export default class Experience {
                         obj.castShadow = true;
                     }
 
-                    if (obj.name === "Box007") {
+                    if (obj.name === "Box007" || obj.name === "Box021") {
                         obj.castShadow = true;
                         obj.receiveShadow = true;
                     }
@@ -573,7 +572,6 @@ diffuseColor *=
             ]);
             this.initHotspots();
             this.scene.add(gltf.scene);
-            this.setupSecurityCameraTracking(gltf.scene);
         });
 
         this.assetsLoaded = true;
@@ -674,7 +672,6 @@ diffuseColor *=
                 renderer.shadowMap.autoUpdate = false;
                 trackballControls.enabled = true;
                 controls.enabled = true;
-                renderer.info.autoReset = false;
             },
         });
 
@@ -685,18 +682,6 @@ diffuseColor *=
         this.loadingManager = this.loadingScreen.loadingManager;
         // Initialize the math library BEFORE creating the light
         RectAreaLightUniformsLib.init();
-        // (Color, Intensity, Width, Height)
-        // Make the width/height roughly the size of your window opening
-        const windowBounceLight = new THREE.RectAreaLight(
-            0xff4400,
-            1.0,
-            30,
-            10,
-        );
-
-        // Position it exactly at the glass, facing inward
-        windowBounceLight.position.set(0, 5, -18);
-        windowBounceLight.lookAt(0, 5, 0);
 
         // Camera
         this.camera = new THREE.PerspectiveCamera(
@@ -815,6 +800,106 @@ diffuseColor *=
         effectComposer.setSize(this.canvasWidth, this.canvasHeight);
         effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         resizeExperience();
+
+        /**
+         * Uses the browser's native Fullscreen API for the complete experience.
+         * The button state also follows fullscreen changes made through Escape
+         * or other browser controls.
+         */
+        const sceneFullscreenButton = document.querySelector(
+            "#scene-fullscreen-button",
+        );
+
+        const fullscreenRoot = document.documentElement;
+
+        const requestSceneFullscreen =
+            fullscreenRoot.requestFullscreen ||
+            fullscreenRoot.webkitRequestFullscreen;
+
+        const exitSceneFullscreen =
+            document.exitFullscreen || document.webkitExitFullscreen;
+
+        const fullscreenApiIsEnabled =
+            document.fullscreenEnabled ??
+            document.webkitFullscreenEnabled ??
+            true;
+
+        const fullscreenIsSupported = Boolean(
+            sceneFullscreenButton &&
+            requestSceneFullscreen &&
+            exitSceneFullscreen &&
+            fullscreenApiIsEnabled
+        );
+
+        const getFullscreenElement = () => {
+            return (
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                null
+            );
+        };
+
+        const syncSceneFullscreenButton = () => {
+            if (!sceneFullscreenButton) {
+                return;
+            }
+
+            const isFullscreen = Boolean(getFullscreenElement());
+            const label = isFullscreen
+                ? "Exit fullscreen"
+                : "Enter fullscreen";
+
+            sceneFullscreenButton.classList.toggle(
+                "is-fullscreen",
+                isFullscreen,
+            );
+
+            sceneFullscreenButton.setAttribute(
+                "aria-pressed",
+                String(isFullscreen),
+            );
+
+            sceneFullscreenButton.setAttribute("aria-label", label);
+            sceneFullscreenButton.title = label;
+
+            requestAnimationFrame(resizeExperience);
+        };
+
+        const toggleSceneFullscreen = async () => {
+            try {
+                if (getFullscreenElement()) {
+                    await exitSceneFullscreen.call(document);
+                } else {
+                    await requestSceneFullscreen.call(fullscreenRoot);
+                }
+            } catch {
+                syncSceneFullscreenButton();
+            }
+        };
+
+        if (sceneFullscreenButton) {
+            sceneFullscreenButton.hidden = !fullscreenIsSupported;
+
+            if (fullscreenIsSupported) {
+                sceneFullscreenButton.addEventListener(
+                    "click",
+                    toggleSceneFullscreen,
+                );
+
+                document.addEventListener(
+                    "fullscreenchange",
+                    syncSceneFullscreenButton,
+                );
+
+                document.addEventListener(
+                    "webkitfullscreenchange",
+                    syncSceneFullscreenButton,
+                );
+
+                syncSceneFullscreenButton();
+            }
+        }
+
         /**
          * Post processing
          */
@@ -822,13 +907,14 @@ diffuseColor *=
         const renderPass = new RenderPass(this.scene, this.camera);
         effectComposer.addPass(renderPass);
 
-        const outputPass = new OutputPass();
-        effectComposer.addPass(outputPass);
-
-        const smaaPass = new SMAAPass();
+                const smaaPass = new SMAAPass();
         effectComposer.addPass(smaaPass);
 
         smaaPass.enabled = false
+
+        const outputPass = new OutputPass();
+        effectComposer.addPass(outputPass);
+
 
         this.terminal = new TerminalCanvas(this);
         /**
@@ -846,41 +932,6 @@ diffuseColor *=
         deskLight2.position.set(2.5, 1.2, -4.2); // near desk
         this.scene.add(deskLight, deskLight2);
 
-        // ---------------------------------------------------------
-        // COOL FLOOR DETAIL LIGHT
-        // final-ish favorite version
-        // ---------------------------------------------------------
-        const coolFloorDetailLight = new THREE.RectAreaLight(
-            0x7eb5e2,
-            1.5,
-            22,
-            9,
-        );
-
-        coolFloorDetailLight.position.set(3.8, -9.2, -4.9);
-        coolFloorDetailLight.lookAt(3.8, 0, 2.1);
-
-        this.scene.add(coolFloorDetailLight);
-
-        const coolFloorDetailLight2 = new THREE.RectAreaLight(
-            0x7eb5e2,
-            1.5,
-            22,
-            9,
-        );
-
-        coolFloorDetailLight2.position.set(10, -9.2, -4.9);
-        coolFloorDetailLight2.lookAt(3.8, 0, 2.1);
-
-        const coolFloorDetailLight3 = new THREE.RectAreaLight(
-            0x7eb5e2,
-            1.5,
-            22,
-            9,
-        );
-
-        coolFloorDetailLight3.position.set(-5, -9.2, -4.9);
-        coolFloorDetailLight3.lookAt(3.8, 0, 2.1);
 
         /**
          * Bed back fill light
@@ -891,10 +942,6 @@ diffuseColor *=
 
         const bedBackLight = new THREE.RectAreaLight(0x5f9fc7, 3, 4, 2.5);
 
-        this.scene.add(coolFloorDetailLight2, coolFloorDetailLight3);
-        coolFloorDetailLight.intensity = 0.9;
-        coolFloorDetailLight2.intensity = 0.9;
-        coolFloorDetailLight3.intensity = 0.9;
         this.scene.environmentIntensity = 0.55;
 
         const stationAmbientLight = new THREE.HemisphereLight(
@@ -917,42 +964,10 @@ diffuseColor *=
 
         bedBackLight.lookAt(bedBackLightTarget);
         this.scene.add(bedBackLight);
-        /**
-         * RECT AREA LIGHTS
-         *
-         * Each RectAreaLight needs a stored Vector3 target.
-         */
-
-        const windowBounceTarget = new THREE.Vector3(0, 5, 0);
-
-        const coolFloorTarget1 = new THREE.Vector3(3.8, 0, 2.1);
-
-        const coolFloorTarget2 = new THREE.Vector3(10, 0, 2.1);
-
-        const coolFloorTarget3 = new THREE.Vector3(-5, 0, 2.1);
-
-        windowBounceLight.lookAt(windowBounceTarget);
-        coolFloorDetailLight.lookAt(coolFloorTarget1);
-        coolFloorDetailLight2.lookAt(coolFloorTarget2);
-        coolFloorDetailLight3.lookAt(coolFloorTarget3);
-
-        /**
-         * Lights must be inside the scene for their Visible toggles
-         * to have any effect.
-         */
-        this.scene.add(
-            windowBounceLight,
-            coolFloorDetailLight2,
-            coolFloorDetailLight3,
-        );
 
         /**
          * Start the problematic accent lights disabled.
          */
-        windowBounceLight.visible = false;
-        coolFloorDetailLight.visible = false;
-        coolFloorDetailLight2.visible = false;
-        coolFloorDetailLight3.visible = false;
 
         this.cube = new Cube(this.scene);
 
@@ -990,6 +1005,7 @@ diffuseColor *=
         const controls = new OrbitControls(this.camera, canvas);
         controls.enableZoom = false;
         controls.target.set(0.9, 1.24, 0); // Set the initial target to match camera.lookAt
+        trackballControls.target.set(0.9, 1.24, 0); // Set the initial target to match camera.lookAt
         controls.enableDamping = true;
         controls.dampingFactor = 0.12;
         controls.minDistance = 0;
@@ -1202,19 +1218,13 @@ diffuseColor *=
             if (activePoint.name === "RubiksCube") {
                 showItems(false, this.ceilingMeshes);
                 showItems(false, this.monitorMeshes);
-                for (let i = 0; i < this.floorMeshes.length; i++) {
-                    this.floorMeshes[i].receiveShadow = false;
-                }
-
                 const cubeIsBusy =
                     this.cube.rotator.isAnimating ||
                     this.cube.rotator.isLayerActive;
 
                 setCubeScrambleButtonState(cubeIsBusy, !cubeIsBusy);
-
                 smaaPass.enabled = true;
-                controls.enabled = true;
-                controls.enableZoom = true;
+                controls.enabled = false;
                 controls.enableRotate = false;
                 controls.enablePan = false;
                 if (isTouchDevice) {
@@ -1540,58 +1550,6 @@ diffuseColor *=
         // Instantiate CubeInput
         this.CubeInput = new CubeInput(this.cube, renderer, this);
 
-        window.addEventListener("keydown", async (event) => {
-            if (event.code !== "KeyJ" || !event.shiftKey) {
-                return;
-            }
-
-            const exporter = new GLTFExporter();
-
-            /**
-             * Clone the decal so exporting it doesn't change
-             * the version currently positioned in the station.
-             */
-            const decalToExport = this.portfolioDecal.clone(true);
-
-            /**
-             * Put it at Blender's origin.
-             *
-             * We keep its current scale so the size you've chosen
-             * in Three.js is preserved.
-             */
-            decalToExport.position.set(0, 0, 0);
-            decalToExport.rotation.set(0, 0, 0);
-            decalToExport.updateMatrixWorld(true);
-
-            const exportScene = new THREE.Scene();
-            exportScene.name = "PortfolioDecalExport";
-            exportScene.add(decalToExport);
-
-            try {
-                const glb = await exporter.parseAsync(exportScene, {
-                    binary: true,
-                    onlyVisible: true,
-                });
-
-                const blob = new Blob([glb], {
-                    type: "model/gltf-binary",
-                });
-
-                const downloadUrl = URL.createObjectURL(blob);
-                const downloadLink = document.createElement("a");
-
-                downloadLink.href = downloadUrl;
-                downloadLink.download = "portfolio-wall-decal.glb";
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                downloadLink.remove();
-
-                URL.revokeObjectURL(downloadUrl);
-            } catch {
-                // Export failures are intentionally ignored in the production UI.
-            }
-        });
-
         this.initHotspots = () => {
             const glassBox = new THREE.Box3().setFromObject(this.monitorGlass);
             const trueGlassCenter = new THREE.Vector3();
@@ -1640,6 +1598,7 @@ diffuseColor *=
             });
         };
 
+
         // ---------------------------------------------------------
         // TICK FUNCTION & HOTSPOT TRACKING
         // ---------------------------------------------------------
@@ -1661,7 +1620,6 @@ diffuseColor *=
         });
 
         const tick = (timestamp) => {
-            renderer.info.reset();
             controls.update(); // Keep hotspot projection synchronized with the current camera frame.
             if (!this.terminalFullscreen?.shouldPauseScene) {
                 effectComposer.render();

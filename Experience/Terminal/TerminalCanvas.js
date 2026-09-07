@@ -1550,9 +1550,9 @@ export default class TerminalCanvas {
     /** Return the canvas region reserved for the desktop terminal controls. */
     getDesktopControlsBounds() {
         const controlWidth = 180
-        const controlHeight = 140
+        const controlHeight = 120
         const controlGap = 16
-        const marginTop = 44
+        const marginTop = 28
         const marginRight = 46
 
         return {
@@ -1639,7 +1639,7 @@ export default class TerminalCanvas {
 
         for (let index = 0; index < labelLines.length; index++) {
             const labelY = labelLines.length > 1
-                ? y + 84 + index * 22
+                ? y + 84 + index * 24
                 : y + 92
 
             this.ctx.fillText(labelLines[index], centerX, labelY)
