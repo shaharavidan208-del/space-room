@@ -5,7 +5,7 @@ An interactive 3D portfolio set inside a sci-fi space station, built with Three.
 Instead of presenting my work through a conventional webpage, I built an explorable environment where the portfolio itself is the main project. The station combines real-time 3D rendering, interactive objects, custom shaders, canvas interfaces, and puzzle mechanics.
 
 <!-- Replace the URL below with the deployed portfolio URL. -->
-**[Launch the portfolio](YOUR_LIVE_DEMO_URL)**
+**[Launch the portfolio](https://space-room-lime.vercel.app)**
 
 ![Space Station Portfolio](./Portfolio-Screenshot.png)
 ![Space Station Portfolio](./Portfolio-Terminal.png)
