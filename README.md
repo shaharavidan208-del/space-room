@@ -19,7 +19,6 @@ Instead of presenting my work through a conventional webpage, I built an explora
 - **Signal Trace**, a terminal-based routing puzzle with multiple handcrafted levels
 - A fully interactive Rubik's Cube with layer rotations, undo support, scrambling, mouse controls, and touch support
 - A custom GLSL supernova shader and a space environment visible outside the station
-- A security camera that tracks the user's position within a limited rotation range
 - Responsive rendering designed for desktop and mobile devices
 - A cinematic loading sequence separated from asset loading to keep its animation smooth
 
