@@ -9,6 +9,7 @@ Instead of presenting my work through a conventional webpage, I built an explora
 
 ![Space Station Portfolio](./Portfolio-Screenshot.png)
 ![Space Station Portfolio](./Portfolio-Terminal.png)
+![Space Station Portfolio](./image.png)
 <!-- Add a screenshot or short GIF once the final media is ready. -->
 <!-- ![Space Station Portfolio](./Portfolio-Screenshot.png) -->
 
