@@ -249,7 +249,7 @@ export default class Experience {
 
         this.objsToHide = []; // Store meshes that should be hidden when the terminal is focused on
 
-        gltfLoader.load("/models/sceneOptimized.glb", (gltf) => {
+        gltfLoader.load("/models/sceneOptimized4.glb", (gltf) => {
             gltf.scene.traverse((obj) => {
                 if (!obj.isMesh) {
                     return;
@@ -718,15 +718,10 @@ diffuseColor *=
         const resizeExperience = () => {
             hotspotNeedUpdate = true;
 
-            // Start with the regular layout viewport as fallback.
-            let viewportWidth = window.innerWidth;
-            let viewportHeight = window.innerHeight;
+            const bodyRect = document.body.getBoundingClientRect();
 
-            // Read the CURRENT visual viewport dimensions on every resize.
-            if (window.visualViewport) {
-                viewportWidth = window.visualViewport.width;
-                viewportHeight = window.visualViewport.height;
-            }
+const viewportWidth = bodyRect.width;
+const viewportHeight = bodyRect.height;
 
             const viewportAspect = viewportWidth / viewportHeight;
             const isPortrait = viewportAspect < 1.0;
@@ -771,13 +766,17 @@ diffuseColor *=
             );
 
             this.canvasRect = renderer.domElement.getBoundingClientRect();
+
         };
 
         window.addEventListener("resize", resizeExperience);
 
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", resizeExperience);
-        }
+if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resizeExperience);
+}
+
+const bodyResizeObserver = new ResizeObserver(resizeExperience);
+bodyResizeObserver.observe(document.body);
 
         // [ DOM MEASUREMENT CACHE ]
         // measure the physical footprint of the canvas
@@ -838,6 +837,7 @@ diffuseColor *=
                 null
             );
         };
+
 
         const syncSceneFullscreenButton = () => {
             if (!sceneFullscreenButton) {
@@ -1211,8 +1211,8 @@ diffuseColor *=
 
             // Hide ALL UI hotspots so they don't float around while we are zoomed in
             this.points.forEach((p) => {
-                p.element.style.opacity = "0";
-                p.element.style.pointerEvents = "none";
+                 p.element.style.display = "none";
+    p.element.style.pointerEvents = "none";
             });
             // --- 1. RUBIK'S CUBE LOGIC ---
             if (activePoint.name === "RubiksCube") {
@@ -1307,11 +1307,7 @@ diffuseColor *=
             setCubeScrambleButtonState(false, false);
             isTransitioning = true;
 
-            // Bring all UI hotspots back
-            this.points.forEach((p) => {
-                p.element.style.opacity = "1";
-                p.element.style.pointerEvents = "auto";
-            });
+           
 
             // Return to home values
             targetFov = homeFov;
@@ -1635,6 +1631,7 @@ diffuseColor *=
 
             this.loadingScreen.update(delta);
 
+
             // ---- CAMERA LERP ----
             if (isTransitioning) {
                 hotspotNeedUpdate = true;
@@ -1660,17 +1657,31 @@ diffuseColor *=
 
                     // Re-enable orbit controls only when returning home
                     if (!this.isFocused) {
-                        controls.update();
-                        trackballControls.update();
-                        trackballControls.enabled = true;
-                        controls.enabled = true;
-                        controls.enableRotate = true;
-                        controls.enablePan = true;
-                    }
+    controls.update();
+    trackballControls.update();
+    trackballControls.enabled = true;
+    controls.enabled = true;
+    controls.enableRotate = true;
+    controls.enablePan = true;
+
+    this.points.forEach((p) => {
+        p.element.style.display = "";
+        p.element.style.opacity = "1";
+        p.element.style.pointerEvents = "auto";
+    });
+
+    hotspotNeedUpdate = true;
+}
                 }
             }
             const target = controls.target;
-            if (sceneReady === true && this.points && hotspotNeedUpdate) {
+            if (
+    sceneReady === true &&
+    this.points &&
+    hotspotNeedUpdate &&
+    !this.isFocused &&
+    !isTransitioning
+) {
                 for (const point of this.points) {
                     // Convert the hotspot's 3D world position into normalized screen coordinates.
                     // After projection:
